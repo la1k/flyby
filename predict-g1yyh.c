@@ -196,12 +196,14 @@ double	tsince, jul_epoch, jul_utc, eclipse_depth=0,
 
 char	qthfile[50], tlefile[50], dbfile[50], temp[80], output[25],
 	serial_port[15], rotctld_host[256], rotctld_port[6]="4533\0\0",
+	uplink_host[256], uplink_port[6]="4532\0\0", uplink_vfo[30],
+	downlink_host[256], downlink_port[6]="4532\0\0", downlink_vfo[30],
 	resave=0, reload_tle=0, netport[8],
 	once_per_second=0, ephem[5], sat_sun_status, findsun,
 	calc_squint, database=0, xterm, io_lat='N', io_lon='W', maidenstr[9];
 
 int	indx, antfd, iaz, iel, ma256, isplat, isplong, socket_flag=0,
-	Flags=0, rotctld_socket, totalsats=0;
+	Flags=0, rotctld_socket, uplink_socket, downlink_socket, totalsats=0;
 
 long	rv, irk;
 
@@ -1969,6 +1971,28 @@ char *string;
 	fprintf(stderr,"*** predict: %s!\n",string);
 }
 
+int sock_readline(int sockd, char *message, size_t bufsize)
+{
+	int len=0, pos=0;
+	char c='\0';
+
+	if (message!=NULL)
+		message[bufsize-1]='\0';
+	do
+	{
+		if ((len=recv(sockd, &c, 1, 0)) < 0)
+			return len;
+		if (message!=NULL)
+		{
+			message[pos]=c;
+			message[pos+1]='\0';
+		}
+		pos+=len;
+	} while (c!='\n' && pos<bufsize-2);
+
+	return pos;
+}
+
 void TrackDataOut(antfd, elevation, azimuth)
 int antfd;
 double elevation, azimuth;
@@ -1998,9 +2022,7 @@ void TrackDataNet(int sockd, double elevation, double azimuth)
 	   them and the antenna will lag behind. Therefore, we wait
 	   for confirmation from last command before sending the
 	   next. */
-
-	if (recv(sockd, message, sizeof(message), MSG_DONTWAIT) < 1)
-		return;
+	sock_readline(sockd, message, sizeof(message));
 
 	sprintf(message, "P %.2f %.2f\n", azimuth, elevation);
 	int len = strlen(message);
@@ -2009,6 +2031,83 @@ void TrackDataNet(int sockd, double elevation, double azimuth)
 		bailout("Failed to send to rotctld");
 		exit(-1);
 	}
+}
+
+void FreqDataNet(int sockd, char *vfo, double freq)
+{
+	char message[256];
+	int len;
+
+	/* If frequencies is sent too often, rigctld will queue
+	   them and the radio will lag behind. Therefore, we wait
+	   for confirmation from last command before sending the
+	   next. */
+	sock_readline(sockd, message, sizeof(message));
+
+	if (vfo)
+	{
+		sprintf(message, "V %s\n", vfo);
+		len = strlen(message);
+		if (send(sockd, message, len, 0) != len)
+		{
+			bailout("Failed to send to rigctld");
+			exit(-1);
+		}
+	}
+
+	sock_readline(sockd, message, sizeof(message));
+
+	sprintf(message, "F %.0f\n", freq*1000000);
+	len = strlen(message);
+	if (send(sockd, message, len, 0) != len)
+	{
+		bailout("Failed to send to rigctld");
+		exit(-1);
+	}
+}
+
+double ReadFreqDataNet(int sockd, char *vfo)
+{
+	char message[256];
+	int len;
+	double freq;
+
+	/* Read pending return message */
+	sock_readline(sockd, message, sizeof(message));
+
+	if (vfo)
+	{
+		sprintf(message, "V %s\n", vfo);
+		len = strlen(message);
+		if (send(sockd, message, len, 0) != len)
+		{
+			bailout("Failed to send to rigctld");
+			exit(-1);
+		}
+	}
+
+	sock_readline(sockd, message, sizeof(message));
+
+	sprintf(message, "f\n");
+	len = strlen(message);
+	if (send(sockd, message, len, 0) != len)
+	{
+		bailout("Failed to send to rigctld");
+		exit(-1);
+	}
+
+	sock_readline(sockd, message, sizeof(message));
+	freq=atof(message)/1.0e6;
+
+	sprintf(message, "f\n");
+	len = strlen(message);
+	if (send(sockd, message, len, 0) != len)
+	{
+		bailout("Failed to send to rigctld");
+		exit(-1);
+	}
+
+	return freq;
 }
 
 int passivesock(char *service, char *protocol, int qlen)
@@ -4882,6 +4981,7 @@ char speak;
 		downlink_end=0.0, uplink_start=0.0, uplink_end=0.0,
 		dopp, doppler100=0.0, delay, loss, shift;
 	long	newtime, lasttime=0;
+	bool	downlink_update=true, uplink_update=true, readfreq=false;
 
 	do {
 		PreCalc(x);
@@ -4965,6 +5065,11 @@ char speak;
 		}
 
 		do {
+			if (downlink_socket!=-1 && readfreq)
+				downlink=ReadFreqDataNet(downlink_socket,downlink_vfo)/(1+1.0e-08*doppler100);
+			if (uplink_socket!=-1 && readfreq)
+				uplink=ReadFreqDataNet(uplink_socket,uplink_vfo)/(1-1.0e-08*doppler100);
+
 			attrset(COLOR_PAIR(6)|A_REVERSE|A_BOLD);
 			daynum=CurrentDaynum();
 			mvprintw(1,54,"%s",Daynum2String(daynum,24,"%a %d%b%y %j.%H:%M:%S"));
@@ -5007,12 +5112,20 @@ char speak;
 
 			if (comsat) {
 				if (downlink!=0.0)
-					mvprintw(12,11,"%11.5f MHz",downlink);
+					mvprintw(12,11,"%11.5f MHz%c%c%c",downlink,
+					readfreq ? '<' : ' ',
+					(readfreq || downlink_update) ? '=' : ' ',
+					downlink_update ? '>' : ' ');
+
 				else
 					mvprintw(12,11,"               ");
 
 				if (uplink!=0.0)
-					mvprintw(11,11,"%11.5f MHz",uplink);
+					mvprintw(11,11,"%11.5f MHz%c%c%c",uplink,
+					readfreq ? '<' : ' ',
+					(readfreq || uplink_update) ? '=' : ' ',
+					uplink_update ? '>' : ' ');
+
 				else
 					mvprintw(11,11,"               ");
 			}
@@ -5033,8 +5146,8 @@ char speak;
 			doppler100=-100.0e06*((sat_range_rate*1000.0)/299792458.0);
 			delay=1000.0*((1000.0*sat_range)/299792458.0);
 
-			if (sat_ele>=0.0) {
-				if (aos_alarm==0) {
+			if (sat_ele>=horizon) {
+				if (sat_ele>=0 && aos_alarm==0) {
 					beep();
 					aos_alarm=1;
 				}
@@ -5060,10 +5173,15 @@ char speak;
 						loss=32.4+(20.0*log10(downlink))+(20.0*log10(sat_range));
 						mvprintw(12,67,"%7.3f dB",loss);
 						mvprintw(13,13,"%7.3f   ms",delay);
-					} else {
-						mvprintw(13,32,"                ");
-						mvprintw(13,67,"          ");
-						mvprintw(14,13,"            ");
+						if (downlink_socket!=-1 && downlink_update)
+							FreqDataNet(downlink_socket,downlink_vfo,downlink+dopp);
+					}
+
+					else
+					{
+						mvprintw(12,32,"                ");
+						mvprintw(12,67,"          ");
+						mvprintw(13,13,"            ");
 					}
 
 					if (uplink!=0.0) {
@@ -5071,18 +5189,23 @@ char speak;
 						mvprintw(11,32,"%11.5f MHz",uplink-dopp);
 						loss=32.4+(20.0*log10(uplink))+(20.0*log10(sat_range));
 						mvprintw(11,67,"%7.3f dB",loss);
-					} else {
-						mvprintw(12,32,"                ");
-						mvprintw(12,67,"          ");
+						if (uplink_socket!=-1 && uplink_update)
+							FreqDataNet(uplink_socket,uplink_vfo,uplink-dopp);
+					}
+
+					else
+					{
+						mvprintw(11,32,"                ");
+						mvprintw(11,67,"          ");
 					}
 
 					if (uplink!=0.0 && downlink!=0.0)
-						mvprintw(13,67,"%7.3f ms",2.0*delay);
+						mvprintw(12,67,"%7.3f ms",2.0*delay);
 					else
-						mvprintw(14,67,"              ");
+						mvprintw(13,67,"              ");
 				}
 
-				if (speak=='T' && soundcard) {
+				if (sat_ele>=0 && speak=='T' && soundcard) {
 					if (eclipse_alarm==0 && fabs(eclipse_depth)<0.015) {
 						/* ~1 deg */
 						/* Hold off regular announcements if
@@ -5251,18 +5374,18 @@ char speak;
 
 			/* Get input from keyboard */
 
-			ans=tolower(getch());
+			ans=getch();
 
 			/* We can force PREDICT to speak by pressing 'T' */
 
-			if (ans=='t')
+			if (ans=='t' || ans=='T')
 				oldtime=0.0;
 
 			/* If we receive a RELOAD_TLE command through the
 				socket connection or an 'r' through the keyboard,
 				reload the TLE file.  */
 
-			if (reload_tle || ans=='r') {
+			if (reload_tle || ans=='r' || ans=='R') {
 				ReadDataFiles();
 				reload_tle=0;
 			}
@@ -5332,13 +5455,37 @@ char speak;
 				length=strlen(sat_db[x].transponder_name[xponder])/2;
 				mvprintw(10,40-length,"%s",sat_db[x].transponder_name[xponder]);
 
+				if (ans=='d')
+					downlink_update=true;
+				if (ans=='D')
+					downlink_update=false;
+				if (ans=='u')
+					uplink_update=true;
+				if (ans=='U')
+					uplink_update=false;
+				if (ans=='f' || ans=='F')
+				{
+					if (downlink_socket!=-1)
+						downlink=ReadFreqDataNet(downlink_socket,downlink_vfo)/(1+1.0e-08*doppler100);
+					if (uplink_socket!=-1)
+						uplink=ReadFreqDataNet(uplink_socket,uplink_vfo)/(1-1.0e-08*doppler100);
+					if (ans=='f')
+					{
+						downlink_update=true;
+						uplink_update=true;
+					}
+				}
+				if (ans=='m')
+					readfreq=true;
+				if (ans=='M')
+					readfreq=false;
 			}
 
 			refresh();
 
 			halfdelay(halfdelaytime);
 
-		} while (ans!='q' && ans!=27 &&
+		} while (ans!='q' && ans!='Q' && ans!=27 &&
 		 	ans!='+' && ans!='-' &&
 		 	ans!=KEY_LEFT && ans!=KEY_RIGHT);
 
@@ -5979,14 +6126,14 @@ void ProgramInfo()
 		printw("Not loaded\n");
 
 	if (antfd!=-1 || rotctld_socket!=-1) {
-		printw("\t\tAutoTracking    : Enabled");
-		if (once_per_second)
-			printw(" - Update every second");
-		printw("\n");
-		if (antfd!=-1) printw("\t\t - Sending data to %s\n",serial_port);
-		if (rotctld_socket!=-1) printw("\t\t - Sending data to %s:%s\n", rotctld_host, rotctld_port);
+		printw("\t\tAutoTracking    : Enabled\n");
+		if (antfd!=-1) printw("\t\t - Serial port: %s\n",serial_port);
+		if (rotctld_socket!=-1) printw("\t\t - Connected to rotctld: %s:%s\n", rotctld_host, rotctld_port);
 
 		printw("\t\tTracking horizon: %.2f degrees. ", horizon);
+
+		if (once_per_second)
+			printw("Update every second");
 
 		printw("\n");
 	} else
@@ -6388,6 +6535,8 @@ char argc, *argv[];
 	y=argc-1;
 	antfd=-1;
 	rotctld_socket=-1;
+	uplink_socket=-1;
+	downlink_socket=-1;
 
 	memset(&hints, 0, sizeof hints);
 	hints.ai_family = AF_UNSPEC;
@@ -6474,7 +6623,7 @@ char argc, *argv[];
 			once_per_second=1;
 		}
 
-		if (strcmp(argv[x],"-AP")==0)
+		if (strcmp(argv[x],"-P")==0)
 		{
 			z=x+1;
 			if (z<=y && argv[z][0] && argv[z][0]!='-')
@@ -6487,6 +6636,54 @@ char argc, *argv[];
 			z=x+1;
 			if (z<=y && argv[z][0])
 				horizon=strtod(argv[z],NULL);
+		}
+
+		if (strcmp(argv[x],"-U")==0)
+		{
+			z=x+1;
+			if (z<=y && argv[z][0] && argv[z][0]!='-')
+				strncpy(uplink_host,argv[z],sizeof(uplink_host)-1);
+			uplink_host[sizeof(uplink_host)-1] = 0;
+		}
+
+		if (strcmp(argv[x],"-UP")==0)
+		{
+			z=x+1;
+			if (z<=y && argv[z][0] && argv[z][0]!='-')
+				strncpy(uplink_port,argv[z],sizeof(uplink_port)-1);
+			uplink_port[sizeof(uplink_port)-1] = 0;
+		}
+
+		if (strcmp(argv[x],"-UV")==0)
+		{
+			z=x+1;
+			if (z<=y && argv[z][0] && argv[z][0]!='-')
+				strncpy(uplink_vfo,argv[z],sizeof(uplink_vfo)-1);
+			uplink_vfo[sizeof(uplink_vfo)-1] = 0;
+		}
+
+		if (strcmp(argv[x],"-D")==0)
+		{
+			z=x+1;
+			if (z<=y && argv[z][0] && argv[z][0]!='-')
+				strncpy(downlink_host,argv[z],sizeof(downlink_host)-1);
+			downlink_host[sizeof(downlink_host)-1] = 0;
+		}
+
+		if (strcmp(argv[x],"-DP")==0)
+		{
+			z=x+1;
+			if (z<=y && argv[z][0] && argv[z][0]!='-')
+				strncpy(downlink_port,argv[z],sizeof(downlink_port)-1);
+			downlink_port[sizeof(downlink_port)-1] = 0;
+		}
+
+		if (strcmp(argv[x],"-DV")==0)
+		{
+			z=x+1;
+			if (z<=y && argv[z][0] && argv[z][0]!='-')
+				strncpy(downlink_vfo,argv[z],sizeof(downlink_vfo)-1);
+			downlink_vfo[sizeof(downlink_vfo)-1] = 0;
 		}
 
 		if (strcmp(argv[x],"-o")==0) {
@@ -6718,6 +6915,79 @@ char argc, *argv[];
 			/* TrackDataNet() will wait for confirmation of a command before sending
 			   the next so we bootstrap this by asking for the current position */
 			send(rotctld_socket, "p\n", 2, 0);
+			sock_readline(rotctld_socket, NULL, 256);
+		}
+
+		/* Create socket and connect to uplink rigctld. */
+
+		if (uplink_host[0]!=0)
+		{
+			if (getaddrinfo(uplink_host, uplink_port, &hints, &servinfo))
+			{
+				bailout("getaddrinfo error");
+				exit(-1);
+			}
+
+			for(servinfop = servinfo; servinfop != NULL; servinfop = servinfop->ai_next)
+			{
+				if ((uplink_socket = socket(servinfop->ai_family, servinfop->ai_socktype,
+					servinfop->ai_protocol)) == -1)
+				{
+					continue;
+				}
+				if (connect(uplink_socket, servinfop->ai_addr, servinfop->ai_addrlen) == -1)
+				{
+					close(uplink_socket);
+					continue;
+				}
+
+				break;
+			}
+			if (servinfop == NULL)
+			{
+				bailout("Unable to connect to uplink rigctld");
+				exit(-1);
+			}
+			freeaddrinfo(servinfo);
+			/* FreqDataNet() will wait for confirmation of a command before sending
+			   the next so we bootstrap this by asking for the current frequency */
+			send(uplink_socket, "f\n", 2, 0);
+		}
+
+		/* Create socket and connect to downlink rigctld. */
+
+		if (downlink_host[0]!=0)
+		{
+			if (getaddrinfo(downlink_host, downlink_port, &hints, &servinfo))
+			{
+				bailout("getaddrinfo error");
+				exit(-1);
+			}
+
+			for(servinfop = servinfo; servinfop != NULL; servinfop = servinfop->ai_next)
+			{
+				if ((downlink_socket = socket(servinfop->ai_family, servinfop->ai_socktype,
+					servinfop->ai_protocol)) == -1)
+				{
+					continue;
+				}
+				if (connect(downlink_socket, servinfop->ai_addr, servinfop->ai_addrlen) == -1)
+				{
+					close(downlink_socket);
+					continue;
+				}
+
+				break;
+			}
+			if (servinfop == NULL)
+			{
+				bailout("Unable to connect to downlink rigctld");
+				exit(-1);
+			}
+			freeaddrinfo(servinfo);
+			/* FreqDataNet() will wait for confirmation of a command before sending
+			   the next so we bootstrap this by asking for the current frequency */
+			send(downlink_socket, "f\n", 2, 0);
 		}
 
 		/* Socket activated here.  Remember that
@@ -6825,6 +7095,16 @@ char argc, *argv[];
 		{
 			send(rotctld_socket, "q\n", 2, 0);
 			close(rotctld_socket);
+		}
+		if (uplink_socket!=-1)
+		{
+			send(uplink_socket, "q\n", 2, 0);
+			close(uplink_socket);
+		}
+		if (downlink_socket!=-1)
+		{
+			send(downlink_socket, "q\n", 2, 0);
+			close(downlink_socket);
 		}
 
 		curs_set(1);
