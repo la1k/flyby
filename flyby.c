@@ -50,7 +50,7 @@
 #include <fcntl.h>
 #include <termios.h>
 
-#include "predict.h"
+#include "flyby.h"
 
 #define maxsats		250
 #define ARRAY_SIZE(a) (sizeof(a) / sizeof(a[0]))
@@ -2821,7 +2821,7 @@ char *input;
 
 char ReadDataFiles()
 {
-	/* This function reads "predict.qth" and "predict.tle"
+	/* This function reads "flyby.qth" and "flyby.tle"
 	   files into memory.  Return values are as follows:
 
 	   0 : No files were loaded
@@ -3062,7 +3062,7 @@ char *destination;
 void SaveQTH()
 {
 	/* This function saves QTH data file normally
-	   found under ~/.predict/predict.qth */
+	   found under ~/.flyby/flyby.qth */
 
 	FILE *fd;
 
@@ -3091,7 +3091,7 @@ void SaveTLE()
 
 		Data2TLE(x);
 
-		/* Write name, line1, line2 to predict.tle */
+		/* Write name, line1, line2 to flyby.tle */
 
 		fprintf(fd,"%s\n", sat[x].name);
 		fprintf(fd,"%s\n", sat[x].line1);
@@ -5214,14 +5214,14 @@ char speak;
 						oldtime=CurrentDaynum();
 
 						if ((old_visibility=='V' || old_visibility=='D') && visibility=='N') {
-							sprintf(command,"%svocalizer/vocalizer eclipse &",predictpath);
+							sprintf(command,"%svocalizer/vocalizer eclipse &",flybypath);
 							system(command);
 							eclipse_alarm=1;
 							oldtime-=0.000015*sqrt(sat_alt);
 						}
 
 						if (old_visibility=='N' && (visibility=='V' || visibility=='D')) {
-							sprintf(command,"%svocalizer/vocalizer sunlight &",predictpath);
+							sprintf(command,"%svocalizer/vocalizer sunlight &",flybypath);
 							system(command);
 							eclipse_alarm=1;
 							oldtime-=0.000015*sqrt(sat_alt);
@@ -5236,7 +5236,7 @@ char speak;
 						if (sat_range_rate>0.0)
 							approaching='-';
 
-						sprintf(command,"%svocalizer/vocalizer %.0f %.0f %c %c &",predictpath,sat_azi,sat_ele,approaching,visibility);
+						sprintf(command,"%svocalizer/vocalizer %.0f %.0f %c %c &",flybypath,sat_azi,sat_ele,approaching,visibility);
 						system(command);
 						oldtime=CurrentDaynum();
 						old_visibility=visibility;
@@ -5340,7 +5340,7 @@ char speak;
 				if (oldtime!=0.0 && speak=='T' && soundcard) {
 					/* Announce LOS */
 
-					sprintf(command,"%svocalizer/vocalizer los &",predictpath);
+					sprintf(command,"%svocalizer/vocalizer los &",flybypath);
 					system(command);
 				}
 			}
@@ -6174,22 +6174,22 @@ void NewUser()
 	printw("  your orbital database using option [U] or [E].  Enjoy the program!  :-)");
 	refresh();
 
-	/* Make "~/.predict" subdirectory */
+	/* Make "~/.flyby" subdirectory */
 
-	sprintf(temp,"%s/.predict",getenv("HOME"));
+	sprintf(temp,"%s/.flyby",getenv("HOME"));
 	mkdir(temp,0777);
 
-	/* Copy default files into ~/.predict directory */
+	/* Copy default files into ~/.flyby directory */
 
-	sprintf(temp,"%sdefault/predict.tle",predictpath);
+	sprintf(temp,"%sdefault/flyby.tle",flybypath);
 
 	CopyFile(temp,tlefile);
 
-	sprintf(temp,"%sdefault/predict.db",predictpath);
+	sprintf(temp,"%sdefault/flyby.db",flybypath);
 
 	CopyFile(temp,dbfile);
 
-	sprintf(temp,"%sdefault/predict.qth",predictpath);
+	sprintf(temp,"%sdefault/flyby.qth",flybypath);
 
 	CopyFile(temp,qthfile);
 
@@ -6723,12 +6723,12 @@ char argc, *argv[];
 	env=getenv("HOME");
 
 	if (qth_cli[0]==0)
-		sprintf(qthfile,"%s/.predict/predict.qth",env);
+		sprintf(qthfile,"%s/.flyby/flyby.qth",env);
 	else
 		sprintf(qthfile,"%s%c",qth_cli,0);
 
 	if (tle_cli[0]==0)
-		sprintf(tlefile,"%s/.predict/predict.tle",env);
+		sprintf(tlefile,"%s/.flyby/flyby.tle",env);
 	else
 		sprintf(tlefile,"%s%c",tle_cli,0);
 
@@ -6741,17 +6741,17 @@ char argc, *argv[];
 		interactive=1;
 
 	if (interactive) {
-		sprintf(dbfile,"%s/.predict/predict.db",env);
+		sprintf(dbfile,"%s/.flyby/flyby.db",env);
 
 		/* If the transponder database file doesn't already
-		   exist under $HOME/.predict, and a working environment
+		   exist under $HOME/.flyby, and a working environment
 		   is available, place a default copy from the PREDICT
-		   distribution under $HOME/.predict. */
+		   distribution under $HOME/.flyby. */
 
 		db=fopen(dbfile,"r");
 
 		if (db==NULL) {
-			sprintf(temp,"%sdefault/predict.db",predictpath);
+			sprintf(temp,"%sdefault/flyby.db",flybypath);
 			CopyFile(temp,dbfile);
 		} else
 			fclose(db);

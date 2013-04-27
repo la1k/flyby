@@ -1,17 +1,17 @@
 #!/bin/bash
-# Script to configure, compile, and install PREDICT.
+# Script to configure, compile, and install flyby.
 # Give an argument to this script if you wish to override
 # the default installation directory of /usr/local/bin.
 # ie: ./configure /usr/bin
 
 version=$(<.version)
 
-if [ -e predict.h ]; then
-	echo "Building PREDICT version $version ..."
-	cc -Wall -O3 -s -fomit-frame-pointer predict.c -lm -lncurses -pthread -o predict
+if [ -e flyby.h ]; then
+	echo "Building flyby version $version ..."
+	cc -Wall -O3 -s -fomit-frame-pointer flyby.c -lm -lmenu -lncurses -pthread -o flyby
 	echo "Done!"
 else
-  echo "Configuring PREDICT version $version ..."
+  echo "Configuring flyby version $version ..."
   cc -Wall -s installer.c -lncurses -o installer
   if [ -a installer ]; then
 	  if [ $# == "0" ]; then
