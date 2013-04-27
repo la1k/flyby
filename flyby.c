@@ -4962,14 +4962,12 @@ void QthEdit()
 	}
 }
 
-void SingleTrack(x,speak)
+void SingleTrack(x)
 int x;
-char speak;
 {
 	/* This function tracks a single satellite in real-time
 	   until 'Q' or ESC is pressed.  x represents the index
-	   of the satellite being tracked.  If speak=='T', then
-	   the speech routines are enabled. */
+	   of the satellite being tracked. */
 
 	int	ans, oldaz=0, oldel=0, length, xponder=0,
 		polarity=0, tshift, bshift;
@@ -5205,50 +5203,6 @@ char speak;
 						mvprintw(13,67,"              ");
 				}
 
-				if (sat_ele>=0 && speak=='T' && soundcard) {
-					if (eclipse_alarm==0 && fabs(eclipse_depth)<0.015) {
-						/* ~1 deg */
-						/* Hold off regular announcements if
-						eclipse depth is within +/- 1 deg. */
-
-						oldtime=CurrentDaynum();
-
-						if ((old_visibility=='V' || old_visibility=='D') && visibility=='N') {
-							sprintf(command,"%svocalizer/vocalizer eclipse &",flybypath);
-							system(command);
-							eclipse_alarm=1;
-							oldtime-=0.000015*sqrt(sat_alt);
-						}
-
-						if (old_visibility=='N' && (visibility=='V' || visibility=='D')) {
-							sprintf(command,"%svocalizer/vocalizer sunlight &",flybypath);
-							system(command);
-							eclipse_alarm=1;
-							oldtime-=0.000015*sqrt(sat_alt);
-						}
-					}
-
-					if ((CurrentDaynum()-oldtime)>(0.00003*sqrt(sat_alt))) {
-
-						if (sat_range_rate<0.0)
-							approaching='+';
-
-						if (sat_range_rate>0.0)
-							approaching='-';
-
-						sprintf(command,"%svocalizer/vocalizer %.0f %.0f %c %c &",flybypath,sat_azi,sat_ele,approaching,visibility);
-						system(command);
-						oldtime=CurrentDaynum();
-						old_visibility=visibility;
-					}
-
-					if (sat_ele<=1.0 && approaching=='-') {
-						/* Suspend regular announcements
-						as we approach LOS. */
-
-						oldtime=CurrentDaynum();
-					}
-				}
 			} else {
 				lostime=0.0;
 				aos_alarm=0;
@@ -5336,13 +5290,6 @@ char speak;
 				nextaos=FindAOS();
 				mvprintw(21,1,"Next AOS: %s %s",Daynum2String(nextaos,24,"%a %d%b%y %j.%H:%M:%S"),(qth.tzoffset==0) ? "GMT" : "Local");
 				aoslos=nextaos;
-
-				if (oldtime!=0.0 && speak=='T' && soundcard) {
-					/* Announce LOS */
-
-					sprintf(command,"%svocalizer/vocalizer los &",flybypath);
-					system(command);
-				}
 			}
 
 			/* This is where the variables for the socket server are updated. */
@@ -5375,11 +5322,6 @@ char speak;
 			/* Get input from keyboard */
 
 			ans=getch();
-
-			/* We can force PREDICT to speak by pressing 'T' */
-
-			if (ans=='t' || ans=='T')
-				oldtime=0.0;
 
 			/* If we receive a RELOAD_TLE command through the
 				socket connection or an 'r' through the keyboard,
@@ -6145,13 +6087,6 @@ void ProgramInfo()
 		printw("Network server on port \"%s\"\n",netport);
 	else
 		printw("Standalone\n");
-
-	printw("\t\tVocalizer       : ");
-
-	if (soundcard)
-		printw("Soundcard present");
-	else
-		printw("No soundcard available");
 
 	refresh();
 	attrset(COLOR_PAIR(4)|A_BOLD);
