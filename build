@@ -1,10 +1,26 @@
-#!/bin/sh
-# Script to manually compile PREDICT
-#
-if [ -a predict.h ]; then
-	echo -n "Building PREDICT version `cat .version`... "
+#!/bin/bash
+# Script to configure, compile, and install PREDICT.
+# Give an argument to this script if you wish to override
+# the default installation directory of /usr/local/bin.
+# ie: ./configure /usr/bin
+
+version=$(<.version)
+
+if [ -e predict.h ]; then
+	echo "Building PREDICT version $version ..."
 	cc -Wall -O3 -s -fomit-frame-pointer predict.c -lm -lncurses -pthread -o predict
 	echo "Done!"
 else
-	./configure
+  echo "Configuring PREDICT version $version ..."
+  cc -Wall -s installer.c -lncurses -o installer
+  if [ -a installer ]; then
+	  if [ $# == "0" ]; then
+		  ./installer
+	  else
+		  ./installer $1
+	  fi
+    else
+	    echo "Compilation failed.  Are you sure you have a C compiler (gcc) installed?"
+  fi
 fi
+
