@@ -2477,12 +2477,12 @@ void Banner()
 	refresh();
 
 	attrset(COLOR_PAIR(6)|A_REVERSE|A_BOLD);
-	mvprintw(2,18,"                                           ");
-	mvprintw(3,18,"         --== PREDICT  v%s ==--         ",version);
-	mvprintw(4,18,"           By John A. Magliacane           ");
-	mvprintw(5,18,"     KD2BD Software --- Copyright 2006     ");
-	mvprintw(6,18,"        Mods by John Heaton,  G1YYH        ");
-	mvprintw(7,18,"                                           ");
+	mvprintw(2,18,"                                                     ");
+	mvprintw(3,18,"                --== flyby v%s ==--               ",version);
+	mvprintw(4,18,"                                                     ");
+	mvprintw(5,18,"   based on PREDICT, by John A. Magliacane (KD2BD)   ");
+	mvprintw(6,18,"         with mods by John Heaton (G1YYH)            ");
+	mvprintw(7,18,"                                                     ");
 }
 
 void AnyKey()
@@ -3305,7 +3305,7 @@ int Select()
 	clear();
 
 	mvprintw(0,0,"                                                                                ");
-	mvprintw(1,0,"  PREDICT Satellite Selector                                                    ");
+	mvprintw(1,0,"  flyby Satellite Selector                                                    ");
 	mvprintw(2,0,"                                                                                ");
 
 	attrset(COLOR_PAIR(3)|A_BOLD);
@@ -3766,9 +3766,9 @@ double daynum;
 	mvprintw(20,70,"   Moon  ");
 	attrset(COLOR_PAIR(3)|A_BOLD);
 	if (moon_el > 0.0)
-		attrset(COLOR_PAIR(3)|A_BOLD);
+		attrset(COLOR_PAIR(1)|A_BOLD);
 	else
-		attrset(COLOR_PAIR(2));
+		attrset(COLOR_PAIR(1));
 	mvprintw(21,70,"%-7.2fAz",moon_az);
 	mvprintw(22,70,"%+-6.2f El",moon_el);
 
@@ -5028,7 +5028,7 @@ int x;
 		decayed=Decayed(indx,0.0);
 
 		if (xterm)
-			fprintf(stderr,"\033]0;PREDICT: Tracking %-10s\007",sat[x].name);
+			fprintf(stderr,"\033]0;flyby: tracking %-10s\007",sat[x].name);
 
 		halfdelay(halfdelaytime);
 		curs_set(0);
@@ -5037,7 +5037,7 @@ int x;
 
 		attrset(COLOR_PAIR(6)|A_REVERSE|A_BOLD);
 		mvprintw(0,0,"                                                                                ");
-		mvprintw(1,0,"  PREDICT Tracking :                                                            ");
+		mvprintw(1,0,"  flyby tracking:                                                            ");
 		mvprintw(2,0,"                                                                                ");
 		mvprintw(1,21,"%-24s (%d)", sat[x].name, sat[x].catnum);
 
@@ -5223,7 +5223,7 @@ int x;
 			mvprintw(5,42,"%0.f ",fm);
 			mvprintw(6,42,"%0.f ",fk);
 
-			attrset(COLOR_PAIR(3)|A_BOLD);
+			attrset(COLOR_PAIR(1)|A_BOLD);
 
 			mvprintw(20,1,"Orbit Number: %ld",rv);
 
@@ -5521,9 +5521,9 @@ char multitype, disttype;
 		attrset(COLOR_PAIR(2)|A_REVERSE);
 		mvprintw(3,28,(multitype=='m') ? " Locator " : " Lat Long");
 		attrset(COLOR_PAIR(2));
-		mvprintw(12,70,(disttype=='i') ? "  (Miles)" : "     (Km)");
+		mvprintw(12,70,(disttype=='i') ? "  (miles)" : "     (km)");
 		mvprintw(13,70,(qth.tzoffset==0)  ? "    (GMT)" : "  (Local)");
-                mvprintw(14,70,(socket_flag) ? " (Server)" : "         ");
+    mvprintw(14,70,(socket_flag) ? " (Server)" : "         ");
 
 		attrset(COLOR_PAIR(4)|A_REVERSE|A_BOLD);
 		mvprintw( 9,70," Control ");
@@ -6049,7 +6049,7 @@ void MainMenu()
 	refresh();
 
 	if (xterm)
-		fprintf(stderr,"\033]0;PREDICT: Version %s\007",version);
+		fprintf(stderr,"\033]0;flyby: Version %s\007",version);
 }
 
 void ProgramInfo()
@@ -6057,7 +6057,7 @@ void ProgramInfo()
 	Banner();
 	attrset(COLOR_PAIR(3)|A_BOLD);
 
-	printw("\n\n\n\n\n\t\tPREDICT version : %s\n",version);
+	printw("\n\n\n\n\n\t\tflyby version : %s\n",version);
 	printw("\t\tQTH file loaded : %s\n",qthfile);
 	printw("\t\tTLE file loaded : %s\n",tlefile);
 	printw("\t\tDatabase file   : ");
@@ -6102,10 +6102,10 @@ void NewUser()
 	Banner();
 	attrset(COLOR_PAIR(3)|A_BOLD);
 
-	mvprintw(12,2,"WELCOME to PREDICT!  Since you are a new user to the program, default\n");
+	mvprintw(12,2,"Welcome to flyby!  Since you are a new user to the program, default\n");
 	printw("  orbital data and ground station location information was copied into\n");
 	printw("  your home directory to get you going.  Please select option [G] from\n");
-	printw("  PREDICT's main menu to edit your ground station information, and update\n");
+	printw("  flyby's main menu to edit your ground station information, and update\n");
 	printw("  your orbital database using option [U] or [E].  Enjoy the program!  :-)");
 	refresh();
 
@@ -6767,9 +6767,9 @@ char argc, *argv[];
 		curs_set(0);
 
 		init_pair(1,COLOR_WHITE,COLOR_BLACK);
-		init_pair(2,COLOR_WHITE,COLOR_BLUE);
-		init_pair(3,COLOR_YELLOW,COLOR_BLUE);
-		init_pair(4,COLOR_CYAN,COLOR_BLUE);
+		init_pair(2,COLOR_YELLOW,COLOR_BLACK);
+		init_pair(3,COLOR_GREEN,COLOR_BLACK);
+		init_pair(4,COLOR_CYAN,COLOR_BLACK);
 		init_pair(5,COLOR_WHITE,COLOR_RED);
 		init_pair(6,COLOR_RED,COLOR_WHITE);
 		init_pair(7,COLOR_CYAN,COLOR_RED);
@@ -6932,7 +6932,7 @@ char argc, *argv[];
 		if (socket_flag) {
 			pthread_create(&thread,NULL,(void *)socket_server,(void *)argv[0]);
 			bkgdset(COLOR_PAIR(3));
-			MultiTrack('m','i');
+			MultiTrack('m','k');
 		}
 
 		MainMenu();
@@ -7000,7 +7000,7 @@ char argc, *argv[];
 
 				case 'm':
 				case 'l':
-					MultiTrack(key,'i');
+					MultiTrack(key,'k');
 					MainMenu();
 					break;
 
