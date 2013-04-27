@@ -47,13 +47,15 @@ Working plugins:
 
 radio plugins
 -------------
-radio_FT736 : Yaesu FT-736 contributed by Hiroshi Iwamoto JH4XSY
-radio_ICR10 : Icom IC-R10 Receiver
-radio_PCR100: Icom PCR-100 Receiver (libpcr100 is needed to compile this)
+radio_FT736  : Yaesu FT-736 contributed by Hiroshi Iwamoto JH4XSY
+radio_ICR10  : Icom IC-R10 Receiver
+radio_PCR100 : Icom PCR-100 Receiver (libpcr100 is needed to compile this)
+radio_rigctld: Hamlib rigctld daemon
 
 rotor plugins
 -------------
 rotor_pictrack: created from the pictrack code in predict. Not tested.
+rotor_rotctld : Hamlib rotctld daemon
 
 the radio_print and rotor_print are test plugins that only print data to the shell.
 

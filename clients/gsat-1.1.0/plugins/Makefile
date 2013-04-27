@@ -4,7 +4,7 @@
 # Edit the TARGETS line to contain only the plugins you need
 #
 
-TARGETS=radio_FT736 radio_FT847 radio_ICR10 radio_TMD700 radio_PCR100 radio_print radio_test rotor_print rotor_pictrack
+TARGETS=radio_FT736 radio_FT847 radio_ICR10 radio_TMD700 radio_PCR100 radio_print radio_test radio_rigctld rotor_print rotor_pictrack rotor_rotctld
 
 PLUGINDIR=/usr/local/lib/gsat/plugins
 
@@ -31,11 +31,17 @@ radio_print:
 radio_test:
 	gcc -fPIC -shared radio_test.c -o radio_test
 
+radio_rigctld: radio_rigctld.c
+	gcc -fPIC -shared radio_rigctld.c -o radio_rigctld
+
 rotor_print:
 	gcc -fPIC -shared rotor_print.c -o rotor_print
 
 rotor_pictrack:
 	gcc -fPIC -shared rotor_pictrack.c -o rotor_pictrack
+
+rotor_rotctld: rotor_rotctld.c
+	gcc -fPIC -shared rotor_rotctld.c -o rotor_rotctld
 
 clean:
 	-rm -f *.o *~ $(TARGETS)
