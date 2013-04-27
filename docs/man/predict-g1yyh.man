@@ -1,0 +1,62 @@
+.\"                                      Hey, EMACS: -*- nroff -*-
+.\" First parameter, NAME, should be all caps
+.\" Second parameter, SECTION, should be 1-8, maybe w/ subsection
+.\" other parameters are allowed: see man(7), man(1)
+.TH PREDICT-G1YYH 1
+.\" Please adjust this date whenever revising the manpage.
+.\"
+.\" Some roff macros, for reference:
+.\" .nh        disable hyphenation
+.\" .hy        enable hyphenation
+.\" .ad l      left justify
+.\" .ad b      justify to both left and right margins
+.\" .nf        disable filling
+.\" .fi        enable filling
+.\" .br        insert line break
+.\" .sp <n>    insert n+1 empty lines
+.\" for manpage-specific macros, see man(7)
+.SH NAME
+predict-g1yyh \- satellite tracking program
+.SH DESCRIPTION
+The 
+.B predict-g1yyh 
+program is a variant on the 
+.B predict 
+satellite tracking program that includes patches from John Heaton, G1YYH, 
+that add new functionality.  This man page documents only the features that
+differ between 
+.B predict
+and
+.B predict-g1yyh.
+See the 
+.B predict
+man page for information on the features of the program that are not described
+here!
+.PP
+The user may step forwards/backwards through the satellites in the Single-Sat 
+display using the '+' and '-' keys, and may remove blank entries from the 
+Selector page.
+.PP
+MultiSat has been reformatted to display upcoming passes below the satellites 
+in view. Using the 'i' and 'k' keys you can toggle between distances in 
+Imperial or Kilometres.  
+Using the 'l' and 'm' keys you can toggle between displaying the normal 
+latitude/longitude or Maidenhead locators for the sub-satellite location.
+.PP
+The SingleSat display allows use of the arrow keys to change the frequency
+up/down and to move to the next/previous satellite using left/right arrows.
+.PP
+A new method of selecting satellites is implemented.  Instead of
+pressing a character next to a satellite name, a scrolling menu is provided.
+This means that the program is now capable of handling a much larget list
+of satellites, currently a maximum of 250.  
+.PP
+Finally, the height of the terminal window containing predict can be increased
+dynamically if you want to display more information than will fit on an 80x24
+terminal window!
+.SH SEE ALSO
+.BR predict (1),
+.br
+.SH AUTHOR
+This manual page was written by Bdale Garbee <bdale@gag.com>,
+for the Debian GNU/Linux system (but may be used by others).

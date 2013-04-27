@@ -1,0 +1,17 @@
+This package was debianized by Bdale Garbee <bdale@gag.com> on
+Tue, 14 Dec 1999 19:21:47 -0700.
+
+It was downloaded from ftp://ftp.amsat.org/amsat/software/Linux/
+
+Upstream Author:  John A. Magliacane, kd2bd@amsat.org
+
+Copyright:
+
+  PREDICT is copyright 1991-2002 by John A. Magliacane, KD2BD, and licensed
+  under the terms of the GPL version 2 or later.  A complete copy of the GPL
+  is provided on Debian systems in /usr/share/common-licenses/GPL.
+
+
+
+The predict-g1yyh version includes patches offered to me by John Heaton, 
+G1YYH, that were downloaded from http://voyager.mcc.ac.uk/Predict/.

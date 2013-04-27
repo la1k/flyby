@@ -1,0 +1,24 @@
+* The predict_2.2.3.orig.tar.gz differs from the upstream
+  predict-2.2.3.tar.gz in that the possibly non-DFSG compliant
+  .wav files from AT&T have been replaced with a set of
+  files generated using festival text to speech tools. Also
+  removed some clients/gsat-1.1.0/config.[log,cache,status]
+  files.
+
+* Included Ralf Baechle, DO1GRB, gsat-1.1.0 plugin support for the
+  Yaesu FT-847 transceiver.
+  ftp://ftp.linux-mips.net/pub/ham/predict-2.2.2/
+
+* Added a new UDP socket command (GET_SAT_AT) to return PREDICT's
+  calculation for a satellite at a given time to networked clients.
+  This allows for applications to do non-real-time planning, or
+  generate responses for web queries for example. (predictat patch).
+
+* The predict-g1yyh is predict-2.2.1jh4.c plus the predictat patch.
+  (John Heaton, G1YYH, has added 2.2.3 fixes)
+
+* This earthtrack application only uses xplanet, and includes a -o
+  switch to send the output to a file like G1YYH's filetrack and a
+  -p switch to set the projection (default ortho).
+
+ -- A. Maitland Bottoms <bottoms@debian.org>, Sat,  5 Aug 2006 20:44:50 -0400

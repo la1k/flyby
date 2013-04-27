@@ -1,0 +1,11 @@
+.TH GEOSAT 1 "20 December 1999"
+.SH NAME
+geosat \- Calculate Az and El to Geostationary Satellites
+.SH SYNOPSIS
+\fB geosat\fP 
+.SH DESCRIPTION
+\fBGEOSAT\fP is a small program which prompts for a longtitude, and displays
+the azimuth and elevation to a geostationary satellite at that longitude.  The
+location of the observer is taken from the data files for predict(1).
+.SH AUTHOR
+This man page was written by Bdale Garbee, N3EUA, for Debian GNU/Linux.
