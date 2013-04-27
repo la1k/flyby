@@ -171,15 +171,17 @@ double	tsince, jul_epoch, jul_utc, eclipse_depth=0,
 	sun_azi, sun_ele, daynum, fm, fk, age, aostime,
 	lostime, ax, ay, az, rx, ry, rz, squint, alat, alon,
 	sun_ra, sun_dec, sun_lat, sun_lon, sun_range, sun_range_rate,
-	moon_az, moon_el, moon_dx, moon_ra, moon_dec, moon_gha, moon_dv;
+	moon_az, moon_el, moon_dx, moon_ra, moon_dec, moon_gha, moon_dv,
+	horizon=0.0;
 
 char	qthfile[50], tlefile[50], dbfile[50], temp[80], output[25],
-	serial_port[15], resave=0, reload_tle=0, netport[8],
+	serial_port[15], rotctld_host[256], rotctld_port[6]="4533\0\0",
+	resave=0, reload_tle=0, netport[8],
 	once_per_second=0, ephem[5], sat_sun_status, findsun,
 	calc_squint, database=0, xterm, io_lat='N', io_lon='W';
 
 int	indx, antfd, iaz, iel, ma256, isplat, isplong, socket_flag=0,
-	Flags=0;
+	Flags=0, rotctld_socket;
 
 long	rv, irk;
 
@@ -1976,6 +1978,27 @@ double elevation, azimuth;
 	if (n<0)
 	{
 		bailout("Error Writing To Antenna Port");
+		exit(-1);
+	}
+}
+
+void TrackDataNet(int sockd, double elevation, double azimuth)
+{
+	char message[30];
+
+	/* If positions are sent too often, rotctld will queue
+	   them and the antenna will lag behind. Therefore, we wait
+	   for confirmation from last command before sending the
+	   next. */
+
+	if (recv(sockd, message, sizeof(message), MSG_DONTWAIT) < 1)
+		return;
+
+	sprintf(message, "P %.2f %.2f\n", azimuth, elevation);
+	int len = strlen(message);
+	if (send(sockd, message, len, 0) != len)
+	{
+		bailout("Failed to send to rotctld");
 		exit(-1);
 	}
 }
@@ -5065,9 +5088,9 @@ char speak;
 				mvprintw(12,11,"               ");
 		}
 
-		if (antfd!=-1)
+		if (antfd!=-1 || rotctld_socket!=-1)
 		{
-			if (sat_ele>=0.0)
+			if (sat_ele>=horizon)
 				mvprintw(18+bshift,67,"   Active   ");
 			else
 				mvprintw(18+bshift,67,"Standing  By");
@@ -5225,16 +5248,18 @@ char speak;
 		mvprintw(21,22,"Orbit Number: %ld",rv);
 
 		/* Send data to serial port antenna tracker
+		   and rotctld,
 		   either as needed (when it changes), or
 		   once per second. */
 
-		if (sat_ele>=0.0 && antfd!=-1)
+		if (sat_ele>=horizon)
 		{
 			newtime=(long)time(NULL);
 
 			if ((oldel!=iel || oldaz!=iaz) || (once_per_second && newtime>lasttime))
 			{
-				TrackDataOut(antfd,(float)iel,(float)iaz);
+				if (antfd!=-1) TrackDataOut(antfd,(float)iel,(float)iaz);
+				if (rotctld_socket!=-1) TrackDataNet(rotctld_socket,sat_ele,sat_azi);
 				oldel=iel;
 				oldaz=iaz;
 				lasttime=newtime;
@@ -6078,12 +6103,16 @@ void ProgramInfo()
 	else
 		printw("Not loaded\n");
 
-	if (antfd!=-1)
+	if (antfd!=-1 || rotctld_socket!=-1)
 	{
-		printw("\t\tAutoTracking    : Sending data to %s",serial_port);
-
+		printw("\t\tAutoTracking    : Enabled");
 		if (once_per_second)
-			printw(" every second");
+			printw(" - Update every second");
+		printw("\n");
+		if (antfd!=-1) printw("\t\t - Sending data to %s\n",serial_port);
+		if (rotctld_socket!=-1) printw("\t\t - Sending data to %s:%s\n", rotctld_host, rotctld_port);
+
+		printw("\t\tTracking horizon: %.2f degrees. ", horizon);
 
 		printw("\n");
 	}
@@ -6491,6 +6520,7 @@ char argc, *argv[];
 	pthread_t thread;
 	char *env=NULL;
 	FILE *db;
+	struct addrinfo hints, *servinfo, *servinfop;
 
 	/* Set up translation table for computing TLE checksums */
 
@@ -6512,6 +6542,11 @@ char argc, *argv[];
 		
 	y=argc-1;
 	antfd=-1;
+	rotctld_socket=-1;
+
+	memset(&hints, 0, sizeof hints);
+	hints.ai_family = AF_UNSPEC;
+	hints.ai_socktype = SOCK_STREAM;
 
 
 	/* Scan command-line arguments */
@@ -6593,6 +6628,38 @@ char argc, *argv[];
 			if (z<=y && argv[z][0] && argv[z][0]!='-')
 				strncpy(serial_port,argv[z],13);
 			once_per_second=1;
+		}
+
+		if (strcmp(argv[x],"-A")==0)
+		{
+			z=x+1;
+			if (z<=y && argv[z][0] && argv[z][0]!='-')
+				strncpy(rotctld_host,argv[z],sizeof(rotctld_host)-1);
+			rotctld_host[sizeof(rotctld_host)-1] = 0;
+		}
+
+		if (strcmp(argv[x],"-A1")==0)
+		{
+			z=x+1;
+			if (z<=y && argv[z][0] && argv[z][0]!='-')
+				strncpy(rotctld_host,argv[z],sizeof(rotctld_host)-1);
+			rotctld_host[sizeof(rotctld_host)-1] = 0;
+			once_per_second=1;
+		}
+
+		if (strcmp(argv[x],"-AP")==0)
+		{
+			z=x+1;
+			if (z<=y && argv[z][0] && argv[z][0]!='-')
+				strncpy(rotctld_port,argv[z],sizeof(rotctld_port)-1);
+			rotctld_port[sizeof(rotctld_port)-1] = 0;
+		}
+
+		if (strcmp(argv[x],"-h")==0)
+		{
+			z=x+1;
+			if (z<=y && argv[z][0])
+				horizon=strtod(argv[z],NULL);
 		}
 
 		if (strcmp(argv[x],"-o")==0)
@@ -6829,7 +6896,42 @@ char argc, *argv[];
 				exit(-1);
 			}
 		}
-	
+
+		/* Create socket and connect to rotctld. */
+
+		if (rotctld_host[0]!=0)
+		{
+			if (getaddrinfo(rotctld_host, rotctld_port, &hints, &servinfo))
+			{
+				bailout("getaddrinfo error");
+				exit(-1);
+			}
+
+			for(servinfop = servinfo; servinfop != NULL; servinfop = servinfop->ai_next)
+			{
+				if ((rotctld_socket = socket(servinfop->ai_family, servinfop->ai_socktype,
+					servinfop->ai_protocol)) == -1) {
+					continue;
+				}
+				if (connect(rotctld_socket, servinfop->ai_addr, servinfop->ai_addrlen) == -1)
+				{
+					close(rotctld_socket);
+					continue;
+				}
+
+				break;
+			}
+			if (servinfop == NULL)
+			{
+				bailout("Unable to connect to rotctld");
+				exit(-1);
+			}
+			freeaddrinfo(servinfo);
+			/* TrackDataNet() will wait for confirmation of a command before sending
+			   the next so we bootstrap this by asking for the current position */
+			send(rotctld_socket, "p\n", 2, 0);
+		}
+
 		/* Socket activated here.  Remember that
 		   the socket data is updated only when
 		   running in the real-time tracking modes. */
@@ -6942,6 +7044,12 @@ char argc, *argv[];
 		{
 			tcsetattr(antfd,TCSANOW,&oldtty);
 			close(antfd);
+		}
+
+		if (rotctld_socket!=-1)
+		{
+			send(rotctld_socket, "q\n", 2, 0);
+			close(rotctld_socket);
 		}
 
 		curs_set(1);	

@@ -5,6 +5,8 @@ predict \- Track and predict passes of satellites in Earth orbit
 .SH SYNOPSIS
 predict [-u \fItle_update_source\fP] [-t \fItlefile\fP]
 [-q \fIqthfile\fP] [-a \fIserial_port\fP] [-a1 \fIserial_port\fP]
+[-A \fIrotctld_host\fP] [-A1 \fIrotctld_host\fP] [-AP \fIrotctld_port\fP]
+[-h \fIhorzion\fP]
 [-n \fInetwork_port\fP]
 [-f \fIsat_name starting_date/time ending_date/time\fP]
 [-p \fIsat_name starting_date/time\fP]
@@ -410,6 +412,25 @@ not (such as the ones by SAI), the \fI-a1\fP option
 may be used:
 
 	\fIpredict -a1 /dev/ttyS0\fP
+
+Similarly, \fBPREDICT\fP can direct tracking data to a Hamlib rotctld
+daemon using the \fI-A\fP command line option.  For example:
+
+	\fIpredict -A localhost\fP
+
+will send AZ/EL tracking data to localhost on the default rotctld port
+(4533).  The \fI-A1\fP command line option is analogous to \fI-a1\fP
+with one small exception: \fBPREDICT\fP waits for acknowledgment of
+the previous command before it sends the position.  This prevents
+queuing of commands when using a slow rotator controller.
+A non-standard rotctld port can be set using the \fI-AP\fP command line
+option.
+
+Both serial port and rotctld tracking starts when the satellite comes
+above the horizon. A negative horzion may be set using the \fI-h\fP
+command line option. If the default horizon (0.0) is used, the antenna
+will not start moving before AOS. A negative horizon will let the
+antenna rotate into position before AOS.
 
 .SH ADDITIONAL OPTIONS
 The \fI-f\fP command-line option, when followed by a satellite name or
