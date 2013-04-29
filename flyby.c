@@ -50,8 +50,6 @@
 #include <fcntl.h>
 #include <termios.h>
 
-#include "flyby.h"
-
 #define maxsats		250
 #define ARRAY_SIZE(a) (sizeof(a) / sizeof(a[0]))
 #define halfdelaytime	10
@@ -139,6 +137,8 @@ int PredictAt ( int iSatID, time_t ttDayNum, double dLat, double dLong );
 #define EPOCH_RESTART_FLAG     0x001000
 #define VISIBLE_FLAG           0x002000
 #define SAT_ECLIPSED_FLAG      0x004000
+
+char *flybypath={"/etc/flyby"}, soundcard=0, *version={"0.1"};
 
 struct	{  char line1[70];
 	   char line2[70];
