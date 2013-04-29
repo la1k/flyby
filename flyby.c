@@ -11,6 +11,7 @@
 *****************************************************************************
 *    Code to send live AZ/EL tracking data to the serial port for antenna   *
 *    tracking was contributed by Vittorio Benvenuti, I3VFJ : 13-Jul-2000    *
+*    (Removed in flyby fork -- Knut Magnus Kvamtrø/LA3DPA)                  *
 *****************************************************************************
 *   SGP4/SDP4 code was derived from Pascal routines originally written by   *
 *       Dr. TS Kelso, and converted to C by Neoklis Kyriazis, 5B4AZ         *
@@ -48,7 +49,6 @@
 #include <netdb.h>
 #include <unistd.h>
 #include <fcntl.h>
-#include <termios.h>
 
 #define maxsats		250
 #define ARRAY_SIZE(a) (sizeof(a) / sizeof(a[0]))
@@ -195,14 +195,14 @@ double	tsince, jul_epoch, jul_utc, eclipse_depth=0,
 	horizon=0.0;
 
 char	qthfile[50], tlefile[50], dbfile[50], temp[80], output[25],
-	serial_port[15], rotctld_host[256], rotctld_port[6]="4533\0\0",
+	rotctld_host[256], rotctld_port[6]="4533\0\0",
 	uplink_host[256], uplink_port[6]="4532\0\0", uplink_vfo[30],
 	downlink_host[256], downlink_port[6]="4532\0\0", downlink_vfo[30],
 	resave=0, reload_tle=0, netport[8],
 	once_per_second=0, ephem[5], sat_sun_status, findsun,
 	calc_squint, database=0, xterm, io_lat='N', io_lon='W', maidenstr[9];
 
-int	indx, antfd, iaz, iel, ma256, isplat, isplong, socket_flag=0,
+int	indx, iaz, iel, ma256, isplat, isplong, socket_flag=0,
 	Flags=0, rotctld_socket, uplink_socket, downlink_socket, totalsats=0;
 
 long	rv, irk;
@@ -217,7 +217,7 @@ char	visibility_array[maxsats], tracking_mode[30];
 float	az_array[maxsats], el_array[maxsats], long_array[maxsats], lat_array[maxsats],
 	footprint_array[maxsats], range_array[maxsats], altitude_array[maxsats],
 	velocity_array[maxsats], eclipse_depth_array[maxsats], phase_array[maxsats],
-squint_array[maxsats];
+  squint_array[maxsats];
 
 double	doppler[maxsats], nextevent[maxsats];
 
@@ -1991,27 +1991,6 @@ int sock_readline(int sockd, char *message, size_t bufsize)
 	return pos;
 }
 
-void TrackDataOut(antfd, elevation, azimuth)
-int antfd;
-double elevation, azimuth;
-{
-	/* This function sends Azimuth and Elevation data
-	   to an antenna tracker connected to the serial port */
-
-	int n, port;
-	char message[30]="\n";
-
-	port=antfd;
-
-	sprintf(message, "AZ%3.1f EL%3.1f \x0D\x0A", azimuth,elevation);
-	n=write(port,message,strlen(message));
-
-	if (n<0) {
-		bailout("Error Writing To Antenna Port");
-		exit(-1);
-	}
-}
-
 void TrackDataNet(int sockd, double elevation, double azimuth)
 {
 	char message[30];
@@ -2476,7 +2455,7 @@ void Banner()
 
 	attrset(COLOR_PAIR(6)|A_REVERSE|A_BOLD);
 	mvprintw(2,18,"                                                     ");
-	mvprintw(3,18,"                --== flyby v%s ==--               ",version);
+	mvprintw(3,18,"                --== flyby v%s ==--                 ",version);
 	mvprintw(4,18,"                                                     ");
 	mvprintw(5,18,"   based on PREDICT, by John A. Magliacane (KD2BD)   ");
 	mvprintw(6,18,"         with mods by John Heaton (G1YYH)            ");
@@ -3303,7 +3282,7 @@ int Select()
 	clear();
 
 	mvprintw(0,0,"                                                                                ");
-	mvprintw(1,0,"  flyby Satellite Selector                                                    ");
+	mvprintw(1,0,"  flyby Satellite Selector                                                      ");
 	mvprintw(2,0,"                                                                                ");
 
 	attrset(COLOR_PAIR(3)|A_BOLD);
@@ -5029,7 +5008,7 @@ int x;
 
 		attrset(COLOR_PAIR(6)|A_REVERSE|A_BOLD);
 		mvprintw(0,0,"                                                                                ");
-		mvprintw(1,0,"  flyby tracking:                                                            ");
+		mvprintw(1,0,"  flyby tracking:                                                               ");
 		mvprintw(2,0,"                                                                                ");
 		mvprintw(1,21,"%-24s (%d)", sat[x].name, sat[x].catnum);
 
@@ -5120,7 +5099,7 @@ int x;
 					mvprintw(11,11,"               ");
 			}
 
-			if (antfd!=-1 || rotctld_socket!=-1) {
+			if (rotctld_socket!=-1) {
 				if (sat_ele>=horizon)
 					mvprintw(17,67,"   Active   ");
 				else
@@ -5217,16 +5196,14 @@ int x;
 
 			mvprintw(20,1,"Orbit Number: %ld",rv);
 
-			/* Send data to serial port antenna tracker
-			and rotctld,
-		   	either as needed (when it changes), or
-		   	once per second. */
+			/* Send data to rotctld, either when it changes, or at a given interval
+       * (as specified by the user). TODO: Implement this, currently fixed at
+       * once per second. */
 
 			if (sat_ele>=horizon) {
 				newtime=(long)time(NULL);
 
 				if ((oldel!=iel || oldaz!=iaz) || (once_per_second && newtime>lasttime)) {
-					if (antfd!=-1) TrackDataOut(antfd,(float)iel,(float)iaz);
 					if (rotctld_socket!=-1) TrackDataNet(rotctld_socket,sat_ele,sat_azi);
 					oldel=iel;
 					oldaz=iaz;
@@ -6056,9 +6033,8 @@ void ProgramInfo()
 	else
 		printw("Not loaded\n");
 
-	if (antfd!=-1 || rotctld_socket!=-1) {
+	if (rotctld_socket!=-1) {
 		printw("\t\tAutoTracking    : Enabled\n");
-		if (antfd!=-1) printw("\t\t - Serial port: %s\n",serial_port);
 		if (rotctld_socket!=-1) printw("\t\t - Connected to rotctld: %s:%s\n", rotctld_host, rotctld_port);
 
 		printw("\t\tTracking horizon: %.2f degrees. ", horizon);
@@ -6432,7 +6408,6 @@ char argc, *argv[];
 	char updatefile[80], quickfind=0, quickpredict=0,
 	     quickstring[40], outputfile[42],
 	     tle_cli[50], qth_cli[50], interactive=0;
-	struct termios oldtty, newtty;
 	pthread_t thread;
 	char *env=NULL;
 	FILE *db;
@@ -6453,11 +6428,9 @@ char argc, *argv[];
 	qth_cli[0]=0;
 	dbfile[0]=0;
 	netport[0]=0;
-	serial_port[0]=0;
 	once_per_second=0;
 
 	y=argc-1;
-	antfd=-1;
 	rotctld_socket=-1;
 	uplink_socket=-1;
 	downlink_socket=-1;
@@ -6517,20 +6490,7 @@ char argc, *argv[];
 				strncpy(qth_cli,argv[z],48);
 		}
 
-		if (strcmp(argv[x],"-a")==0) {
-			z=x+1;
-			if (z<=y && argv[z][0] && argv[z][0]!='-')
-				strncpy(serial_port,argv[z],13);
-		}
-
-		if (strcmp(argv[x],"-a1")==0) {
-			z=x+1;
-			if (z<=y && argv[z][0] && argv[z][0]!='-')
-				strncpy(serial_port,argv[z],13);
-			once_per_second=1;
-		}
-
-		if (strcmp(argv[x],"-A")==0)
+		if (strcmp(argv[x],"-a")==0)
 		{
 			z=x+1;
 			if (z<=y && argv[z][0] && argv[z][0]!='-')
@@ -6538,7 +6498,7 @@ char argc, *argv[];
 			rotctld_host[sizeof(rotctld_host)-1] = 0;
 		}
 
-		if (strcmp(argv[x],"-A1")==0)
+		if (strcmp(argv[x],"-a1")==0)
 		{
 			z=x+1;
 			if (z<=y && argv[z][0] && argv[z][0]!='-')
@@ -6547,7 +6507,7 @@ char argc, *argv[];
 			once_per_second=1;
 		}
 
-		if (strcmp(argv[x],"-P")==0)
+		if (strcmp(argv[x],"-ap")==0)
 		{
 			z=x+1;
 			if (z<=y && argv[z][0] && argv[z][0]!='-')
@@ -6771,42 +6731,7 @@ char argc, *argv[];
 	}
 
 	if (x==3) {
-		/* Open serial port to send data to
-		   the antenna tracker if present. */
-
-		if (serial_port[0]!=0) {
-			/* Make sure there's no trailing '/' */
-
-			x=strlen(serial_port);
-
-			if (serial_port[x-1]=='/')
-				serial_port[x-1]=0;
-
-			antfd=open(serial_port, O_WRONLY|O_NOCTTY);
-
-			if (antfd!=-1) {
-				/* Set up serial port */
-
-				tcgetattr(antfd, &oldtty);
-				memset(&newtty, 0, sizeof(newtty));
-
-				/* 9600 baud, 8-bits, no parity,
-				   1-stop bit, no handshaking */
-
-				newtty.c_cflag=B9600|CS8|CLOCAL;
-				newtty.c_iflag=IGNPAR;
-				newtty.c_oflag=0;
-				newtty.c_lflag=0;
-
-				tcflush(antfd, TCIFLUSH);
-				tcsetattr(antfd, TCSANOW, &newtty);
-			} else {
-				bailout("Unable To Open Antenna Port");
-				exit(-1);
-			}
-		}
-
-		/* Create socket and connect to rotctld. */
+		/* Create socket and connect to rotctld if present. */
 
 		if (rotctld_host[0]!=0)
 		{
@@ -7009,11 +6934,6 @@ char argc, *argv[];
 			}
 
 		} while (key!='q' && key!=27);
-
-		if (antfd!=-1) {
-			tcsetattr(antfd,TCSANOW,&oldtty);
-			close(antfd);
-		}
 
 		if (rotctld_socket!=-1)
 		{
