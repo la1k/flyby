@@ -1,0 +1,8 @@
+#!/bin/bash
+echo "Downloading TLE data..."
+wget www.celestrak.com/NORAD/elements/amateur.txt -O /tmp/amateur.txt
+wget www.celestrak.com/NORAD/elements/visual.txt -O /tmp/visual.txt
+wget www.celestrak.com/NORAD/elements/weather.txt -O /tmp/weather.txt
+echo "Updating flyby TLE data..."
+./flyby -u /tmp/amateur.txt /tmp/visual.txt /tmp/weather.txt
+rm -f /tmp/amateur.txt /tmp/visual.txt /tmp/weather.txt
