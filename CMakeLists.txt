@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 2.6)
 project(flyby)
 
-add_definitions(-O3 -s -fomit-frame-pointer -pthread)
+add_definitions(-Wall -O3 -s -fomit-frame-pointer -pthread)
 add_executable(flyby flyby.c)
 
 target_link_libraries(flyby pthread)

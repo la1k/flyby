@@ -1037,7 +1037,7 @@ void Deep(int ientry, tle_t * tle, deep_arg_t * deep_arg)
 	g533, gam, sinq, sinzf, sis, sl, sll, sls, stem, temp, temp1, x1,
 	x2, x2li, x2omi, x3, x4, x5, x6, x7, x8, xl, xldot, xmao, xnddt,
 	xndot, xno2, xnodce, xnoi, xomi, xpidot, z1, z11, z12, z13, z2,
-	z21, z22, z23, z3, z31, z32, z33, ze, zf, zm, zmo, zn, zsing,
+	z21, z22, z23, z3, z31, z32, z33, ze, zf, zm, zn, zsing,
 	zsinh, zsini, zcosg, zcosh, zcosi, delt=0, ft=0;
 
 	switch (ientry) {
@@ -1089,7 +1089,6 @@ void Deep(int ientry, tle_t * tle, deep_arg_t * deep_arg)
 		cc=c1ss;
 		zn=zns;
 		ze=zes;
-		zmo=zmos;
 		xnoi=1/xnq;
 
 		/* Loop breaks when Solar terms are done a second */
@@ -1189,7 +1188,6 @@ void Deep(int ientry, tle_t * tle, deep_arg_t * deep_arg)
 			zn=znl;
 			cc=c1l;
 			ze=zel;
-			zmo=zmol;
 			SetFlag(LUNAR_TERMS_DONE_FLAG);
 		}
 
@@ -3424,9 +3422,8 @@ double CurrentDaynum()
 	 *            of days since 31Dec79 00:00:00 UTC (daynum 0) */
 
         struct timeb tptr;
-        int x;
 
-        x=ftime(&tptr);
+        ftime(&tptr);
 
         return ((((double)tptr.time+0.001*(double)tptr.millitm)/86400.0)-3651.0);
 }
@@ -3604,7 +3601,7 @@ double daynum;
 	http://www.geocities.com/s_perona/ingles/poslun.htm. */
 
 	double  jd, ss, t, t1, t2, t3, d, ff, l1, m, m1, ex, om, l,
-	b, w1, w2, bt, p, lm, h, ra, dec, z, ob, n, e, el,
+	b, w1, w2, bt, p, lm, h, ra, dec, z, ob, n, el,
 	az, teg, th, mm, dv;
 
 	jd=daynum+2444238.5;
@@ -3743,7 +3740,6 @@ double daynum;
 	/* dec = declination */
 
 	n=qth.stnlat*deg2rad;    /* North latitude of tracking station */
-	e=-qth.stnlong*deg2rad;  /* East longitude of tracking station */
 
 	/* Find siderial time in radians */
 
@@ -4970,11 +4966,11 @@ int x;
 	   of the satellite being tracked. */
 
 	int	ans, oldaz=0, oldel=0, length, xponder=0,
-		polarity=0, tshift, bshift;
-	char	approaching=0, command[80], comsat, aos_alarm=0,
-		geostationary=0, aoshappens=0, decayed=0, eclipse_alarm=0,
-		visibility=0, old_visibility=0, los_alarm=0;
-	double	oldtime=0.0, nextaos=0.0, lostime=0.0, aoslos=0.0,
+		polarity=0;
+	char	comsat, aos_alarm=0,
+		geostationary=0, aoshappens=0, decayed=0,
+		visibility=0;
+	double	nextaos=0.0, lostime=0.0, aoslos=0.0,
 		downlink=0.0, uplink=0.0, downlink_start=0.0,
 		downlink_end=0.0, uplink_start=0.0, uplink_end=0.0,
 		dopp, doppler100=0.0, delay, loss, shift;
@@ -4987,12 +4983,8 @@ int x;
 
 		if (sat_db[x].transponders>0) {
 			comsat=1;
-			tshift=0;
-			bshift=0;
 		} else {
 			comsat=0;
-			tshift=2;
-			bshift=-2;
 		}
 
 		if (comsat) {
@@ -5206,8 +5198,6 @@ int x;
 			} else {
 				lostime=0.0;
 				aos_alarm=0;
-				los_alarm=0;
-				eclipse_alarm=0;
 
 				if (comsat) {
 					mvprintw(11,32,"                ");
@@ -5481,7 +5471,7 @@ char multitype, disttype;
 			ok2predict[maxsats];
 
 	double		aos[maxsats],
-			nextcalctime=0.0, los[maxsats], aoslos[maxsats];
+			los[maxsats], aoslos[maxsats];
 
 	if (xterm)
 		fprintf(stderr,"\033]0;PREDICT: Multi-Satellite Tracking Mode\007");
@@ -5867,7 +5857,6 @@ char multitype, disttype;
 		if (reload_tle || ans=='r') {
 			ReadDataFiles();
 			reload_tle=0;
-			nextcalctime=0.0;
 		}
 
 	} while (ans!='q' && ans!=27);
