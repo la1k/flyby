@@ -9,8 +9,8 @@ Knut Magnus Kvamtrø (LA3DPA):
  - Removal of unnecessary features and client applications.
 
 The flyby code is based on predict-g1yyh from the Debian Project, which
-is an extended version of PREDICT version 2.2.3 by John A. Magliacane
-(KD2BD) <kd2bd@amsat.org> and others.
+is an extended version of PREDICT by John A. Magliacane (KD2BD)
+<kd2bd@amsat.org> and others.
 
 
 Authors of the Debian Package
