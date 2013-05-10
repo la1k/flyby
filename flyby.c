@@ -52,7 +52,7 @@
 
 #define maxsats		250
 #define ARRAY_SIZE(a) (sizeof(a) / sizeof(a[0]))
-#define halfdelaytime	10
+#define halfdelaytime	5
 
 int PredictAt ( int iSatID, time_t ttDayNum, double dLat, double dLong );
 
