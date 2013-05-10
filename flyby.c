@@ -5531,25 +5531,21 @@ char multitype, disttype;
 					getMaidenHead(sat_lat,sat_lon,maidenstr);
 	if (multitype=='m') {
 		mvprintw(y+5,1,
-        	((strlen(sat[indx].name)>12)
-		 ? " #%-12d%5.1f  %5.1f  %7s  %6.0f %6.0f %c       %8s "
-		 : " %-13s%5.1f  %5.1f  %7s  %6.0f %6.0f %c       %8s "),
-        	((strlen(sat[indx].name)>12)
-		 ? (const char *)sat[indx].catnum
-		 : sat[indx].name),
-        	sat_azi, sat_ele, maidenstr,
-        	((disttype=='i') ? sat_alt*km2mi : sat_alt),
-        	((disttype=='i') ? sat_range*km2mi : sat_range),
-        	sunstat, Daynum2String(los[indx]-daynum,8,"%H:%M:%S"));
+    " %-13s%5.1f  %5.1f  %7s  %6.0f %6.0f %c       %8s ",
+    ((strlen(sat[indx].name)>12)
+      ? Abbreviate(sat[indx].name,12)
+		  : sat[indx].name),
+    sat_azi, sat_ele, maidenstr,
+    ((disttype=='i') ? sat_alt*km2mi : sat_alt),
+    ((disttype=='i') ? sat_range*km2mi : sat_range),
+    sunstat, Daynum2String(los[indx]-daynum,8,"%H:%M:%S"));
 
 	} else {
 		mvprintw(y+5,1,
-        	((strlen(sat[indx].name)>12)
-		 ? " #%-12d%5.1f  %5.1f  %3.0f  %3.0f %6.0f %6.0f %c       %8s "
-		 : " %-13s%5.1f  %5.1f  %3.0f  %3.0f %6.0f %6.0f %c       %8s "),
-		((strlen(sat[indx].name)>12)
-		 ? (const char *)sat[indx].catnum
-		 : sat[indx].name),
+		" %-13s%5.1f  %5.1f  %3.0f  %3.0f %6.0f %6.0f %c       %8s ",
+    ((strlen(sat[indx].name)>12)
+		  ? Abbreviate(sat[indx].name,12)
+		  : sat[indx].name),
 		sat_azi, sat_ele, sat_lat, 360.0-sat_lon,
 		((disttype=='i') ? sat_alt*km2mi : sat_alt),
 		((disttype=='i') ? sat_range*km2mi : sat_range),
@@ -5701,12 +5697,10 @@ char multitype, disttype;
 						attrset(COLOR_PAIR(4));
 	if (multitype=='m')
 						mvprintw(w+y,1,
+	" %-13s%5.1f  %5.1f  %7s  %6.0f %6.0f %c   %12s ",
 	(strlen(sat[(int)satindex[indx]].name)>12)
-	? " #%-12d%5.1f  %5.1f  %7s  %6.0f %6.0f %c   %12s "
-	: " %-13s%5.1f  %5.1f  %7s  %6.0f %6.0f %c   %12s ",
-	(strlen(sat[(int)satindex[indx]].name)>12)
-	? (const char *)sat[(int)satindex[indx]].catnum
-	: sat[(int)satindex[indx]].name,
+    ? Abbreviate(sat[(int)satindex[indx]].name,12)
+	  : sat[(int)satindex[indx]].name,
 	sat_azi, sat_ele, maidenstr,
 	(disttype=='i') ? sat_alt*km2mi : sat_alt,
 	(disttype=='i') ? sat_range*km2mi : sat_range,
@@ -5716,11 +5710,9 @@ char multitype, disttype;
 	: Daynum2String(aos[(int)satindex[indx]],12,"%j.%H:%M:%S"));
 					else
 						mvprintw(w+y,1,
+            " %-13s%5.1f  %5.1f  %3.0f  %3.0f %6.0f %6.0f %c   %12s ",
 	(strlen(sat[(int)satindex[indx]].name)>12)
-		? " #%-12d%5.1f  %5.1f  %3.0f  %3.0f %6.0f %6.0f %c   %12s "
-		: " %-13s%5.1f  %5.1f  %3.0f  %3.0f %6.0f %6.0f %c   %12s ",
-	(strlen(sat[(int)satindex[indx]].name)>12)
-		? (const char *)sat[(int)satindex[indx]].catnum
+    ? Abbreviate(sat[(int)satindex[indx]].name,12)
 		: sat[(int)satindex[indx]].name,
 	sat_azi, sat_ele, sat_lat, 360.0-sat_lon,
 	(disttype=='i') ? sat_alt*km2mi : sat_alt,
@@ -5772,11 +5764,9 @@ char multitype, disttype;
 					attrset(COLOR_PAIR(3));
 	if (multitype=='m')
 						mvprintw(w+y,1,
+		" %-13s%5.1f  %5.1f  %7s  %6.0f %6.0f %c   %12s ",
 	(strlen(sat[(int)satindex[indx]].name)>12)
-		? " #%-12d%5.1f  %5.1f  %7s  %6.0f %6.0f %c   %12s "
-		: " %-13s%5.1f  %5.1f  %7s  %6.0f %6.0f %c   %12s ",
-	(strlen(sat[(int)satindex[indx]].name)>12)
-		? (const char *)sat[(int)satindex[indx]].catnum
+		? Abbreviate(sat[(int)satindex[indx]].name,12)
 		: sat[(int)satindex[indx]].name,
 	sat_azi, sat_ele, maidenstr,
 	(disttype=='i') ? sat_alt*km2mi : sat_alt,
@@ -5784,11 +5774,9 @@ char multitype, disttype;
 	sunstat, "*GeoS-NoAOS*");
 					else
 						mvprintw(w+y,1,
+		" %-13s%5.1f  %5.1f  %3.0f  %3.0f %6.0f %6.0f %c   %12s ",
 	(strlen(sat[(int)satindex[indx]].name)>12)
-		? " #%-12d%5.1f  %5.1f  %3.0f  %3.0f %6.0f %6.0f %c   %12s "
-		: " %-13s%5.1f  %5.1f  %3.0f  %3.0f %6.0f %6.0f %c   %12s ",
-	(strlen(sat[(int)satindex[indx]].name)>12)
-		? (const char *)sat[(int)satindex[indx]].catnum
+    ? Abbreviate(sat[(int)satindex[indx]].name,12)
 		: sat[(int)satindex[indx]].name,
 	sat_azi, sat_ele, sat_lat, 360.0-sat_lon,
 	(disttype=='i') ? sat_alt*km2mi : sat_alt,
