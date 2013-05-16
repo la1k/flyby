@@ -2396,7 +2396,7 @@ char *predict_name;
 			ok=1;
 		}
 
-		if (strncmp("PREDICT",buf,7)==0) {
+		if (strncmp("flyby",buf,7)==0) {
 			/* Parse "buf" for satellite name and arguments */
 			for (i=0; buf[i]!=32 && buf[i]!=0 && i<39; i++);
 
@@ -3104,7 +3104,7 @@ char *string;
 
 			attrset(COLOR_PAIR(6)|A_REVERSE|A_BOLD);
 			mvprintw(0,0,"                                                                                ");
-			mvprintw(1,0,"  PREDICT Keplerian Database Auto Update                                        ");
+			mvprintw(1,0,"  flyby Keplerian Database Auto Update                                          ");
 			mvprintw(2,0,"                                                                                ");
 
 			attrset(COLOR_PAIR(4)|A_BOLD);
@@ -3193,7 +3193,7 @@ char *string;
 									clear();
 
 									mvprintw(0,0,"                                                                                ");
-									mvprintw(1,0,"  PREDICT Orbital Data : Updating.....                                          ");
+									mvprintw(1,0,"  flyby Orbital Data : Updating...                                              ");
 									mvprintw(2,0,"                                                                                ");
 
 									attrset(COLOR_PAIR(2));
@@ -3813,7 +3813,7 @@ double daynum;
 void PreCalc(x)
 int x;
 {
-	/* This function copies TLE data from PREDICT's sat structure
+	/* This function copies TLE data from flyby's sat structure
 	   to the SGP4/SDP4's single dimensioned tle structure, and
 	   prepares the tracking code for the update. */
 
@@ -4178,7 +4178,7 @@ char *string, mode;
 			attrset(COLOR_PAIR(6)|A_REVERSE|A_BOLD);
 			clear();
 			mvprintw(0,0,"                                                                                ");
-			mvprintw(1,0,"  PREDICT Calendar :                                                            ");
+			mvprintw(1,0,"  flyby Calendar :                                                              ");
 			mvprintw(1,21,"%-24s", type);
 			if (mode == 'p' || mode == 'v' || mode == 's') {
 				mvprintw(1,60, "%s (%d)", sat[indx].name, sat[indx].catnum);
@@ -4350,7 +4350,7 @@ char mode;
 			if (mode=='v')
 				strcpy(type,"Visual");
 
-			fprintf(stderr,"\033]0;PREDICT: %s's %s Calendar For %s\007",qth.callsign, type, sat[indx].name);
+			fprintf(stderr,"\033]0;flyby: %s's %s Calendar For %s\007",qth.callsign, type, sat[indx].name);
 		}
 
 		do {
@@ -4444,7 +4444,7 @@ void PredictMoon()
 	clear();
 
 	if (xterm)
-		fprintf(stderr,"\033]0;PREDICT: %s's Orbit Calendar for the Moon\007",qth.callsign);
+		fprintf(stderr,"\033]0;flyby: %s's Orbit Calendar for the Moon\007",qth.callsign);
 
 	do {
 		/* Determine moonrise */
@@ -4518,7 +4518,7 @@ void PredictSun()
 	clear();
 
 	if (xterm)
-		fprintf(stderr,"\033]0;PREDICT: %s's Orbit Calendar for the Sun\007",qth.callsign);
+		fprintf(stderr,"\033]0;flyby: %s's Orbit Calendar for the Sun\007",qth.callsign);
 
 	do {
 		/* Determine sunrise */
@@ -4648,7 +4648,7 @@ void ShowOrbitData()
 			clear();
 
 			mvprintw(0,0,"                                                                                ");
-			mvprintw(1,0,"  PREDICT Orbital Data                                                          ");
+			mvprintw(1,0,"  flyby Orbital Data                                                          ");
 			mvprintw(2,0,"                                                                                ");
 
 			mvprintw(1,25,"(%ld) %s", sat[x].catnum, sat[x].name);
@@ -4716,7 +4716,7 @@ void KepEdit()
 			clear();
 
 			mvprintw(0,0,"                                                                                ");
-			mvprintw(1,0,"  PREDICT Orbital Database Editing                                              ");
+			mvprintw(1,0,"  flyby Orbital Database Editing                                              ");
 			mvprintw(2,0,"                                                                                ");
 
 			attrset(COLOR_PAIR(4)|A_BOLD);
@@ -4854,7 +4854,7 @@ void QthEdit()
 
 	attrset(COLOR_PAIR(6)|A_REVERSE|A_BOLD);
 	mvprintw(0,0,"                                                                                ");
-	mvprintw(1,0,"  PREDICT Ground Station Location                                               ");
+	mvprintw(1,0,"  flyby Ground Station Location                                                 ");
 	mvprintw(2,0,"                                                                                ");
 
 	curs_set(1);
@@ -4999,7 +4999,7 @@ int x;
 		decayed=Decayed(indx,0.0);
 
 		if (xterm)
-			fprintf(stderr,"\033]0;flyby: tracking %-10s\007",sat[x].name);
+			fprintf(stderr,"\033]0;flyby: Tracking %-10s\007",sat[x].name);
 
 		halfdelay(halfdelaytime);
 		curs_set(0);
@@ -5008,7 +5008,7 @@ int x;
 
 		attrset(COLOR_PAIR(6)|A_REVERSE|A_BOLD);
 		mvprintw(0,0,"                                                                                ");
-		mvprintw(1,0,"  flyby tracking:                                                               ");
+		mvprintw(1,0,"  flyby Tracking:                                                               ");
 		mvprintw(2,0,"                                                                                ");
 		mvprintw(1,21,"%-24s (%d)", sat[x].name, sat[x].catnum);
 
@@ -5065,7 +5065,7 @@ int x;
 			mvprintw(5,29,"%0.f ",(3600.0*sat_vel)*km2mi);
 			mvprintw(6,29,"%0.f ",3600.0*sat_vel);
 
-			mvprintw(18,3,"%+6.2f%c  ",eclipse_depth/deg2rad,176);
+			mvprintw(18,3,"%+6.2f deg",eclipse_depth/deg2rad);
 			mvprintw(18,20,"%5.1f",256.0*(phase/twopi));
 			mvprintw(18,37,"%s",ephem);
 
@@ -5451,14 +5451,14 @@ char multitype, disttype;
 			los[maxsats], aoslos[maxsats];
 
 	if (xterm)
-		fprintf(stderr,"\033]0;PREDICT: Multi-Satellite Tracking Mode\007");
+		fprintf(stderr,"\033]0;flyby: Multi-Satellite Tracking Mode\007");
 
 	curs_set(0);
 	attrset(COLOR_PAIR(6)|A_REVERSE|A_BOLD);
 	clear();
 
 	mvprintw(0,0,"                                                                                ");
-	mvprintw(1,0,"  PREDICT Real-Time Multi-Tracking                                              ");
+	mvprintw(1,0,"  flyby Real-Time Multi-Tracking                                                ");
 	mvprintw(2,0,"                                                                                ");
 
 	attrset(COLOR_PAIR(2)|A_REVERSE);
@@ -5847,7 +5847,7 @@ void Illumination()
 	clear();
 
 	if (xterm)
-		fprintf(stderr,"\033]0;PREDICT: %s's Solar Illumination Calendar For %s\007",qth.callsign, sat[indx].name);
+		fprintf(stderr,"\033]0;flyby: %s's Solar Illumination Calendar For %s\007",qth.callsign, sat[indx].name);
 
 
 	do {
@@ -5993,7 +5993,7 @@ void MainMenu()
 	attrset(COLOR_PAIR(6)|A_REVERSE|A_BOLD);
 	mvprintw(21,41," Q ");
 	attrset(COLOR_PAIR(3)|A_BOLD);
-	mvprintw(21,45," Exit PREDICT");
+	mvprintw(21,45," Exit flyby");
 
 	if (socket_flag) {
 		attrset(COLOR_PAIR(4)|A_BOLD);
