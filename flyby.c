@@ -2025,6 +2025,7 @@ void FreqDataNet(int sockd, char *vfo, double freq)
 	{
 		sprintf(message, "V %s\n", vfo);
 		len = strlen(message);
+    usleep(100); // hack: avoid VFO selection racing
 		if (send(sockd, message, len, 0) != len)
 		{
 			bailout("Failed to send to rigctld");
@@ -2056,6 +2057,7 @@ double ReadFreqDataNet(int sockd, char *vfo)
 	{
 		sprintf(message, "V %s\n", vfo);
 		len = strlen(message);
+    usleep(100); // hack: avoid VFO selection racing
 		if (send(sockd, message, len, 0) != len)
 		{
 			bailout("Failed to send to rigctld");
@@ -5362,6 +5364,7 @@ int x;
 				}
 
 				length=strlen(sat_db[x].transponder_name[xponder])/2;
+	      mvprintw(10,0,"                                                                                ");
 				mvprintw(10,40-length,"%s",sat_db[x].transponder_name[xponder]);
 
 				if (ans=='d')
@@ -5388,6 +5391,16 @@ int x;
 					readfreq=true;
 				if (ans=='M')
 					readfreq=false;
+        if (ans=='x') // Reverse VFO uplink and downlink names
+        {
+          if (downlink_socket!=-1 && uplink_socket!=-1)
+          {
+            char tmp_vfo[30];
+            strncpy(tmp_vfo,downlink_vfo,sizeof(tmp_vfo));
+            strncpy(downlink_vfo,uplink_vfo,sizeof(downlink_vfo));
+            strncpy(uplink_vfo,tmp_vfo,sizeof(uplink_vfo));
+          }
+        }
 			}
 
 			refresh();
