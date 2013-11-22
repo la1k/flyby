@@ -4650,7 +4650,7 @@ void ShowOrbitData()
 			clear();
 
 			mvprintw(0,0,"                                                                                ");
-			mvprintw(1,0,"  flyby Orbital Data                                                          ");
+			mvprintw(1,0,"  flyby Orbital Data                                                            ");
 			mvprintw(2,0,"                                                                                ");
 
 			mvprintw(1,25,"(%ld) %s", sat[x].catnum, sat[x].name);
@@ -4718,7 +4718,7 @@ void KepEdit()
 			clear();
 
 			mvprintw(0,0,"                                                                                ");
-			mvprintw(1,0,"  flyby Orbital Database Editing                                              ");
+			mvprintw(1,0,"  flyby Orbital Database Editing                                                ");
 			mvprintw(2,0,"                                                                                ");
 
 			attrset(COLOR_PAIR(4)|A_BOLD);
