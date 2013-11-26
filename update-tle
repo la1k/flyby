@@ -1,8 +1,40 @@
 #!/bin/bash
-echo "Downloading TLE data..."
-wget www.celestrak.com/NORAD/elements/amateur.txt -O /tmp/amateur.txt
-wget www.celestrak.com/NORAD/elements/visual.txt -O /tmp/visual.txt
-wget www.celestrak.com/NORAD/elements/weather.txt -O /tmp/weather.txt
-echo "Updating flyby TLE data..."
-./flyby -u /tmp/amateur.txt /tmp/visual.txt /tmp/weather.txt
-rm -f /tmp/amateur.txt /tmp/visual.txt /tmp/weather.txt
+
+tempfolder="/tmp/flyby-tle"
+tleurl="http://celestrak.com/NORAD/elements"
+
+if [ -x "./flyby" ]; then
+  flybybin="./flyby"
+fi
+
+if [ -x "build/flyby" ]; then
+  flybybin="build/flyby";
+fi
+
+if [ -x "/usr/local/bin/flyby" ]; then
+  flybybin="/usr/local/bin/flyby";
+fi
+
+if [ -n "$flybybin" ]; then
+  mkdir -p "$tempfolder"
+
+  echo "Downloading TLE data..."
+  wget -nv "$tleurl"/amateur.txt -O "$tempfolder"/amateur.txt
+  wget -nv "$tleurl"/visual.txt -O "$tempfolder"/visual.txt
+  wget -nv "$tleurl"/weather.txt -O "$tempfolder"/weather.txt
+  wget -nv "$tleurl"/cubesat.txt -O "$tempfolder"/cubesat.txt
+  wget -nv "$tleurl"/science.txt -O "$tempfolder"/science.txt
+  wget -nv "$tleurl"/engineering.txt -O "$tempfolder"/engineering.txt
+
+  echo
+  # Update TLE data; flyby doesn't accept very long arguments
+  "$flybybin" -u "$tempfolder"/amateur.txt
+  "$flybybin" -u "$tempfolder"/visual.txt
+  "$flybybin" -u "$tempfolder"/weather.txt
+  "$flybybin" -u "$tempfolder"/cubesat.txt
+  "$flybybin" -u "$tempfolder"/science.txt
+  "$flybybin" -u "$tempfolder"/engineering.txt
+else
+  echo "Error: Could not find flyby executable in working directory or under build/"
+fi
+

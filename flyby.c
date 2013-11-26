@@ -1966,7 +1966,7 @@ char *string;
 	clear();
 	refresh();
 	endwin();
-	fprintf(stderr,"*** predict: %s!\n",string);
+	fprintf(stderr,"*** flyby: %s!\n",string);
 }
 
 int sock_readline(int sockd, char *message, size_t bufsize)
@@ -6646,6 +6646,7 @@ char argc, *argv[];
 
 	if (x>1)  /* TLE file was loaded successfully */ {
 		if (updatefile[0]) {
+	    printf("*** flyby: Updating TLE data using file(s) %s", updatefile);
 			y=0;
 			z=0;
 			temp[0]=0;
