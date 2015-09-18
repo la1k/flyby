@@ -34,6 +34,7 @@
 *                                                                           *
 \***************************************************************************/
 
+#include "config.h"
 #include <math.h>
 #include <time.h>
 #include <sys/timeb.h>
@@ -138,7 +139,7 @@ int PredictAt ( int iSatID, time_t ttDayNum, double dLat, double dLong );
 #define VISIBLE_FLAG           0x002000
 #define SAT_ECLIPSED_FLAG      0x004000
 
-char *flybypath={"/etc/flyby"}, soundcard=0, *version={"0.1"};
+char *flybypath={"/etc/flyby"}, soundcard=0;
 
 struct	{  char line1[70];
 	   char line2[70];
@@ -2292,7 +2293,7 @@ char *predict_name;
 
 		if (strncmp("GET_VERSION",buf,11)==0) {
 			buff[0]=0;
-			sprintf(buff,"%s\n",version);
+			sprintf(buff,"%s\n",FLYBY_VERSION);
 			sendto(sock,buff,strlen(buff),0,(struct sockaddr *)&fsin,sizeof(fsin));
 			ok=1;
 		}
@@ -2457,7 +2458,7 @@ void Banner()
 
 	attrset(COLOR_PAIR(6)|A_REVERSE|A_BOLD);
 	mvprintw(2,18,"                                                     ");
-	mvprintw(3,18,"                --== flyby v%s ==--                 ",version);
+	mvprintw(3,18,"                --== flyby v%s ==--                 ",FLYBY_VERSION);
 	mvprintw(4,18,"                                                     ");
 	mvprintw(5,18,"   based on PREDICT, by John A. Magliacane (KD2BD)   ");
 	mvprintw(6,18,"         with mods by John Heaton (G1YYH)            ");
@@ -6016,7 +6017,7 @@ void MainMenu()
 	refresh();
 
 	if (xterm)
-		fprintf(stderr,"\033]0;flyby: Version %s\007",version);
+		fprintf(stderr,"\033]0;flyby: Version %s\007",FLYBY_VERSION);
 }
 
 void ProgramInfo()
@@ -6024,7 +6025,7 @@ void ProgramInfo()
 	Banner();
 	attrset(COLOR_PAIR(3)|A_BOLD);
 
-	printw("\n\n\n\n\n\t\tflyby version : %s\n",version);
+	printw("\n\n\n\n\n\t\tflyby version : %s\n",FLYBY_VERSION);
 	printw("\t\tQTH file loaded : %s\n",qthfile);
 	printw("\t\tTLE file loaded : %s\n",tlefile);
 	printw("\t\tDatabase file   : ");

@@ -1,0 +1,8 @@
+#ifndef CONFIG_H
+#define CONFIG_H
+
+const int FLYBY_VERSION_MAJOR=@FLYBY_VERSION_MAJOR@;
+const int FLYBY_VERSION_MINOR=@FLYBY_VERSION_MINOR@;
+const char const *FLYBY_VERSION="@FLYBY_VERSION@";
+
+#endif // CONFIG_H
