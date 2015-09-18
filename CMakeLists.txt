@@ -4,6 +4,8 @@ cmake_minimum_required(VERSION 2.8)
 
 project(flyby C)
 
+include(GNUInstallDirs)
+
 # These variables will be set automatically by newer CMake (at least
 # 3.0) if the project command is given a VERSION argument. Set them
 # manually for now.
@@ -23,6 +25,7 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall")
 configure_file(config.h.in config.h @ONLY)
 include_directories(${CMAKE_BINARY_DIR})
 add_executable(flyby flyby.c)
+install(TARGETS flyby RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 
 target_link_libraries(flyby pthread)
 target_link_libraries(flyby m)
