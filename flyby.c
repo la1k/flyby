@@ -55,8 +55,6 @@
 #define ARRAY_SIZE(a) (sizeof(a) / sizeof(a[0]))
 #define halfdelaytime	5
 
-int PredictAt ( int iSatID, time_t ttDayNum, double dLat, double dLong );
-
 /* Constants used by SGP4/SDP4 code */
 
 #define	km2mi		0.621371		/* km to miles */
@@ -5898,115 +5896,6 @@ double GetDayNum ( struct timeval *tv )
 {
   /* used by PredictAt */
   return ( ( ( (double) (tv->tv_sec) - 0.000001 * ( (double) (tv->tv_usec) ) ) / 86400.0) - 3651.0 );
-}
-
-/*
- void PredictAt ( int iSatID, time_t ttDayNum, double dLat, double dLong )
-
-    Computes the satellites possition at the given time...
-    ... so that we can report it via a socket.
-
-    Returns:
-       TRUE if successful.
-
-    Author/Editor:
-       February 2003
-       Glenn Richardson
-       glenn@spacequest.com
-*/
-
-int PredictAt ( int iSatID, time_t ttDayNum, double dLat, double dLong )
-{
-  double dDayNum;               /* time of prediction */
-  double dOldRange, dOldClock;  /* range / time of pre-prediction position */
-  double dDoppler = 0.0;        /* doppler calculation */
-  double dDeltaTime, dDeltaPos; /* used in doppler calc */
-  double dQLat, dQLong;         /* remember the groundstation lat/long */
-  int iInRange;                 /* is the satellite in view? */
-  struct timeval tv;            /* time structure... */
-
-  /* remember... */
-  dQLat = qth.stnlat;
-  dQLong = qth.stnlong;
-  qth.stnlat = dLat;
-  qth.stnlong = dLong;
-
-  /* are the keps ok? */
-  if ( ( sat[iSatID].meanmo == 0.0) || ( Decayed ( iSatID, 0.0 ) == 1 ) || ( Geostationary ( iSatID ) ) || !( AosHappens ( iSatID ) ) )
-    {
-      qth.stnlat = dQLat;
-      qth.stnlong = dQLong;
-
-      /* !!!! NOTE: we only compute LEOs !!!! */
-      /* syslog ( LOG_INFO, "PredictAT() can't do this one..."); */
-      return FALSE;
-    }
-
-  /* syslog ( LOG_INFO, "PredictAT: ttDayNum... %ld, %s", (unsigned long) ttDayNum, ctime ( &ttDayNum ) ); */
-  /* first, prepare for doppler by computing pos 5 sec ago */
-  indx = iSatID;
-  tv.tv_sec = ttDayNum - 5;
-  tv.tv_usec = 0;
-  daynum = GetDayNum ( &tv );
-  PreCalc ( iSatID );
-  Calc ();
-
-  dOldClock = 86400.0 * daynum;
-  dOldRange = sat_range * 1000.0;
-
-  /* now, recompute at current position */
-  tv.tv_sec = ttDayNum;
-  daynum = GetDayNum ( &tv );
-  PreCalc ( iSatID );
-  Calc ();
-
-  dDayNum = daynum;
-
-  /* setup for doppler... */
-  dDeltaTime = dDayNum * 86400.0 - dOldClock;
-  dDeltaPos = (sat_range * 1000.0) - dOldRange;
-
-  if ( sat_azi >= 0.0 )
-    {
-      iInRange = 1;
-
-      /* compute the doppler */
-      dDoppler = - ( ( dDeltaPos / dDeltaTime ) / 299792458.0 );
-      dDoppler = dDoppler * 100.0e6;
-    }
-  else
-    {
-      /* compute the doppler */
-      iInRange = 0;
-    }
-
-  /* printf ("InRange? %d, doppler: %f, Az: %f, El: %f, %s",
-              iInRange, dDoppler, azimuth, elevation, ctime ( &ttDayNum ) ); */
-  /* remember values for socket connection... */
-  az_array[iSatID] = sat_azi;
-  el_array[iSatID] = sat_ele;
-  lat_array[iSatID] = sat_lat;
-  long_array[iSatID] = 360.0 - sat_lon;
-  footprint_array[iSatID] = fk;
-  range_array[iSatID] = sat_range;
-  altitude_array[iSatID] = sat_alt;
-  velocity_array[iSatID] = sat_vel;
-  orbitnum_array[iSatID] = rv;
-  doppler[iSatID] = dDoppler;
-
-
-  /* Calculate Next Event (AOS/LOS) Times */
-  if ( iInRange )
-    nextevent[iSatID] = FindLOS2();
-  else
-    nextevent[iSatID] = FindAOS();
-
-
-  /* restore... */
-  qth.stnlat = dQLat;
-  qth.stnlong = dQLong;
-
-  return TRUE;
 }
 
 int main(argc,argv)
