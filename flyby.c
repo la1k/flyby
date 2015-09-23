@@ -203,7 +203,7 @@ char	qthfile[50], tlefile[50], dbfile[50], temp[80], output[25],
 	once_per_second=0, ephem[5], sat_sun_status, findsun,
 	calc_squint, database=0, xterm, io_lat='N', io_lon='W', maidenstr[9];
 
-int	indx, iaz, iel, ma256, isplat, isplong, socket_flag=0,
+int	indx, iaz, iel, ma256, isplat, isplong,
 	Flags=0, rotctld_socket, uplink_socket, downlink_socket, totalsats=0;
 
 long	rv, irk;
@@ -2141,313 +2141,6 @@ int passivesock(char *service, char *protocol, int qlen)
 	return sd;
 }
 
-void socket_server(predict_name)
-char *predict_name;
-{
-	/* This is the socket server code */
-
-	int i, j, n, sock;
-	socklen_t alen;
-	double dLat, dLong;           /* parameters for PredictAt */
-	struct sockaddr_in fsin;
-	char buf[80], buff[1000], satname[50], tempname[30], ok;
-	time_t t;
-	long nxtevt;
-	FILE *fd=NULL;
-
-	/* Open a socket port at "predict" or netport if defined */
-
-	if (netport[0]==0)
-		strncpy(netport,"predict",7);
-
-	sock=passivesock(netport,"udp",10);
-	alen=sizeof(fsin);
-
-	/* This is the main loop for monitoring the socket
-	   port and sending back replies to clients */
-
-	while (1) {
-		/* Get datagram from socket port */
-		if ((n=recvfrom(sock,buf,sizeof(buf),0,(struct sockaddr *)&fsin,&alen)) < 0)
-			exit (-1);
-
-		buf[n]=0;
-		ok=0;
-
-		/* Parse the command in the datagram */
-		if ((strncmp("GET_SAT",buf,7)==0) && (strncmp("GET_SAT_POS",buf,11)!=0)) {
-			/* Parse "buf" for satellite name */
-			for (i=0; buf[i]!=32 && buf[i]!=0 && i<39; i++);
-
-			for (j=++i; buf[j]!='\n' && buf[j]!=0 && (j-i)<25; j++)
-				satname[j-i]=buf[j];
-
-			satname[j-i]=0;
-
-			/* Do a simple search for the matching satellite name */
-
-			for (i=0; i<maxsats; i++) {
-				if ((strncmp(satname,sat[i].name,25)==0) || (atol(satname)==sat[i].catnum)) {
-					nxtevt=(long)rint(86400.0*(nextevent[i]+3651.0));
-
-					/* Build text buffer with satellite data */
-					sprintf(buff,"%s\n%-7.2f\n%+-6.2f\n%-7.2f\n%+-6.2f\n%ld\n%-7.2f\n%-7.2f\n%-7.2f\n%-7.2f\n%ld\n%c\n%-7.2f\n%-7.2f\n%-7.2f\n",sat[i].name,long_array[i],lat_array[i],az_array[i],el_array[i],nxtevt,footprint_array[i],range_array[i],altitude_array[i],velocity_array[i],orbitnum_array[i],visibility_array[i],phase_array[i],eclipse_depth_array[i],squint_array[i]);
-
-					/* Send buffer back to the client that sent the request */
-					sendto(sock,buff,strlen(buff),0,(struct sockaddr*)&fsin,sizeof(fsin));
-					ok=1;
-					break;
-				}
-			}
-		}
-
-		if (strncmp("GET_TLE",buf,7)==0) {
-			/* Parse "buf" for satellite name */
-			for (i=0; buf[i]!=32 && buf[i]!=0 && i<39; i++);
-
-			for (j=++i; buf[j]!='\n' && buf[j]!=0 && (j-i)<25; j++)
-				satname[j-i]=buf[j];
-
-			satname[j-i]=0;
-
-			/* Do a simple search for the matching satellite name */
-
-			for (i=0; i<maxsats; i++) {
-				if ((strncmp(satname,sat[i].name,25)==0) || (atol(satname)==sat[i].catnum)) {
-					/* Build text buffer with satellite data */
-					sprintf(buff,"%s\n%s\n%s\n",sat[i].name,sat[i].line1, sat[i].line2);
-
-					/* Send buffer back to the client that sent the request */
-					sendto(sock,buff,strlen(buff),0,(struct sockaddr*)&fsin,sizeof(fsin));
-					ok=1;
-					break;
-				}
-			}
-		}
-
-		if (strncmp("GET_DOPPLER",buf,11)==0) {
-			/* Parse "buf" for satellite name */
-			for (i=0; buf[i]!=32 && buf[i]!=0 && i<39; i++);
-
-			for (j=++i; buf[j]!='\n' && buf[j]!=0 && (j-i)<25; j++)
-				satname[j-i]=buf[j];
-
-			satname[j-i]=0;
-
-			/* Do a simple search for the matching satellite name */
-
-			for (i=0; i<maxsats; i++) {
-				if ((strncmp(satname,sat[i].name,25)==0) || (atol(satname)==sat[i].catnum)) {
-					/* Get Normalized (100 MHz)
-					   Doppler shift for sat[i] */
-
-					sprintf(buff,"%f\n",doppler[i]);
-
-					/* Send buffer back to client who sent request */
-					sendto(sock,buff,strlen(buff),0,(struct sockaddr*)&fsin,sizeof(fsin));
-					ok=1;
-					break;
-				}
-			}
-		}
-
-		if (strncmp("GET_LIST",buf,8)==0) {
-			buff[0]=0;
-
-			for (i=0; i<totalsats; i++) {
-				if (sat[i].name[0]!=0)
-					strcat(buff,sat[i].name);
-
-				strcat(buff,"\n");
-			}
-
-			sendto(sock,buff,strlen(buff),0,(struct sockaddr *)&fsin,sizeof(fsin));
-			ok=1;
-		}
-
-		if (strncmp("RELOAD_TLE",buf,10)==0) {
-			buff[0]=0;
-			sendto(sock,buff,strlen(buff),0,(struct sockaddr *)&fsin,sizeof(fsin));
-			reload_tle=1;
-			ok=1;
-		}
-
-		if (strncmp("GET_SUN",buf,7)==0) {
-			buff[0]=0;
-			sprintf(buff,"%-7.2f\n%+-6.2f\n%-7.2f\n%-7.2f\n%-7.2f\n",sun_azi, sun_ele, sun_lat, sun_lon, sun_ra);
-			sendto(sock,buff,strlen(buff),0,(struct sockaddr *)&fsin,sizeof(fsin));
-			ok=1;
-		}
-
-		if (strncmp("GET_MOON",buf,8)==0) {
-			buff[0]=0;
-			sprintf(buff,"%-7.2f\n%+-6.2f\n%-7.2f\n%-7.2f\n%-7.2f\n",moon_az, moon_el, moon_dec, moon_gha, moon_ra);
-			sendto(sock,buff,strlen(buff),0,(struct sockaddr *)&fsin,sizeof(fsin));
-			ok=1;
-		}
-
-		if (strncmp("GET_MODE",buf,8)==0) {
-			sendto(sock,tracking_mode,strlen(tracking_mode),0,(struct sockaddr *)&fsin,sizeof(fsin));
-			ok=1;
-		}
-
-		if (strncmp("GET_VERSION",buf,11)==0) {
-			buff[0]=0;
-			sprintf(buff,"%s\n",FLYBY_VERSION);
-			sendto(sock,buff,strlen(buff),0,(struct sockaddr *)&fsin,sizeof(fsin));
-			ok=1;
-		}
-
-		if (strncmp("GET_QTH",buf,7)==0) {
-			buff[0]=0;
-			sprintf(buff,"%s\n%g\n%g\n%d\n",qth.callsign, qth.stnlat, qth.stnlong, qth.stnalt);
-			sendto(sock,buff,strlen(buff),0,(struct sockaddr *)&fsin,sizeof(fsin));
-			ok=1;
-		}
-
-		// calculate the satellite position at a given moment in time...
-		if ( strncmp ( "GET_SAT_AT", buf, 10 ) == 0 ) {
-		  // get the parameters...
-		  sscanf ( &buf[10], "%s %ld %lf %lf", satname, (unsigned long *) &t, &dLat, &dLong );
-
-		  // find the satellite id
-		  for ( i=0; i<24; i++ ) {
-		    if ( strcmp ( sat[i].name, satname ) == 0) {
-		      //syslog ( LOG_INFO, "%s | %ld\n", sat[i].name, (unsigned long) t );
-
-		      // get the position
-		      PredictAt ( i, t, dLat, dLong );
-
-		      // print out the info...
-		      sprintf ( buff, "GOT_SAT_AT %ld %f %f %f %f %ld %f %f\n",   \
-				(unsigned long)t,                \
-				long_array[i],                   \
-				lat_array[i],                    \
-				az_array[i],                     \
-				el_array[i],                     \
-				aos_array[i],                    \
-				range_array[i],                  \
-				doppler[i] );
-		      sendto(sock,buff,strlen(buff),0,(struct sockaddr *)&fsin,sizeof(fsin));
-		    }
-		  }
-		}
-
-		if (strncmp("GET_TIME$",buf,9)==0) {
-			buff[0]=0;
-			t=time(NULL);
-			sprintf(buff,"%s",asctime(gmtime(&t)));
-
-			if (buff[8]==32)
-				buff[8]='0';
-
-			sendto(sock,buff,strlen(buff),0,(struct sockaddr *)&fsin,sizeof(fsin));
-			buf[0]=0;
-			ok=1;
-		}
-
-		if (strncmp("GET_TIME",buf,8)==0) {
-			buff[0]=0;
-			t=time(NULL);
-			sprintf(buff,"%lu\n",(unsigned long)t);
-			sendto(sock,buff,strlen(buff),0,(struct sockaddr *)&fsin,sizeof(fsin));
-			ok=1;
-		}
-
-		if (strncmp("GET_SAT_POS",buf,11)==0) {
-			/* Parse "buf" for satellite name and arguments */
-			for (i=0; buf[i]!=32 && buf[i]!=0 && i<39; i++);
-
-			for (j=++i; buf[j]!='\n' && buf[j]!=0 && (j-i)<49; j++)
-				satname[j-i]=buf[j];
-
-			satname[j-i]=0;
-
-			/* Send request to predict with output
-			   directed to a temporary file under /tmp */
-
-			strcpy(tempname,"/tmp/XXXXXX\0");
-			i=mkstemp(tempname);
-
-			sprintf(buff,"%s -f %s -t %s -q %s -o %s\n",predict_name,satname,tlefile,qthfile,tempname);
-			system(buff);
-
-			/* Append an EOF marker (CNTRL-Z) to the end of file */
-
-			fd=fopen(tempname,"a");
-			fprintf(fd,"%c\n",26);  /* Control-Z */
-			fclose(fd);
-
-			buff[0]=0;
-
-			/* Send the file to the client */
-
-			fd=fopen(tempname,"rb");
-
-			fgets(buff,80,fd);
-
-			do {
-				sendto(sock,buff,strlen(buff),0,(struct sockaddr *)&fsin,sizeof(fsin));
-				fgets(buff,80,fd);
-				/* usleep(2);  if needed (for flow-control) */
-
-			} while (feof(fd)==0);
-
-			fclose(fd);
-			unlink(tempname);
-			close(i);
-			ok=1;
-		}
-
-		if (strncmp("flyby",buf,7)==0) {
-			/* Parse "buf" for satellite name and arguments */
-			for (i=0; buf[i]!=32 && buf[i]!=0 && i<39; i++);
-
-			for (j=++i; buf[j]!='\n' && buf[j]!=0 && (j-i)<49; j++)
-				satname[j-i]=buf[j];
-
-			satname[j-i]=0;
-
-			/* Send request to predict with output
-			   directed to a temporary file under /tmp */
-
-			strcpy(tempname,"/tmp/XXXXXX\0");
-			i=mkstemp(tempname);
-
-			sprintf(buff,"%s -p %s -t %s -q %s -o %s\n",predict_name, satname,tlefile,qthfile,tempname);
-			system(buff);
-
-			/* Append an EOF marker (CNTRL-Z) to the end of file */
-
-			fd=fopen(tempname,"a");
-			fprintf(fd,"%c\n",26);  /* Control-Z */
-			fclose(fd);
-
-			buff[0]=0;
-
-			/* Send the file to the client */
-
-			fd=fopen(tempname,"rb");
-
-			fgets(buff,80,fd);
-
-			do {
-				sendto(sock,buff,strlen(buff),0,(struct sockaddr *)&fsin,sizeof(fsin));
-				fgets(buff,80,fd);
-				/* usleep(2);  if needed (for flow-control) */
-
-			} while (feof(fd)==0);
-
-			fclose(fd);
-			unlink(tempname);
-			close(i);
-			ok=1;
-		}
-
-		if (ok==0)
-			sendto(sock,"Huh?\n",5,0,(struct sockaddr *)&fsin,sizeof(fsin));
-	}
-}
 
 void Banner()
 {
@@ -5262,33 +4955,6 @@ int x;
 				aoslos=nextaos;
 			}
 
-			/* This is where the variables for the socket server are updated. */
-
-			if (socket_flag) {
-				az_array[indx]=sat_azi;
-				el_array[indx]=sat_ele;
-				lat_array[indx]=sat_lat;
-				long_array[indx]=360.0-sat_lon;
-				footprint_array[indx]=fk;
-				range_array[indx]=sat_range;
-				altitude_array[indx]=sat_alt;
-				velocity_array[indx]=sat_vel;
-				orbitnum_array[indx]=rv;
-				doppler[indx]=doppler100;
-				nextevent[indx]=aoslos;
-				eclipse_depth_array[indx]=eclipse_depth/deg2rad;
-				phase_array[indx]=360.0*(phase/twopi);
-
-				if (calc_squint)
-					squint_array[indx]=squint;
-				else
-					squint_array[indx]=360.0;
-
-				FindSun(daynum);
-
-				sprintf(tracking_mode, "%s\n%c",sat[indx].name,0);
-			}
-
 			/* Get input from keyboard */
 
 			ans=getch();
@@ -5504,7 +5170,6 @@ char multitype, disttype;
 		attrset(COLOR_PAIR(2));
 		mvprintw(12,70,(disttype=='i') ? "  (miles)" : "     (km)");
 		mvprintw(13,70,(qth.tzoffset==0)  ? "    (GMT)" : "  (Local)");
-    mvprintw(14,70,(socket_flag) ? " (Server)" : "         ");
 
 		attrset(COLOR_PAIR(4)|A_REVERSE|A_BOLD);
 		mvprintw( 9,70," Control ");
@@ -5582,32 +5247,6 @@ char multitype, disttype;
 					siv++;
 				}
 
-				if (socket_flag) {
-					az_array[indx]=sat_azi;
-					el_array[indx]=sat_ele;
-					lat_array[indx]=sat_lat;
-					long_array[indx]=360.0-sat_lon;
-					footprint_array[indx]=fk;
-					range_array[indx]=sat_range;
-					altitude_array[indx]=sat_alt;
-					velocity_array[indx]=sat_vel;
-					orbitnum_array[indx]=rv;
-					visibility_array[indx]=sunstat;
-					eclipse_depth_array[indx]=eclipse_depth/deg2rad;
-					phase_array[indx]=360.0*(phase/twopi);
-
-					doppler[indx]=-100e06*((sat_range_rate*1000.0)/299792458.0);
-
-					if (calc_squint)
-						squint_array[indx]=squint;
-					else
-						squint_array[indx]=360.0;
-
-					FindSun(daynum);
-					sprintf(tracking_mode,"MULTI\n%c",0);
-
-				}
-
 				attrset(COLOR_PAIR(4)|A_REVERSE|A_BOLD);
 				mvprintw(16,70,"   Sun   ");
 				if (sun_ele > 0.0)
@@ -5636,36 +5275,11 @@ char multitype, disttype;
 				else
 					aoslos[indx]=aos[indx];
 
-				if (socket_flag) {
-					if (ok2predict[indx])
-						nextevent[indx]=aoslos[indx];
-					else
-						nextevent[indx]=-3651.0;
-				}
-
 			}
 
 			if (Decayed(indx,0.0)) {
 				attrset(COLOR_PAIR(2));
 				mvprintw(y+5,1,"%-10s---------- Decayed ---------", Abbreviate(sat[indx].name,9));
-
-				if (socket_flag) {
-					az_array[indx]=0.0;
-					el_array[indx]=0.0;
-					lat_array[indx]=0.0;
-					long_array[indx]=0.0;
-					footprint_array[indx]=0.0;
-					range_array[indx]=0.0;
-					altitude_array[indx]=0.0;
-					velocity_array[indx]=0.0;
-					orbitnum_array[indx]=0L;
-					visibility_array[indx]='N';
-					eclipse_depth_array[indx]=0.0;
-					phase_array[indx]=0.0;
-					doppler[indx]=0.0;
-					squint_array[indx]=0.0;
-					nextevent[indx]=-3651.0;
-				}
 			}
 		} while (y<=(LINES-6) && z++<totalsats);
 
@@ -6009,11 +5623,6 @@ void MainMenu()
 	attrset(COLOR_PAIR(3)|A_BOLD);
 	mvprintw(21,45," Exit flyby");
 
-	if (socket_flag) {
-		attrset(COLOR_PAIR(4)|A_BOLD);
-		mvprintw( 1, 1,"Server Mode");
-	}
-
 	refresh();
 
 	if (xterm)
@@ -6050,10 +5659,7 @@ void ProgramInfo()
 
 	printw("\t\tRunning Mode    : ");
 
-	if (socket_flag)
-		printw("Network server on port \"%s\"\n",netport);
-	else
-		printw("Standalone\n");
+	printw("Standalone\n");
 
 	refresh();
 	attrset(COLOR_PAIR(4)|A_BOLD);
@@ -6410,7 +6016,6 @@ char argc, *argv[];
 	char updatefile[80], quickfind=0, quickpredict=0,
 	     quickstring[40], outputfile[42],
 	     tle_cli[50], qth_cli[50], interactive=0;
-	pthread_t thread;
 	char *env=NULL;
 	FILE *db;
 	struct addrinfo hints, *servinfo, *servinfop;
@@ -6583,9 +6188,6 @@ char argc, *argv[];
 			if (z<=y && argv[z][0] && argv[z][0]!='-')
 				strncpy(netport,argv[z],5);
 		}
-
-		if (strcmp(argv[x],"-s")==0)
-			socket_flag=1;
 
 		if (strcmp(argv[x],"-north")==0) /* Default */
 			io_lat='N';
@@ -6845,12 +6447,6 @@ char argc, *argv[];
 		/* Socket activated here.  Remember that
 		the socket data is updated only when
 		running in the real-time tracking modes. */
-
-		if (socket_flag) {
-			pthread_create(&thread,NULL,(void *)socket_server,(void *)argv[0]);
-			bkgdset(COLOR_PAIR(3));
-			MultiTrack('m','k');
-		}
 
 		MainMenu();
 
