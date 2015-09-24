@@ -5126,7 +5126,7 @@ char multitype, disttype;
 			ok2predict[maxsats];
 
 	double		aos[maxsats],
-			los[maxsats], aoslos[maxsats];
+			los[maxsats];
 
 	if (xterm)
 		fprintf(stderr,"\033]0;flyby: Multi-Satellite Tracking Mode\007");
@@ -5156,7 +5156,6 @@ char multitype, disttype;
 		else
 			ok2predict[x]=0;
 
-		aoslos[x]=0.0;
 		los[x]=0.0;
 		aos[x]=0.0;
 		satindex[x]=x;
@@ -5267,11 +5266,6 @@ char multitype, disttype;
 					else
 						aos[indx]=FindAOS();
 				}
-
-				if (inrange[indx])
-					aoslos[indx]=los[indx];
-				else
-					aoslos[indx]=aos[indx];
 
 			}
 
