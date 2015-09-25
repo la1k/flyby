@@ -50,6 +50,7 @@
 #include <netdb.h>
 #include <unistd.h>
 #include <fcntl.h>
+#include <predict/predict.h>
 
 #define maxsats		250
 #define ARRAY_SIZE(a) (sizeof(a) / sizeof(a[0]))
@@ -3504,6 +3505,7 @@ double daynum;
 	sun_dec=Degrees(solar_rad.y);
 }
 
+
 char AosHappens(x)
 int x;
 {
@@ -3564,6 +3566,9 @@ int x;
 	else
 		return 0;
 }
+
+//#include "removed_functions.c"
+
 
 int Print(string,mode)
 char *string, mode;
@@ -3782,7 +3787,7 @@ char *string;
 	return quit;
 }
 
-void Predict(mode)
+void Predict(predict_orbit_t *orbit, predict_observer_t *qth, mode)
 char mode;
 {
 	/* This function predicts satellite passes.  It displays
@@ -3792,25 +3797,34 @@ char mode;
 
 	int quit=0, lastel=0, breakout=0;
 	char string[80], type[10];
+	int iel = 1;
+	int iaz = 0;
 
-	PreCalc(indx);
-	daynum=GetStartTime(0);
+	predict_julian_date_t daynum = predict_to_julian(time(NULL));
 	clear();
 
-	/* Trap geostationary orbits and passes that cannot occur. */
+	predict_orbit_t *orbit;
+	predict_observer_t *qth;
 
-	if (AosHappens(indx) && Geostationary(indx)==0 && Decayed(indx,daynum)==0) {
+	/* Trap geostationary orbits and passes that cannot occur. */
+	irk=(long)rint(sat_range);
+	isplat=(int)rint(sat_lat);
+	isplong=(int)rint(360.0-sat_lon);
+	iaz=(int)rint(sat_azi);
+	iel=(int)rint(sat_ele);
+
+	if (predict_aos_happens(orbit, qth->latitude) && !predict_is_geostationary(orbit) && !predict_decayed(orbit)) {
 		if (xterm) {
 			strcpy(type,"Orbit");  /* Default */
 
 			if (mode=='v')
 				strcpy(type,"Visual");
 
-			fprintf(stderr,"\033]0;flyby: %s's %s Calendar For %s\007",qth.callsign, type, sat[indx].name);
+			fprintf(stderr,"\033]0;flyby: %s's %s Calendar For %s\007",qth->name, type, orbit->name);
 		}
 
 		do {
-			daynum=FindAOS();
+			daynum = predict_next_aos(qth, orbit, daynum);
 
 			/* Display the pass */
 
@@ -3841,13 +3855,18 @@ char mode;
 					quit=PrintVisible(string);
 				}
 
-				daynum+=cos((sat_ele-1.0)*deg2rad)*sqrt(sat_alt)/25000.0;
-				Calc();
+				predict_orbit(orbit, daynum);
+				struct predict_observation obs;
+				predict_observe_orbit(qth, orbit, &obs);
+				iel = (int)rint(obs.elevation);
+				iaz = (int)rint(obs.azimuth);
+
+				daynum+=cos((obs.elevation*180/M_PI-1.0)*deg2rad)*sqrt(orbit->altitude)/25000.0;
 			}
 
 			if (lastel!=0) {
-				daynum=FindLOS();
-				Calc();
+				daynum=predict_next_los(qth, orbit, daynum);
+				predict_orbit(orbit, daynum);
 
 				if (calc_squint)
 					sprintf(string,"      %s%4d %4d  %4d  %4d   %4d   %6ld  %4.0f %c\n",Daynum2String(daynum,20,"%a %d%b%y %H:%M:%S"),iel,iaz,ma256,(io_lat=='N'?+1:-1)*isplat,(io_lon=='W'?isplong:360-isplong),irk,squint,findsun);
@@ -3868,18 +3887,20 @@ char mode;
 				quit=PrintVisible("\n");
 
 			/* Move to next orbit */
-			daynum=NextAOS();
+			daynum=predict_next_aos(qth, orbit, daynum);
 
-		}  while (quit==0 && breakout==0 && AosHappens(indx) && Decayed(indx,daynum)==0);
+		}  while (quit==0 && breakout==0 && predict_aos_happens(orbit, qth->latitude) && !predict_decayed(orbit));
 	} else {
 		bkgdset(COLOR_PAIR(5)|A_BOLD);
 		clear();
 
-		if (AosHappens(indx)==0 || Decayed(indx,daynum)==1)
+		if (!predict_aos_happens(orbit, qth->latitude) || predict_decayed(orbit)) {
 			mvprintw(12,5,"*** Passes for %s cannot occur for your ground station! ***\n",sat[indx].name);
+		}
 
-		if (Geostationary(indx)==1)
+		if (predict_is_geostationary(orbit)) {
 			mvprintw(12,3,"*** Orbital predictions cannot be made for a geostationary satellite! ***\n");
+		}
 
 		beep();
 		bkgdset(COLOR_PAIR(7)|A_BOLD);
