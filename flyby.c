@@ -3567,7 +3567,7 @@ int x;
 		return 0;
 }
 
-//#include "removed_functions.c"
+#include "removed_functions.c"
 
 
 int Print(string,mode)
@@ -3787,24 +3787,19 @@ char *string;
 	return quit;
 }
 
-void Predict(predict_orbit_t *orbit, predict_observer_t *qth, mode)
-char mode;
+void Predict(predict_orbit_t *orbit, predict_observer_t *qth, char mode)
 {
 	/* This function predicts satellite passes.  It displays
 	   output through the Print() function if mode=='p' (show
 	   all passes), or through the PrintVisible() function if
 	   mode=='v' (show only visible passes). */
 
-	int quit=0, lastel=0, breakout=0;
+	int quit=0, breakout=0;
 	char string[80], type[10];
-	int iel = 1;
-	int iaz = 0;
 
-	predict_julian_date_t daynum = predict_to_julian(time(NULL));
+	predict_julian_date_t curr_time = predict_to_julian(time(NULL));
+	predict_orbit(orbit, curr_time);
 	clear();
-
-	predict_orbit_t *orbit;
-	predict_observer_t *qth;
 
 	/* Trap geostationary orbits and passes that cannot occur. */
 	irk=(long)rint(sat_range);
@@ -3824,17 +3819,24 @@ char mode;
 		}
 
 		do {
-			daynum = predict_next_aos(qth, orbit, daynum);
+			predict_julian_date_t next_aos = predict_next_aos(qth, orbit, curr_time);
+			predict_julian_date_t next_los = predict_next_los(qth, orbit, next_aos);
+			curr_time = next_aos;
 
 			/* Display the pass */
+			struct predict_observation obs;
+			predict_orbit(orbit, curr_time);
+			predict_observe_orbit(qth, orbit, &obs);
 
-			while (iel>=0 && quit==0) {
-				if (calc_squint)
-					sprintf(string,"      %s%4d %4d  %4d  %4d   %4d   %6ld  %4.0f %c\n",Daynum2String(daynum,20,"%a %d%b%y %H:%M:%S"),iel,iaz,ma256,(io_lat=='N'?+1:-1)*isplat,(io_lon=='W'?isplong:360-isplong),irk,squint,findsun);
-				else
-					sprintf(string,"      %s%4d %4d  %4d  %4d   %4d   %6ld  %6ld %c\n",Daynum2String(daynum,20,"%a %d%b%y %H:%M:%S"),iel,iaz,ma256,(io_lat=='N'?+1:-1)*isplat,(io_lon=='W'?isplong:360-isplong),irk,rv,findsun);
+			bool has_printed_last_entry = false;
+			do {
+				//print results to screen
+				const int MAX_TIME_STRING = 50;
+				char time_string[MAX_TIME_STRING];
+				time_t epoch = predict_from_julian(curr_time);
+				strftime(time_string, MAX_TIME_STRING, "%a %d%b%y %H:%M:%S", gmtime(&epoch));
 
-				lastel=iel;
+				sprintf(string,"      %s%4.0f %4.0f  %s  %4.0f   %4.0f   %4.0f  %s %s\n", time_string, obs.elevation*180.0/M_PI, obs.azimuth*180.0/M_PI, "????", orbit->latitude*180.0/M_PI, orbit->longitude*180.0/M_PI, obs.range*180.0/M_PI, "??????", "?");
 
 				if (mode=='p')
 					quit=Print(string,'p');
@@ -3855,30 +3857,20 @@ char mode;
 					quit=PrintVisible(string);
 				}
 
-				predict_orbit(orbit, daynum);
-				struct predict_observation obs;
+				//calculate results for next timestep
+				curr_time += cos((obs.elevation*180/M_PI-1.0)*deg2rad)*sqrt(orbit->altitude)/25000.0; //predict's magic time increment formula
+				predict_orbit(orbit, curr_time);
 				predict_observe_orbit(qth, orbit, &obs);
-				iel = (int)rint(obs.elevation);
-				iaz = (int)rint(obs.azimuth);
 
-				daynum+=cos((obs.elevation*180/M_PI-1.0)*deg2rad)*sqrt(orbit->altitude)/25000.0;
-			}
+				//make sure that the last printed line is at elevation 0 (since that looks nicer)
+				if ((obs.elevation < 0) && !has_printed_last_entry) {
+					has_printed_last_entry = true;
+					curr_time = next_los;
 
-			if (lastel!=0) {
-				daynum=predict_next_los(qth, orbit, daynum);
-				predict_orbit(orbit, daynum);
-
-				if (calc_squint)
-					sprintf(string,"      %s%4d %4d  %4d  %4d   %4d   %6ld  %4.0f %c\n",Daynum2String(daynum,20,"%a %d%b%y %H:%M:%S"),iel,iaz,ma256,(io_lat=='N'?+1:-1)*isplat,(io_lon=='W'?isplong:360-isplong),irk,squint,findsun);
-				else
-					sprintf(string,"      %s%4d %4d  %4d  %4d   %4d   %6ld  %6ld %c\n",Daynum2String(daynum,20,"%a %d%b%y %H:%M:%S"),iel,iaz,ma256,(io_lat=='N'?+1:-1)*isplat,(io_lon=='W'?isplong:360-isplong),irk,rv,findsun);
-
-				if (mode=='p')
-					quit=Print(string,'p');
-
-				if (mode=='v')
-					quit=PrintVisible(string);
-			}
+					predict_orbit(orbit, curr_time);
+					predict_observe_orbit(qth, orbit, &obs);
+				}
+			} while (((obs.elevation >= 0) || (curr_time <= next_los)) && (quit==0));
 
 			if (mode=='p')
 				quit=Print("\n",'p');
@@ -6129,8 +6121,12 @@ char argc, *argv[];
 					PrintVisible("");
 					indx=Select();
 
-					if (indx!=-1 && sat[indx].meanmo!=0.0 && Decayed(indx,0.0)==0)
-						Predict(key);
+					if (indx!=-1 && sat[indx].meanmo!=0.0 && Decayed(indx,0.0)==0) {
+						const char *tle[2] = {sat[indx].line1, sat[indx].line2};
+						predict_orbit_t *orbit = predict_create_orbit(tle);
+						predict_observer_t *observer = predict_create_observer("test_qth", qth.stnlat*M_PI/180.0, qth.stnlong*M_PI/180.0, qth.stnalt);
+						Predict(orbit, observer, key);
+					}
 
 					MainMenu();
 					break;
