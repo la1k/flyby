@@ -3794,8 +3794,11 @@ void Predict(predict_orbit_t *orbit, predict_observer_t *qth, char mode)
 	   all passes), or through the PrintVisible() function if
 	   mode=='v' (show only visible passes). */
 
-	int quit=0, breakout=0;
-	char string[80], type[10];
+	bool should_quit = false;
+	bool should_break = false;
+	char data_string[80];
+	const int MAX_TIME_STRING = 50;
+	char time_string[MAX_TIME_STRING];
 
 	predict_julian_date_t curr_time = predict_to_julian(time(NULL));
 	predict_orbit(orbit, curr_time);
@@ -3812,12 +3815,14 @@ void Predict(predict_orbit_t *orbit, predict_observer_t *qth, char mode)
 			predict_observe_orbit(qth, orbit, &obs);
 			bool has_printed_last_entry = false;
 			do {
-				//print results to screen
-				const int MAX_TIME_STRING = 50;
-				char time_string[MAX_TIME_STRING];
+				//get formatted time
 				time_t epoch = predict_from_julian(curr_time);
 				strftime(time_string, MAX_TIME_STRING, "%a %d%b%y %H:%M:%S", gmtime(&epoch));
+
+				//modulo 256 phase
 				int ma256 = (int)rint(256.0*(orbit->phase/(2*M_PI)));
+
+				//satellite visibility status
 				char visibility;
 				if (obs.visible) {
 					visibility = '+';
@@ -3827,10 +3832,12 @@ void Predict(predict_orbit_t *orbit, predict_observer_t *qth, char mode)
 					visibility = ' ';
 				}
 
-				sprintf(string,"      %s%4.0f %4.0f  %d  %4.0f   %4.0f   %4.0f  %d %c\n", time_string, obs.elevation*180.0/M_PI, obs.azimuth*180.0/M_PI, ma256, orbit->latitude*180.0/M_PI, orbit->longitude*180.0/M_PI, obs.range, orbit->revolutions, visibility);
+				//format line of data
+				sprintf(data_string,"      %s%4.0f %4.0f  %d  %4.0f   %4.0f   %4.0f  %d %c\n", time_string, obs.elevation*180.0/M_PI, obs.azimuth*180.0/M_PI, ma256, orbit->latitude*180.0/M_PI, orbit->longitude*180.0/M_PI, obs.range, orbit->revolutions, visibility);
 
+				//print data to screen
 				if (mode=='p') {
-					quit=Print(string,'p');
+					should_quit=Print(data_string,'p');
 				}
 
 				if (mode=='v') {
@@ -3841,12 +3848,14 @@ void Predict(predict_orbit_t *orbit, predict_observer_t *qth, char mode)
 					/* Allow a way out if this
 					   should continue forever... */
 
-					if (getch()==27)
-						breakout=1;
+					if (getch()==27) {
+						//will continue through the pass, and then break the outer whileloop
+						should_break = true;
+					}
 
 					nodelay(stdscr,FALSE);
 
-					quit=PrintVisible(string);
+					should_quit=PrintVisible(data_string);
 				}
 
 				//calculate results for next timestep
@@ -3862,20 +3871,20 @@ void Predict(predict_orbit_t *orbit, predict_observer_t *qth, char mode)
 					predict_orbit(orbit, curr_time);
 					predict_observe_orbit(qth, orbit, &obs);
 				}
-			} while (((obs.elevation >= 0) || (curr_time <= next_los)) && (quit==0));
+			} while (((obs.elevation >= 0) || (curr_time <= next_los)) && !should_quit);
 
 			if (mode=='p') {
-				quit=Print("\n",'p');
+				should_quit=Print("\n",'p');
 			}
 
 			if (mode=='v') {
-				quit=PrintVisible("\n");
+				should_quit=PrintVisible("\n");
 			}
 
 			//move to the next orbit
 			daynum = predict_next_aos(qth, orbit, daynum);
 
-		} while (quit==0 && breakout==0 && !predict_decayed(orbit));
+		} while (!should_quit && !should_break && !predict_decayed(orbit));
 	} else {
 		//display warning that passes are impossible
 		bkgdset(COLOR_PAIR(5)|A_BOLD);
