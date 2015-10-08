@@ -3645,10 +3645,10 @@ char *string, mode;
 				mvprintw(1,60, "%s (%d)", sat[indx].name, sat[indx].catnum);
 			}
 			mvprintw(2,0,"                                                                                ");
-			attrset(COLOR_PAIR(2)|A_REVERSE);
+			attrset(COLOR_PAIR(2)|A_REVERSE|A_BOLD);
 			mvprintw(3,0,head2);
 
-			attrset(COLOR_PAIR(2));
+			attrset(COLOR_PAIR(2)|A_BOLD);
 	                mvprintw(4,0,"\n");
 
 			addstr(buffer);
@@ -3833,7 +3833,7 @@ void Predict(predict_orbit_t *orbit, predict_observer_t *qth, char mode)
 				}
 
 				//format line of data
-				sprintf(data_string,"      %s%4.0f %4.0f  %d  %4.0f   %4.0f   %4.0f  %d %c\n", time_string, obs.elevation*180.0/M_PI, obs.azimuth*180.0/M_PI, ma256, orbit->latitude*180.0/M_PI, orbit->longitude*180.0/M_PI, obs.range, orbit->revolutions, visibility);
+				sprintf(data_string,"      %s%4d %4d  %4d  %4d   %4d   %6ld  %6ld %c\n", time_string, (int)(obs.elevation*180.0/M_PI), (int)(obs.azimuth*180.0/M_PI), ma256, (int)(orbit->latitude*180.0/M_PI), (int)(orbit->longitude*180.0/M_PI), (long)(obs.range), orbit->revolutions, visibility);
 
 				//print data to screen
 				if (mode=='p') {
