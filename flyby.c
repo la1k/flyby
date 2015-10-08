@@ -200,7 +200,7 @@ char	qthfile[50], tlefile[50], dbfile[50], temp[80], output[25],
 	downlink_host[256], downlink_port[6]="4532\0\0", downlink_vfo[30],
 	resave=0, reload_tle=0, netport[8],
 	once_per_second=0, ephem[5], sat_sun_status, findsun,
-	calc_squint, database=0, xterm, io_lat='N', io_lon='E', maidenstr[9];
+	calc_squint, database=0, io_lat='N', io_lon='E', maidenstr[9];
 
 int	indx, iaz, iel, ma256, isplat, isplong,
 	Flags=0, rotctld_socket, uplink_socket, downlink_socket, totalsats=0;
@@ -3802,16 +3802,6 @@ void Predict(predict_orbit_t *orbit, predict_observer_t *qth, char mode)
 	clear();
 
 	if (predict_aos_happens(orbit, qth->latitude) && !predict_is_geostationary(orbit) && !predict_decayed(orbit)) {
-		if (xterm) {
-			strcpy(type,"Orbit");  /* Default */
-
-			if (mode=='v') {
-				strcpy(type,"Visual");
-			}
-
-			fprintf(stderr,"\033]0;flyby: %s's %s Calendar For %s\007",qth->name, type, orbit->name);
-		}
-
 		do {
 			predict_julian_date_t next_aos = predict_next_aos(qth, orbit, curr_time);
 			predict_julian_date_t next_los = predict_next_los(qth, orbit, next_aos);
@@ -3917,9 +3907,6 @@ void PredictMoon()
 	daynum=GetStartTime('m');
 	clear();
 
-	if (xterm)
-		fprintf(stderr,"\033]0;flyby: %s's Orbit Calendar for the Moon\007",qth.callsign);
-
 	do {
 		/* Determine moonrise */
 
@@ -3990,9 +3977,6 @@ void PredictSun()
 
 	daynum=GetStartTime('o');
 	clear();
-
-	if (xterm)
-		fprintf(stderr,"\033]0;flyby: %s's Orbit Calendar for the Sun\007",qth.callsign);
 
 	do {
 		/* Determine sunrise */
@@ -4472,9 +4456,6 @@ int x;
 		geostationary=Geostationary(indx);
 		decayed=Decayed(indx,0.0);
 
-		if (xterm)
-			fprintf(stderr,"\033]0;flyby: Tracking %-10s\007",sat[x].name);
-
 		halfdelay(halfdelaytime);
 		curs_set(0);
 		bkgdset(COLOR_PAIR(3));
@@ -4908,9 +4889,6 @@ char multitype, disttype;
 	double		aos[maxsats],
 			los[maxsats];
 
-	if (xterm)
-		fprintf(stderr,"\033]0;flyby: Multi-Satellite Tracking Mode\007");
-
 	curs_set(0);
 	attrset(COLOR_PAIR(6)|A_REVERSE|A_BOLD);
 	clear();
@@ -5246,9 +5224,6 @@ void Illumination()
 	curs_set(0);
 	clear();
 
-	if (xterm)
-		fprintf(stderr,"\033]0;flyby: %s's Solar Illumination Calendar For %s\007",qth.callsign, sat[indx].name);
-
 
 	do {
 		attrset(COLOR_PAIR(4));
@@ -5397,8 +5372,6 @@ void MainMenu()
 
 	refresh();
 
-	if (xterm)
-		fprintf(stderr,"\033]0;flyby: Version %s\007",FLYBY_VERSION);
 }
 
 void ProgramInfo()
@@ -5963,15 +5936,6 @@ char argc, *argv[];
 
 	if (interactive) {
 		/* We're in interactive mode.  Prepare the screen */
-
-		/* Are we running under an xterm or equivalent? */
-
-		env=getenv("TERM");
-
-		if (env!=NULL && strncmp(env,"xterm",5)==0)
-			xterm=1;
-		else
-			xterm=0;
 
 		/* Start ncurses */
 
