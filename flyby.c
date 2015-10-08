@@ -3840,6 +3840,7 @@ void Predict(predict_orbit_t *orbit, predict_observer_t *qth, char mode)
 					should_quit=Print(data_string,'p');
 				}
 
+				//print only visible passes to screen
 				if (mode=='v') {
 					nodelay(stdscr,TRUE);
 					attrset(COLOR_PAIR(4));
