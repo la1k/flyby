@@ -3796,9 +3796,9 @@ void Predict(predict_orbit_t *orbit, predict_observer_t *qth, char mode)
 
 	bool should_quit = false;
 	bool should_break = false;
-	char data_string[80];
-	const int MAX_TIME_STRING = 50;
-	char time_string[MAX_TIME_STRING];
+	const int MAX_NUM_CHARS = 80;
+	char data_string[MAX_NUM_CHARS];
+	char time_string[MAX_NUM_CHARS];
 
 	predict_julian_date_t curr_time = predict_to_julian(time(NULL));
 	predict_orbit(orbit, curr_time);
@@ -3817,7 +3817,7 @@ void Predict(predict_orbit_t *orbit, predict_observer_t *qth, char mode)
 			do {
 				//get formatted time
 				time_t epoch = predict_from_julian(curr_time);
-				strftime(time_string, MAX_TIME_STRING, "%a %d%b%y %H:%M:%S", gmtime(&epoch));
+				strftime(time_string, MAX_NUM_CHARS, "%a %d%b%y %H:%M:%S", gmtime(&epoch));
 
 				//modulo 256 phase
 				int ma256 = (int)rint(256.0*(orbit->phase/(2*M_PI)));
