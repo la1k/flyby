@@ -200,7 +200,7 @@ char	qthfile[50], tlefile[50], dbfile[50], temp[80], output[25],
 	downlink_host[256], downlink_port[6]="4532\0\0", downlink_vfo[30],
 	resave=0, reload_tle=0, netport[8],
 	once_per_second=0, ephem[5], sat_sun_status, findsun,
-	calc_squint, database=0, xterm, io_lat='N', io_lon='W', maidenstr[9];
+	calc_squint, database=0, xterm, io_lat='N', io_lon='E', maidenstr[9];
 
 int	indx, iaz, iel, ma256, isplat, isplong,
 	Flags=0, rotctld_socket, uplink_socket, downlink_socket, totalsats=0;
@@ -3801,19 +3801,13 @@ void Predict(predict_orbit_t *orbit, predict_observer_t *qth, char mode)
 	predict_orbit(orbit, curr_time);
 	clear();
 
-	/* Trap geostationary orbits and passes that cannot occur. */
-	irk=(long)rint(sat_range);
-	isplat=(int)rint(sat_lat);
-	isplong=(int)rint(360.0-sat_lon);
-	iaz=(int)rint(sat_azi);
-	iel=(int)rint(sat_ele);
-
 	if (predict_aos_happens(orbit, qth->latitude) && !predict_is_geostationary(orbit) && !predict_decayed(orbit)) {
 		if (xterm) {
 			strcpy(type,"Orbit");  /* Default */
 
-			if (mode=='v')
+			if (mode=='v') {
 				strcpy(type,"Visual");
+			}
 
 			fprintf(stderr,"\033]0;flyby: %s's %s Calendar For %s\007",qth->name, type, orbit->name);
 		}
@@ -3823,11 +3817,9 @@ void Predict(predict_orbit_t *orbit, predict_observer_t *qth, char mode)
 			predict_julian_date_t next_los = predict_next_los(qth, orbit, next_aos);
 			curr_time = next_aos;
 
-			/* Display the pass */
 			struct predict_observation obs;
 			predict_orbit(orbit, curr_time);
 			predict_observe_orbit(qth, orbit, &obs);
-
 			bool has_printed_last_entry = false;
 			do {
 				//print results to screen
@@ -3835,11 +3827,21 @@ void Predict(predict_orbit_t *orbit, predict_observer_t *qth, char mode)
 				char time_string[MAX_TIME_STRING];
 				time_t epoch = predict_from_julian(curr_time);
 				strftime(time_string, MAX_TIME_STRING, "%a %d%b%y %H:%M:%S", gmtime(&epoch));
+				int ma256 = (int)rint(256.0*(orbit->phase/(2*M_PI)));
+				char visibility;
+				if (obs.visible) {
+					visibility = '+';
+				} else if (!(orbit->eclipsed)) {
+					visibility = '*';
+				} else {
+					visibility = ' ';
+				}
 
-				sprintf(string,"      %s%4.0f %4.0f  %s  %4.0f   %4.0f   %4.0f  %s %s\n", time_string, obs.elevation*180.0/M_PI, obs.azimuth*180.0/M_PI, "????", orbit->latitude*180.0/M_PI, orbit->longitude*180.0/M_PI, obs.range*180.0/M_PI, "??????", "?");
+				sprintf(string,"      %s%4.0f %4.0f  %d  %4.0f   %4.0f   %4.0f  %d %c\n", time_string, obs.elevation*180.0/M_PI, obs.azimuth*180.0/M_PI, ma256, orbit->latitude*180.0/M_PI, orbit->longitude*180.0/M_PI, obs.range, orbit->revolutions, visibility);
 
-				if (mode=='p')
+				if (mode=='p') {
 					quit=Print(string,'p');
+				}
 
 				if (mode=='v') {
 					nodelay(stdscr,TRUE);
@@ -3872,17 +3874,20 @@ void Predict(predict_orbit_t *orbit, predict_observer_t *qth, char mode)
 				}
 			} while (((obs.elevation >= 0) || (curr_time <= next_los)) && (quit==0));
 
-			if (mode=='p')
+			if (mode=='p') {
 				quit=Print("\n",'p');
+			}
 
-			if (mode=='v')
+			if (mode=='v') {
 				quit=PrintVisible("\n");
+			}
 
-			/* Move to next orbit */
-			daynum=predict_next_aos(qth, orbit, daynum);
+			//move to the next orbit
+			daynum = predict_next_aos(qth, orbit, daynum);
 
-		}  while (quit==0 && breakout==0 && predict_aos_happens(orbit, qth->latitude) && !predict_decayed(orbit));
+		} while (quit==0 && breakout==0 && !predict_decayed(orbit));
 	} else {
+		//display warning that passes are impossible
 		bkgdset(COLOR_PAIR(5)|A_BOLD);
 		clear();
 
@@ -6123,7 +6128,7 @@ char argc, *argv[];
 
 					if (indx!=-1 && sat[indx].meanmo!=0.0 && Decayed(indx,0.0)==0) {
 						const char *tle[2] = {sat[indx].line1, sat[indx].line2};
-						predict_orbit_t *orbit = predict_create_orbit(tle);
+						predict_orbit_t *orbit = predict_create_orbit(predict_tle_from_string(tle));
 						predict_observer_t *observer = predict_create_observer("test_qth", qth.stnlat*M_PI/180.0, qth.stnlong*M_PI/180.0, qth.stnalt);
 						Predict(orbit, observer, key);
 					}
