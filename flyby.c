@@ -33,6 +33,7 @@
 * General Public License for more details.                                  *
 *                                                                           *
 \***************************************************************************/
+#include "flyby_defs.h"
 
 #include "config.h"
 #include <math.h>
@@ -54,11 +55,9 @@
 
 #define maxsats		250
 #define ARRAY_SIZE(a) (sizeof(a) / sizeof(a[0]))
-#define halfdelaytime	5
 
 /* Constants used by SGP4/SDP4 code */
 
-#define	km2mi		0.621371		/* km to miles */
 #define deg2rad		1.745329251994330E-2	/* Degrees to radians */
 #define pi		3.14159265358979323846	/* Pi */
 #define pio2		1.57079632679489656	/* Pi/2 */
@@ -167,7 +166,8 @@ struct	{  char callsign[17];
 	   int tzoffset;
 	}  qth;
 
-struct	{  char name[25];
+struct sat_db_entry {
+	   char name[25];
 	   long catnum;
 	   char squintflag;
 	   double alat;
@@ -181,7 +181,10 @@ struct	{  char name[25];
 	   unsigned char dayofweek[10];
 	   int phase_start[10];
 	   int phase_end[10];
-	}  sat_db[maxsats];
+	};
+
+struct sat_db_entry sat_db[maxsats];
+
 
 /* Global variables for sharing data among functions... */
 
@@ -3787,7 +3790,6 @@ char *string;
 	return quit;
 }
 
-const int MAX_NUM_CHARS = 80;
 void Predict(predict_orbit_t *orbit, predict_observer_t *qth, char mode)
 {
 	/* This function predicts satellite passes.  It displays
@@ -4405,22 +4407,32 @@ void QthEdit()
 	}
 }
 
-void SingleTrack(int x, predict_orbit_t *orbit, predict_observer_t *qth)
+void SingleTrack(double horizon, predict_orbit_t *orbit, predict_observer_t *qth, struct sat_db_entry sat_db)
 {
 	/* This function tracks a single satellite in real-time
 	   until 'Q' or ESC is pressed.  x represents the index
 	   of the satellite being tracked. */
 
-	int	ans, oldaz=0, oldel=0, length, xponder=0,
+	int	ans, length, xponder=0,
 		polarity=0;
-	char	comsat, aos_alarm=0, aoshappens=0;
+	bool	comsat, aos_alarm=0, aoshappens=0;
 	double	nextaos=0.0, lostime=0.0, aoslos=0.0,
 		downlink=0.0, uplink=0.0, downlink_start=0.0,
 		downlink_end=0.0, uplink_start=0.0, uplink_end=0.0,
-		dopp, doppler100=0.0, delay, loss, shift;
-	long	newtime, lasttime=0;
+		shift;
 	bool	downlink_update=true, uplink_update=true, readfreq=false;
+	bool once_per_second = true;
 
+	double doppler100, delay;
+	double dopp;
+	double loss;
+
+	//elevation and azimuth at previous timestep, for checking when to send messages to rotctld
+	int prev_elevation = 0;
+	int prev_azimuth = 0;
+	time_t prev_time = 0;
+
+	char tracking_mode[MAX_NUM_CHARS];
 	char ephemeris_string[MAX_NUM_CHARS];
 	switch (orbit->ephemeris) {
 		case EPHEMERIS_SGP4:
@@ -4440,19 +4452,13 @@ void SingleTrack(int x, predict_orbit_t *orbit, predict_observer_t *qth)
 	char time_string[MAX_NUM_CHARS];
 
 	do {
-		indx=x;
-
-		if (sat_db[x].transponders>0) {
-			comsat=1;
-		} else {
-			comsat=0;
-		}
+		bool comsat = sat_db.transponders > 0;
 
 		if (comsat) {
-			downlink_start=sat_db[x].downlink_start[xponder];
-			downlink_end=sat_db[x].downlink_end[xponder];
-			uplink_start=sat_db[x].uplink_start[xponder];
-			uplink_end=sat_db[x].uplink_end[xponder];
+			downlink_start=sat_db.downlink_start[xponder];
+			downlink_end=sat_db.downlink_end[xponder];
+			uplink_start=sat_db.uplink_start[xponder];
+			uplink_end=sat_db.uplink_end[xponder];
 
 			if (downlink_start>downlink_end)
 				polarity=-1;
@@ -4475,10 +4481,10 @@ void SingleTrack(int x, predict_orbit_t *orbit, predict_observer_t *qth)
 			uplink=0.0;
 		}
 
-		predict_julian_date_t daynum = predict_to_julian(time(NULL));
 		bool aos_happens = predict_aos_happens(orbit, qth->latitude);
 		bool geostationary = predict_is_geostationary(orbit);
 
+		predict_julian_date_t daynum = predict_to_julian(time(NULL));
 		predict_orbit(orbit, daynum);
 		bool decayed = predict_decayed(orbit);
 
@@ -4491,7 +4497,7 @@ void SingleTrack(int x, predict_orbit_t *orbit, predict_observer_t *qth)
 		mvprintw(0,0,"                                                                                ");
 		mvprintw(1,0,"  flyby Tracking:                                                               ");
 		mvprintw(2,0,"                                                                                ");
-		mvprintw(1,21,"%-24s (%d)", orbit->name, orbit->orbital_elements.element_number);
+		mvprintw(1,21,"%-24s (%d)", sat_db.name, orbit->orbital_elements.element_number);
 
 		attrset(COLOR_PAIR(4)|A_BOLD);
 
@@ -4520,26 +4526,30 @@ void SingleTrack(int x, predict_orbit_t *orbit, predict_observer_t *qth)
 			if (uplink_socket!=-1 && readfreq)
 				uplink=ReadFreqDataNet(uplink_socket,uplink_vfo)/(1-1.0e-08*doppler100);
 
-			attrset(COLOR_PAIR(6)|A_REVERSE|A_BOLD);
 
+			//predict and observe satellite orbit
 			time_t epoch = time(NULL);
 			daynum = predict_to_julian(epoch);
-			strftime(time_string, MAX_NUM_CHARS, "%a %d%b%y %j.%H:%M:%S", gmtime(&epoch));
-
-			mvprintw(1,54,"%s",time_string);
-			attrset(COLOR_PAIR(2)|A_BOLD);
-
 			predict_orbit(orbit, daynum);
 			struct predict_observation obs;
 			predict_observe_orbit(qth, orbit, &obs);
+			double sat_vel = sqrt(pow(orbit->velocity[0], 2.0) + pow(orbit->velocity[1], 2.0) + pow(orbit->velocity[2], 2.0));
+			double squint = predict_squint_angle(qth, orbit, sat_db.alon, sat_db.alat);
 
-			mvprintw(5,1,"%-6.2f",orbit->latitude*180.0/M_PI);
+			//display current time
+			attrset(COLOR_PAIR(6)|A_REVERSE|A_BOLD);
+			strftime(time_string, MAX_NUM_CHARS, "%a %d%b%y %j.%H:%M:%S", gmtime(&epoch));
+			mvprintw(1,54,"%s",time_string);
+
 			attrset(COLOR_PAIR(4)|A_BOLD);
-			mvprintw(5,8,(io_lat=='N'?"N":"S"));
-			mvprintw(6,8,(io_lon=='W'?"W":"E"));
+			mvprintw(5,8,"N");
+			mvprintw(6,8,"E");
+
+			//display satellite data
+			attrset(COLOR_PAIR(2)|A_BOLD);
+			mvprintw(5,1,"%-6.2f",orbit->latitude*180.0/M_PI);
 
 			attrset(COLOR_PAIR(2)|A_BOLD);
-
 			mvprintw(5,55,"%0.f ",orbit->altitude*km2mi);
 			mvprintw(6,55,"%0.f ",orbit->altitude);
 			mvprintw(5,68,"%-5.0f",obs.range*km2mi);
@@ -4547,23 +4557,83 @@ void SingleTrack(int x, predict_orbit_t *orbit, predict_observer_t *qth)
 			mvprintw(6,1,"%-7.2f",orbit->longitude*180.0/M_PI);
 			mvprintw(5,15,"%-7.2f",obs.azimuth*180.0/M_PI);
 			mvprintw(6,14,"%+-6.2f",obs.elevation*180.0/M_PI);
-
-			double sat_vel = sqrt(pow(orbit->velocity[0], 2.0) + pow(orbit->velocity[1], 2.0) + pow(orbit->velocity[2], 2.0));
 			mvprintw(5,29,"%0.f ",(3600.0*sat_vel)*km2mi);
 			mvprintw(6,29,"%0.f ",3600.0*sat_vel);
-
 			mvprintw(18,3,"%+6.2f deg",orbit->eclipse_depth*180.0/M_PI);
 			mvprintw(18,20,"%5.1f",256.0*(orbit->phase/(2*M_PI)));
 			mvprintw(18,37,"%s",ephemeris_string);
+			mvprintw(18,52,"%+6.2f",squint);
+			mvprintw(5,42,"%0.f ",orbit->footprint*km2mi);
+			mvprintw(6,42,"%0.f ",orbit->footprint);
 
-			char visibility;
+			attrset(COLOR_PAIR(1)|A_BOLD);
+			mvprintw(20,1,"Orbit Number: %ld", orbit->revolutions);
+
+			mvprintw(22,1,"Spacecraft is currently ");
 			if (obs.visible) {
-				visibility = 'V';
+				mvprintw(22,25,"visible    ");
 			} else if (!(orbit->eclipsed)) {
-				visibility = 'D';
+				mvprintw(22,25,"in sunlight");
 			} else {
-				visibility = 'N';
+				mvprintw(22,25,"in eclipse ");
 			}
+
+			//display satellite AOS/LOS information
+			if (geostationary && (obs.elevation>=0.0)) {
+				mvprintw(21,1,"Satellite orbit is geostationary");
+				aoslos=-3651.0;
+			}
+
+			if (geostationary && (obs.elevation<0)) {
+				mvprintw(21,1,"This satellite never reaches AOS");
+				aoslos=-3651.0;
+			}
+
+			if (!aos_happens || decayed) {
+				mvprintw(21,1,"This satellite never reaches AOS");
+				aoslos=-3651.0;
+			}
+
+			if ((obs.elevation>=0.0) && !geostationary && !decayed && daynum>lostime) {
+				lostime = predict_next_los(qth, orbit, daynum);
+				time_t epoch = predict_from_julian(lostime);
+				strftime(time_string, MAX_NUM_CHARS, "%a %d%b%y %j.%H:%M:%S", gmtime(&epoch));
+				mvprintw(21,1,"LOS at: %s %s  ",time_string, "GMT");
+				aoslos=lostime;
+			} else if (obs.elevation<0.0 && !geostationary && !decayed && aoshappens && daynum>aoslos) {
+				daynum+=0.003;  /* Move ahead slightly... */
+				nextaos=predict_next_aos(qth, orbit, daynum);
+				time_t epoch = predict_from_julian(nextaos);
+				strftime(time_string, MAX_NUM_CHARS, "%a %d%b%y %j.%H:%M:%S", gmtime(&epoch));
+				mvprintw(21,1,"Next AOS: %s %s",time_string, "GMT");
+				aoslos=nextaos;
+			}
+
+			//predict and observe sun and moon
+			struct predict_observation sun;
+			predict_observe_sun(qth, daynum, &sun);
+
+			struct predict_observation moon;
+			predict_observe_moon(qth, daynum, &moon);
+
+			//display sun and moon
+			attrset(COLOR_PAIR(4)|A_REVERSE|A_BOLD);
+			mvprintw(20,55,"   Sun   ");
+			mvprintw(20,70,"   Moon  ");
+			if (sun.elevation > 0.0)
+				attrset(COLOR_PAIR(3)|A_BOLD);
+			else
+				attrset(COLOR_PAIR(2));
+			mvprintw(21,55,"%-7.2fAz",sun.azimuth);
+			mvprintw(22,55,"%+-6.2f El",sun.elevation);
+
+			attrset(COLOR_PAIR(3)|A_BOLD);
+			if (moon.elevation > 0.0)
+				attrset(COLOR_PAIR(1)|A_BOLD);
+			else
+				attrset(COLOR_PAIR(1));
+			mvprintw(21,70,"%-7.2fAz",moon.azimuth);
+			mvprintw(22,70,"%+-6.2f El",moon.elevation);
 
 			if (comsat) {
 				if (downlink!=0.0)
@@ -4586,23 +4656,16 @@ void SingleTrack(int x, predict_orbit_t *orbit, predict_observer_t *qth)
 			}
 
 			if (rotctld_socket!=-1) {
-				if (sat_ele>=horizon)
+				if (obs.elevation>=horizon)
 					mvprintw(17,67,"   Active   ");
 				else
 					mvprintw(17,67,"Standing  By");
 			} else
 				mvprintw(18,67,"Not  Enabled");
 
-			if (calc_squint) {
-				double squint = predict_squint_angle(qth, orbit, sat_db[x].alon, sat_db[x].alat);
-				mvprintw(18,52,"%+6.2f",squint);
-			} else {
-				mvprintw(18,54,"N/A");
-			}
 
 			doppler100=-100.0e06*((obs.range_rate*1000.0)/299792458.0);
 			delay=1000.0*((1000.0*obs.range)/299792458.0);
-
 			if (obs.elevation>=horizon) {
 				if (obs.elevation>=0 && aos_alarm==0) {
 					beep();
@@ -4640,7 +4703,6 @@ void SingleTrack(int x, predict_orbit_t *orbit, predict_observer_t *qth)
 						mvprintw(12,67,"          ");
 						mvprintw(13,13,"            ");
 					}
-
 					if (uplink!=0.0) {
 						dopp=1.0e-08*(doppler100*uplink);
 						mvprintw(11,32,"%11.5f MHz",uplink-dopp);
@@ -4649,7 +4711,6 @@ void SingleTrack(int x, predict_orbit_t *orbit, predict_observer_t *qth)
 						if (uplink_socket!=-1 && uplink_update)
 							FreqDataNet(uplink_socket,uplink_vfo,uplink-dopp);
 					}
-
 					else
 					{
 						mvprintw(11,32,"                ");
@@ -4677,107 +4738,41 @@ void SingleTrack(int x, predict_orbit_t *orbit, predict_observer_t *qth)
 				}
 			}
 
-			mvprintw(5,42,"%0.f ",orbit->footprint*km2mi);
-			mvprintw(6,42,"%0.f ",orbit->footprint);
-
-			attrset(COLOR_PAIR(1)|A_BOLD);
-
-			mvprintw(20,1,"Orbit Number: %ld", orbit->revolutions);
 
 			/* Send data to rotctld, either when it changes, or at a given interval
        * (as specified by the user). TODO: Implement this, currently fixed at
        * once per second. */
+			if (obs.elevation*180.0/M_PI >= horizon) {
+				time_t curr_time = time(NULL);
+				int elevation = (int)round(obs.elevation*180.0/M_PI);
+				int azimuth = (int)round(obs.azimuth*180.0/M_PI);
 
-			if (sat_ele>=horizon) {
-				newtime=(long)time(NULL);
-
-				if ((oldel!=iel || oldaz!=iaz) || (once_per_second && newtime>lasttime)) {
+				if ((elevation != prev_elevation) || (azimuth != prev_azimuth) || (once_per_second && (curr_time > prev_time))) {
 					if (rotctld_socket!=-1) TrackDataNet(rotctld_socket,sat_ele,sat_azi);
-					oldel=iel;
-					oldaz=iaz;
-					lasttime=newtime;
+					prev_elevation = elevation;
+					prev_azimuth = azimuth;
+					prev_time = curr_time;
 				}
-			}
-
-			mvprintw(22,1,"Spacecraft is currently ");
-
-			if (visibility=='V')
-				mvprintw(22,25,"visible    ");
-
-			if (visibility=='D')
-				mvprintw(22,25,"in sunlight");
-
-			if (visibility=='N')
-				mvprintw(22,25,"in eclipse ");
-
-			attrset(COLOR_PAIR(4)|A_REVERSE|A_BOLD);
-			mvprintw(20,55,"   Sun   ");
-			if (sun_ele > 0.0)
-				attrset(COLOR_PAIR(3)|A_BOLD);
-			else
-				attrset(COLOR_PAIR(2));
-			mvprintw(21,55,"%-7.2fAz",sun_azi);
-			mvprintw(22,55,"%+-6.2f El",sun_ele);
-
-			FindMoon(daynum);
-
-			if (geostationary && (obs.elevation>=0.0)) {
-				mvprintw(21,1,"Satellite orbit is geostationary");
-				aoslos=-3651.0;
-			}
-
-			if (geostationary && (obs.elevation<0)) {
-				mvprintw(21,1,"This satellite never reaches AOS");
-				aoslos=-3651.0;
-			}
-
-			if (!aos_happens || decayed) {
-				mvprintw(21,1,"This satellite never reaches AOS");
-				aoslos=-3651.0;
-			}
-
-			if ((obs.elevation>=0.0) && !geostationary && !decayed && daynum>lostime) {
-				lostime = predict_next_los(qth, orbit, daynum);
-				time_t epoch = predict_from_julian(lostime);
-				strftime(time_string, MAX_NUM_CHARS, "%a %d%b%y %j.%H:%M:%S", gmtime(&epoch));
-				mvprintw(21,1,"LOS at: %s %s  ",time_string, "GMT");
-				aoslos=lostime;
-			} else if (obs.elevation<0.0 && !geostationary && !decayed && aoshappens && daynum>aoslos) {
-				daynum+=0.003;  /* Move ahead slightly... */
-				nextaos=predict_next_aos(qth, orbit, daynum);
-				time_t epoch = predict_from_julian(lostime);
-				strftime(time_string, MAX_NUM_CHARS, "%a %d%b%y %j.%H:%M:%S", gmtime(&epoch));
-				mvprintw(21,1,"Next AOS: %s %s",time_string, "GMT");
-				aoslos=nextaos;
 			}
 
 			/* Get input from keyboard */
 
 			ans=getch();
 
-			/* If we receive a RELOAD_TLE command through the
-				socket connection or an 'r' through the keyboard,
-				reload the TLE file.  */
-
-			if (reload_tle || ans=='r' || ans=='R') {
-				ReadDataFiles();
-				reload_tle=0;
-			}
-
 			if (comsat) {
-				if (ans==' ' && sat_db[x].transponders>1) {
+				if (ans==' ' && sat_db.transponders>1) {
 					xponder++;
 
-					if (xponder>=sat_db[x].transponders)
+					if (xponder>=sat_db.transponders)
 						xponder=0;
 
 					move(9,1);
 					clrtoeol();
 
-					downlink_start=sat_db[x].downlink_start[xponder];
-					downlink_end=sat_db[x].downlink_end[xponder];
-					uplink_start=sat_db[x].uplink_start[xponder];
-					uplink_end=sat_db[x].uplink_end[xponder];
+					downlink_start=sat_db.downlink_start[xponder];
+					downlink_end=sat_db.downlink_end[xponder];
+					uplink_start=sat_db.uplink_start[xponder];
+					uplink_end=sat_db.uplink_end[xponder];
 
 					if (downlink_start>downlink_end)
 						polarity=-1;
@@ -4792,43 +4787,39 @@ void SingleTrack(int x, predict_orbit_t *orbit, predict_observer_t *qth)
 					uplink=0.5*(uplink_start+uplink_end);
 				}
 
+				double shift = 0;
+
+				/* Raise uplink frequency */
 				if (ans==KEY_UP || ans=='>' || ans=='.') {
 					if (ans==KEY_UP || ans=='>')
 						shift=0.001;  /* 1 kHz */
 					else
 						shift=0.0001; /* 100 Hz */
-
-					/* Raise uplink frequency */
-
-					uplink+=shift*(double)abs(polarity);
-					downlink=downlink+(shift*(double)polarity);
-
-					if (uplink>uplink_end) {
-						uplink=uplink_start;
-						downlink=downlink_start;
-					}
 				}
 
+				/* Lower uplink frequency */
 				if (ans==KEY_DOWN || ans=='<' || ans== ',') {
 					if (ans==KEY_DOWN || ans=='<')
-						shift=0.001;  /* 1 kHz */
+						shift=-0.001;  /* 1 kHz */
 					else
-						shift=0.0001; /* 100 Hz */
-
-					/* Lower uplink frequency */
-
-					uplink-=shift*(double)abs(polarity);
-					downlink=downlink-(shift*(double)polarity);
-
-					if (uplink<uplink_start) {
-						uplink=uplink_end;
-						downlink=downlink_end;
-					}
+						shift=-0.0001; /* 100 Hz */
 				}
 
-				length=strlen(sat_db[x].transponder_name[xponder])/2;
+				uplink+=shift*(double)abs(polarity);
+				downlink=downlink+(shift*(double)polarity);
+
+				if (uplink < uplink_start) {
+					uplink=uplink_end;
+					downlink=downlink_end;
+				}
+				if (uplink > uplink_end) {
+					uplink=uplink_start;
+					downlink=downlink_start;
+				}
+
+				length=strlen(sat_db.transponder_name[xponder])/2;
 	      mvprintw(10,0,"                                                                                ");
-				mvprintw(10,40-length,"%s",sat_db[x].transponder_name[xponder]);
+				mvprintw(10,40-length,"%s",sat_db.transponder_name[xponder]);
 
 				if (ans=='d')
 					downlink_update=true;
@@ -4873,9 +4864,6 @@ void SingleTrack(int x, predict_orbit_t *orbit, predict_observer_t *qth)
 		} while (ans!='q' && ans!='Q' && ans!=27 &&
 		 	ans!='+' && ans!='-' &&
 		 	ans!=KEY_LEFT && ans!=KEY_RIGHT);
-
-		if ((ans=='+' || ans==KEY_RIGHT) && (x<totalsats-1)) x++;
-		if ((ans=='-' || ans==KEY_LEFT) && (x>0)) x--;
 
 	} while (ans!='q' && ans!=17);
 
@@ -6177,7 +6165,7 @@ char argc, *argv[];
 						const char *tle[2] = {sat[indx].line1, sat[indx].line2};
 						predict_orbit_t *orbit = predict_create_orbit(predict_parse_tle(tle));
 						predict_observer_t *observer = predict_create_observer("test_qth", qth.stnlat*M_PI/180.0, -qth.stnlong*M_PI/180.0, qth.stnalt);
-						SingleTrack(indx,orbit, observer);
+						SingleTrack(horizon, orbit, observer, sat_db[indx]);
 					}
 
 					MainMenu();
