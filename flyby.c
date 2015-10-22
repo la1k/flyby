@@ -4624,16 +4624,18 @@ void SingleTrack(double horizon, predict_orbit_t *orbit, predict_observer_t *qth
 				attrset(COLOR_PAIR(3)|A_BOLD);
 			else
 				attrset(COLOR_PAIR(2));
-			mvprintw(21,55,"%-7.2fAz",sun.azimuth);
-			mvprintw(22,55,"%+-6.2f El",sun.elevation);
+			mvprintw(21,55,"%-7.2fAz",sun.azimuth*180.0/M_PI);
+			mvprintw(22,55,"%+-6.2f El",sun.elevation*180.0/M_PI);
 
 			attrset(COLOR_PAIR(3)|A_BOLD);
 			if (moon.elevation > 0.0)
 				attrset(COLOR_PAIR(1)|A_BOLD);
 			else
 				attrset(COLOR_PAIR(1));
-			mvprintw(21,70,"%-7.2fAz",moon.azimuth);
-			mvprintw(22,70,"%+-6.2f El",moon.elevation);
+			mvprintw(21,70,"%-7.2fAz",moon.azimuth*180.0/M_PI);
+			mvprintw(22,70,"%+-6.2f El",moon.elevation*180.0/M_PI);
+
+			attrset(COLOR_PAIR(2)|A_BOLD);
 
 			if (comsat) {
 				if (downlink!=0.0)
