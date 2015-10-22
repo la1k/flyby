@@ -6102,7 +6102,7 @@ char argc, *argv[];
 
 					if (indx!=-1 && sat[indx].meanmo!=0.0 && Decayed(indx,0.0)==0) {
 						const char *tle[2] = {sat[indx].line1, sat[indx].line2};
-						predict_orbit_t *orbit = predict_create_orbit(predict_tle_from_string(tle));
+						predict_orbit_t *orbit = predict_create_orbit(predict_parse_tle(tle));
 						predict_observer_t *observer = predict_create_observer("test_qth", qth.stnlat*M_PI/180.0, qth.stnlong*M_PI/180.0, qth.stnalt);
 						Predict(orbit, observer, key);
 					}
