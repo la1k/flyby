@@ -4415,7 +4415,7 @@ void SingleTrack(double horizon, predict_orbit_t *orbit, predict_observer_t *qth
 
 	int	ans, length, xponder=0,
 		polarity=0;
-	bool	comsat, aos_alarm=0, aoshappens=0;
+	bool	comsat, aos_alarm=0;
 	double	nextaos=0.0, lostime=0.0, aoslos=0.0,
 		downlink=0.0, uplink=0.0, downlink_start=0.0,
 		downlink_end=0.0, uplink_start=0.0, uplink_end=0.0,
@@ -4582,31 +4582,22 @@ void SingleTrack(double horizon, predict_orbit_t *orbit, predict_observer_t *qth
 			if (geostationary && (obs.elevation>=0.0)) {
 				mvprintw(21,1,"Satellite orbit is geostationary");
 				aoslos=-3651.0;
-			}
-
-			if (geostationary && (obs.elevation<0)) {
-				mvprintw(21,1,"This satellite never reaches AOS");
-				aoslos=-3651.0;
-			}
-
-			if (!aos_happens || decayed) {
-				mvprintw(21,1,"This satellite never reaches AOS");
-				aoslos=-3651.0;
-			}
-
-			if ((obs.elevation>=0.0) && !geostationary && !decayed && daynum>lostime) {
+			} else if ((obs.elevation>=0.0) && !geostationary && !decayed && daynum>lostime) {
 				lostime = predict_next_los(qth, orbit, daynum);
 				time_t epoch = predict_from_julian(lostime);
 				strftime(time_string, MAX_NUM_CHARS, "%a %d%b%y %j.%H:%M:%S", gmtime(&epoch));
 				mvprintw(21,1,"LOS at: %s %s  ",time_string, "GMT");
 				aoslos=lostime;
-			} else if (obs.elevation<0.0 && !geostationary && !decayed && aoshappens && daynum>aoslos) {
+			} else if (obs.elevation<0.0 && !geostationary && !decayed && aos_happens && daynum>aoslos) {
 				daynum+=0.003;  /* Move ahead slightly... */
 				nextaos=predict_next_aos(qth, orbit, daynum);
 				time_t epoch = predict_from_julian(nextaos);
 				strftime(time_string, MAX_NUM_CHARS, "%a %d%b%y %j.%H:%M:%S", gmtime(&epoch));
 				mvprintw(21,1,"Next AOS: %s %s",time_string, "GMT");
 				aoslos=nextaos;
+			} else if (decayed || !aos_happens || (geostationary && (obs.elevation<0.0))){
+				mvprintw(21,1,"This satellite never reaches AOS");
+				aoslos=-3651.0;
 			}
 
 			//predict and observe sun and moon
@@ -4637,6 +4628,7 @@ void SingleTrack(double horizon, predict_orbit_t *orbit, predict_observer_t *qth
 
 			attrset(COLOR_PAIR(2)|A_BOLD);
 
+			//display downlink/uplink information
 			if (comsat) {
 				if (downlink!=0.0)
 					mvprintw(12,11,"%11.5f MHz%c%c%c",downlink,
@@ -4657,15 +4649,7 @@ void SingleTrack(double horizon, predict_orbit_t *orbit, predict_observer_t *qth
 					mvprintw(11,11,"               ");
 			}
 
-			if (rotctld_socket!=-1) {
-				if (obs.elevation>=horizon)
-					mvprintw(17,67,"   Active   ");
-				else
-					mvprintw(17,67,"Standing  By");
-			} else
-				mvprintw(18,67,"Not  Enabled");
-
-
+			//calculate and display downlink/uplink information during pass, and control rig if available
 			doppler100=-100.0e06*((obs.range_rate*1000.0)/299792458.0);
 			delay=1000.0*((1000.0*obs.range)/299792458.0);
 			if (obs.elevation>=horizon) {
@@ -4739,6 +4723,15 @@ void SingleTrack(double horizon, predict_orbit_t *orbit, predict_observer_t *qth
 					mvprintw(13,67,"          ");
 				}
 			}
+
+			//display rotation information
+			if (rotctld_socket!=-1) {
+				if (obs.elevation>=horizon)
+					mvprintw(17,67,"   Active   ");
+				else
+					mvprintw(17,67,"Standing  By");
+			} else
+				mvprintw(18,67,"Not  Enabled");
 
 
 			/* Send data to rotctld, either when it changes, or at a given interval
