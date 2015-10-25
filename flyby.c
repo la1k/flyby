@@ -4883,8 +4883,7 @@ double scrk, scel;
 		attrset(COLOR_PAIR(2)|A_REVERSE); /* reverse */
 }
 
-void MultiTrack(multitype,disttype)
-char multitype, disttype;
+void MultiTrack(predict_observer_t *qth, int num_orbits, predict_orbit_t **orbits, char multitype, char disttype)
 {
 	/* This function tracks all satellites in the program's
 	   database simultaneously until 'Q' or ESC is pressed.
@@ -4893,11 +4892,12 @@ char multitype, disttype;
 
 	int		w, x, y, z, ans, siv;
 
-	unsigned char	satindex[maxsats], inrange[maxsats], sunstat=0,
-			ok2predict[maxsats];
+	unsigned char	inrange[num_orbits], sunstat=0;
+	bool		ok2predict[num_orbits];
+	int 		satindex[num_orbits];
 
-	double		aos[maxsats],
-			los[maxsats];
+	double		aos[num_orbits],
+			los[num_orbits];
 
 	curs_set(0);
 	attrset(COLOR_PAIR(6)|A_REVERSE|A_BOLD);
@@ -4914,16 +4914,15 @@ char multitype, disttype;
 	attrset(COLOR_PAIR(4)|A_REVERSE|A_BOLD);
 	mvprintw(5,70,"   QTH   ");
 	attrset(COLOR_PAIR(2));
-	mvprintw(6,70,"%9s",Abbreviate(qth.callsign,9));
-	getMaidenHead(qth.stnlat,qth.stnlong,maidenstr);
+	mvprintw(6,70,"%9s",Abbreviate(qth->name,9));
+	getMaidenHead(qth->latitude*180.0/M_PI, qth->longitude*180.0/M_PI, maidenstr);
 	mvprintw(7,70,"%9s",maidenstr);
 
-	for (x=0; x<totalsats; x++) {
-		if (Geostationary(x)==0 && AosHappens(x)==1 && Decayed(x,0.0)!=1)
-			ok2predict[x]=1;
-		else
-			ok2predict[x]=0;
+	predict_julian_date_t daynum = predict_to_julian(time(NULL));
 
+	for (x=0; x < num_orbits; x++) {
+		predict_orbit(orbits[x], daynum);
+		ok2predict[x] = !predict_is_geostationary(orbits[x]) && predict_aos_happens(orbits[x], qth->latitude) && !predict_decayed(orbits[x]);
 		los[x]=0.0;
 		aos[x]=0.0;
 		satindex[x]=x;
@@ -4934,7 +4933,7 @@ char multitype, disttype;
 		mvprintw(3,28,(multitype=='m') ? " Locator " : " Lat Long");
 		attrset(COLOR_PAIR(2));
 		mvprintw(12,70,(disttype=='i') ? "  (miles)" : "     (km)");
-		mvprintw(13,70,(qth.tzoffset==0)  ? "    (GMT)" : "  (Local)");
+		mvprintw(13,70,"    (GMT)");
 
 		attrset(COLOR_PAIR(4)|A_REVERSE|A_BOLD);
 		mvprintw( 9,70," Control ");
@@ -6154,7 +6153,7 @@ char argc, *argv[];
 
 				case 'm':
 				case 'l':
-					MultiTrack(key,'k');
+					//MultiTrack(key,'k');
 					MainMenu();
 					break;
 
