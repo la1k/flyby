@@ -3786,6 +3786,7 @@ char *string;
 
 	return quit;
 }
+#define MAX_NUM_CHARS 80
 
 void Predict(predict_orbit_t *orbit, predict_observer_t *qth, char mode)
 {
@@ -3796,7 +3797,6 @@ void Predict(predict_orbit_t *orbit, predict_observer_t *qth, char mode)
 
 	bool should_quit = false;
 	bool should_break = false;
-	const int MAX_NUM_CHARS = 80;
 	char data_string[MAX_NUM_CHARS];
 	char time_string[MAX_NUM_CHARS];
 
@@ -4917,17 +4917,18 @@ void MultiTrack(predict_observer_t *qth, int num_orbits, predict_orbit_t **orbit
 	   Satellites in range are HIGHLIGHTED.  Coordinates
 	   for the Sun and Moon are also displayed. */
 
-	int		w, x, y, z, ans, siv;
+	int 		*satindex = (int*)malloc(sizeof(int)*num_orbits);
 
-	unsigned char	inrange[num_orbits], sunstat=0;
-	bool		ok2predict[num_orbits];
-	int 		satindex[num_orbits];
-
-	double		aos[num_orbits],
-			los[num_orbits];
+	double		*aos = (double*)malloc(sizeof(double)*num_orbits);
+	double		*los = (double*)malloc(sizeof(double)*num_orbits);
+	char ans = '\0';
 
 	struct predict_observation *observations = (struct predict_observation*)malloc(sizeof(struct predict_observation)*num_orbits);
 	NCURSES_ATTR_T *attributes = (NCURSES_ATTR_T*)malloc(sizeof(NCURSES_ATTR_T)*num_orbits);
+	char **string_lines = (char*)malloc(sizeof(char*)*num_orbits);
+	for (int i=0; i < num_orbits; i++) {
+		string_lines[i] = (char*)malloc(sizeof(char)*MAX_NUM_CHARS);
+	}
 
 	curs_set(0);
 	attrset(COLOR_PAIR(6)|A_REVERSE|A_BOLD);
@@ -4950,7 +4951,7 @@ void MultiTrack(predict_observer_t *qth, int num_orbits, predict_orbit_t **orbit
 
 	predict_julian_date_t daynum = predict_to_julian(time(NULL));
 
-	for (x=0; x < num_orbits; x++) {
+	for (int x=0; x < num_orbits; x++) {
 		predict_orbit(orbits[x], daynum);
 		los[x]=0.0;
 		aos[x]=0.0;
@@ -4976,8 +4977,11 @@ void MultiTrack(predict_observer_t *qth, int num_orbits, predict_orbit_t **orbit
 
 		//predict orbits
 		for (int i=0; i < num_orbits; i++){
-			predict_orbit(orbits[i], daynum);
-			predict_observe_orbit(qth, orbits[i], &(observations[i]));
+			predict_orbit_t *orbit = orbits[i];
+
+			struct predict_observation obs;
+			predict_orbit(orbit, daynum);
+			predict_observe_orbit(qth, orbit, &obs);
 
 			//sun status
 			char sunstat;
@@ -4993,24 +4997,28 @@ void MultiTrack(predict_observer_t *qth, int num_orbits, predict_orbit_t **orbit
 			
 			//satellite approaching status
 			char rangestat;
-			double range = observations[i].range_rate;
-			if (fabs(range_rate) < 0.1) {
-				rangestat = "=";
-			} else if (range_rate < 0.0) {
-				rangestat = "/";
-			} else if (range_rate > 0.0) {
-				rangestat = "\\";
+			if (fabs(obs.range_rate) < 0.1) {
+				rangestat = '=';
+			} else if (obs.range_rate < 0.0) {
+				rangestat = '/';
+			} else if (obs.range_rate > 0.0) {
+				rangestat = '\\';
 			}
 
 			//set text formatting attributes according to satellite state, set AOS/LOS string
-			bool can_predict = !predict_is_geostationary(orbits[x]) && predict_aos_happens(orbits[x], qth->latitude) && !predict_decayed(orbits[x]);
+			bool can_predict = !predict_is_geostationary(orbits[i]) && predict_aos_happens(orbits[i], qth->latitude) && !predict_decayed(orbits[i]);
 			char aos_los[MAX_NUM_CHARS] = {0};
-			if (observations[i].elevation >= 0) {
+			if (obs.elevation >= 0) {
 				//different colours according to range and elevation
 				attributes[i] = MultiColours_retattr(obs.range, obs.elevation*180/M_PI);
-				time_t epoch = predict_from_julian(los[indx] - daynum);
-				strftime(aos_los, MAX_NUM_CHARS, "%H:%M:%S", gmtime(&epoch)); //time for LOS
-			} else if ((observations[i].elevation < 0) && can_predict) {
+
+				if (predict_is_geostationary(orbit)){
+					sprintf(aos_los, "*GeoS*");
+				} else {
+					time_t epoch = predict_from_julian(los[indx] - daynum);
+					strftime(aos_los, MAX_NUM_CHARS, "%H:%M:%S", gmtime(&epoch)); //time for LOS
+				}
+			} else if ((obs.elevation < 0) && can_predict) {
 				if ((aos[(int)satindex[indx]]-daynum) < 0.00694) {
 					//satellite is close, set bold
 					attributes[i] = COLOR_PAIR(2);
@@ -5024,36 +5032,39 @@ void MultiTrack(predict_observer_t *qth, int num_orbits, predict_orbit_t **orbit
 				}
 			} else if (!can_predict) {
 				attributes[i] = COLOR_PAIR(3);
-				sscanf(aos_los, "*GeoS-NoAOS*");
+				sprintf(aos_los, "*GeoS-NoAOS*");
 			}
 			
-			char abs_pos_string[MAX_NUM_CHAR] = {0};
-			if (tjafs med maidenhead) {
-				getMaidenHead(sat_lat, sat_lon, abs_pos_string);
+			char abs_pos_string[MAX_NUM_CHARS] = {0};
+			if (multitype == 'm') {
+				getMaidenHead(orbit->latitude*180.0/M_PI, orbit->longitude*180.0/M_PI, abs_pos_string);
 			} else {
-				sscanf(abs_pos_string, "%3.0f  %3.0f", orbit->latitude, orbit->longitude);
+				sprintf(abs_pos_string, "%3.0f  %3.0f", orbit->latitude*180.0/M_PI, orbit->longitude*180.0/M_PI);
 			}
 
 			/* Calculate Next Event (AOS/LOS) Times */
-			if (ok2predict[indx] && daynum>los[indx] && inrange[indx])
-				los[indx]=FindLOS2();
+			if (can_predict && (daynum > los[i]) && (obs.elevation > 0)) {
+				los[i]= predict_next_los(qth, orbit, daynum);
+			}
 
-			if (ok2predict[indx] && daynum>aos[indx]) {
-				if (inrange[indx])
-					aos[indx]=NextAOS();
-				else
-					aos[indx]=FindAOS();
+			if (can_predict && (daynum > aos[i])) {
+				if (obs.elevation < 0) {
+					aos[i] = predict_next_aos(qth, orbit, daynum);
+				}
 			}
 
 			//set string to display
-			char disp_string[MAX_NUM_CHAR];
-			sscanf(disp_string, "-13s%5.1f  %5.1f  %s %6.0f %6.0f  %c      %8s", Abbreviate(sat[indx].name, 12), obs.azimuth, obs.elevation, abs_pos_string, sat_alt, sat_range, sunstat, aos_los);
+			char disp_string[MAX_NUM_CHARS];
+			sprintf(disp_string, "%-13s%5.1f  %5.1f  %s %6.0f %6.0f  %c %c     %8s", Abbreviate(orbit->name, 12), obs.azimuth*180.0/M_PI, obs.elevation*180.0/M_PI, abs_pos_string, orbit->altitude, obs.range, sunstat, rangestat, aos_los);
 
-
-			if (Decayed(indx,0.0)) {
-				attrset(COLOR_PAIR(2));
-				mvprintw(y+5,1,"%-10s---------- Decayed ---------", Abbreviate(sat[indx].name,9));
+			//overwrite everything if orbit was decayed
+			if (predict_decayed(orbit)) {
+				attributes[i] = COLOR_PAIR(2);
+				sprintf(disp_string, "%-10s---------- Decayed ---------", Abbreviate(orbit->name,9));
 			}
+
+			memcpy(string_lines[i], disp_string, sizeof(char)*MAX_NUM_CHARS);
+			observations[i] = obs;
 		}
 
 		//sun/moon
@@ -5068,15 +5079,42 @@ void MultiTrack(predict_observer_t *qth, int num_orbits, predict_orbit_t **orbit
 		FindMoon(daynum);
 	
 
-/*
+		//sort satellites before displaying them
 
-		for (z=0; z<totalsats; z++)
-			for (y=0; y<totalsats-1; y++)
-				if (aos[satindex[y]]>aos[satindex[y+1]]) {
-					x=satindex[y];
-					satindex[y]=satindex[y+1];
-					satindex[y+1]=x;
+		//those with elevation > 0 at the top
+		int above_horizon_counter = 0;
+		for (int i=0; i < num_orbits; i++){
+			if (observations[i].elevation > 0) {
+				satindex[above_horizon_counter] = i;
+				above_horizon_counter++;
+			}
+		}
+
+		//the rest at the bottom
+		int below_horizon_counter = 0;
+		int decayed_counter = 0;
+		for (int i=0; i < num_orbits; i++){
+			bool ok_predict = !predict_decayed(orbits[i]) && predict_aos_happens(orbits[i], qth->latitude);
+			if ((observations[i].elevation <= 0) && ok_predict) {
+				satindex[below_horizon_counter + above_horizon_counter] = i;
+				below_horizon_counter++;
+			} else if (!ok_predict) {
+				satindex[num_orbits - 1 - decayed_counter] = i;
+				decayed_counter++;
+			}
+		}
+
+		//sort internally according to AOS/LOS
+		for (int i=0; i < num_orbits-decayed_counter; i++) {
+			for (int j=0; j < num_orbits-decayed_counter-1; j++){
+				if (aos[satindex[j]]>aos[satindex[j+1]]) {
+					int x = satindex[j];
+					satindex[j] = satindex[j+1];
+					satindex[j+1] = x;
 				}
+			}
+		}
+		/*
 
 		y=0; z=0; siv=0;
 		do {
@@ -5102,7 +5140,7 @@ void MultiTrack(predict_observer_t *qth, int num_orbits, predict_orbit_t **orbit
 				}
 			}
 		} while ((w+y)<=(LINES-2) && z++<(totalsats));*/
-
+/*
 		mvprintw(w+y  ,1,"                                                                    ");
 		mvprintw(w+y+1,1,"                                                                    ");
 		mvprintw(w+y+2,1,"                                                                    ");
@@ -5114,8 +5152,19 @@ void MultiTrack(predict_observer_t *qth, int num_orbits, predict_orbit_t **orbit
 
 		mvprintw(1,35,"(%d/%d in view)  ", siv,totalsats);
 
+		*/
+		for (int i=0; i < above_horizon_counter; i++) {
+			attrset(attributes[satindex[i]]);
+			mvprintw(i+5, 1, "%s", string_lines[satindex[i]]);
+		}
+		mvprintw(above_horizon_counter, 1, "");
+		for (int i=above_horizon_counter; i < num_orbits; i++) {
+			attrset(attributes[satindex[i]]);
+			mvprintw(i+6, 1, "%s", string_lines[satindex[i]]);
+		}
+
 		refresh();
-		halfdelay(halfdelaytime);  /* Increase if CPU load is too high */
+		halfdelay(halfdelaytime);  // Increase if CPU load is too high
 		ans=tolower(getch());
 
 		if (ans=='m') multitype='m';
@@ -5123,15 +5172,14 @@ void MultiTrack(predict_observer_t *qth, int num_orbits, predict_orbit_t **orbit
 		if (ans=='k') disttype ='k';
 		if (ans=='i') disttype ='i';
 
-		/* If we receive a RELOAD_TLE command through the
-		   socket connection, or an 'r' through the keyboard,
-		   reload the TLE file.  */
+		// If we receive a RELOAD_TLE command through the
+		//   socket connection, or an 'r' through the keyboard,
+		//   reload the TLE file.  
 
 		if (reload_tle || ans=='r') {
 			ReadDataFiles();
 			reload_tle=0;
 		}
-
 	} while (ans!='q' && ans!=27);
 
 	cbreak();
@@ -6006,6 +6054,7 @@ char argc, *argv[];
 		running in the real-time tracking modes. */
 
 		MainMenu();
+		int num_sats;
 
 		do {
 			key=getch();
@@ -6074,7 +6123,22 @@ char argc, *argv[];
 
 				case 'm':
 				case 'l':
-					//MultiTrack(key,'k');
+					num_sats = totalsats;
+					printf("%d, %d\n", ARRAY_SIZE(sat), num_sats);
+					predict_orbit_t **orbits = (predict_orbit_t**)malloc(sizeof(predict_orbit_t*)*num_sats);
+					for (int i=0; i < num_sats; i++){
+						const char *tle[2] = {sat[i].line1, sat[i].line2};
+						orbits[i] = predict_create_orbit(predict_parse_tle(tle));
+						memcpy(orbits[i]->name, sat[i].name, 25);
+					}
+					predict_observer_t *observer = predict_create_observer("test_qth", qth.stnlat*M_PI/180.0, qth.stnlong*M_PI/180.0, qth.stnalt);
+
+					MultiTrack(observer, num_sats, orbits, key, 'k');
+					for (int i=0; i < num_sats; i++){
+						predict_destroy_orbit(orbits[i]);
+					}
+					free(orbits);
+
 					MainMenu();
 					break;
 
