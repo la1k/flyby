@@ -4946,7 +4946,7 @@ void MultiTrack(predict_observer_t *qth, int num_orbits, predict_orbit_t **orbit
 	mvprintw(5,70,"   QTH   ");
 	attrset(COLOR_PAIR(2));
 	mvprintw(6,70,"%9s",Abbreviate(qth->name,9));
-	getMaidenHead(qth->latitude*180.0/M_PI, qth->longitude*180.0/M_PI, maidenstr);
+	getMaidenHead(qth->latitude*180.0/M_PI, -qth->longitude*180.0/M_PI, maidenstr);
 	mvprintw(7,70,"%9s",maidenstr);
 
 	predict_julian_date_t daynum = predict_to_julian(time(NULL));
@@ -5016,7 +5016,7 @@ void MultiTrack(predict_observer_t *qth, int num_orbits, predict_orbit_t **orbit
 					sprintf(aos_los, "*GeoS*");
 				} else {
 					time_t epoch = predict_from_julian(los[i] - daynum);
-					strftime(aos_los, MAX_NUM_CHARS, "%M:%S", gmtime(&epoch)); //time for LOS
+					strftime(aos_los, MAX_NUM_CHARS, "%M:%S", gmtime(&epoch)); //time until LOS
 				}
 			} else if ((obs.elevation < 0) && can_predict) {
 				if ((aos[i]-daynum) < 0.00694) {
@@ -5055,12 +5055,12 @@ void MultiTrack(predict_observer_t *qth, int num_orbits, predict_orbit_t **orbit
 
 			//set string to display
 			char disp_string[MAX_NUM_CHARS];
-			sprintf(disp_string, "%-13s %5.1f  %5.1f %8s  %6.0f %6.0f %c %c %12s", Abbreviate(orbit->name, 12), obs.azimuth*180.0/M_PI, obs.elevation*180.0/M_PI, abs_pos_string, orbit->altitude, obs.range, sunstat, rangestat, aos_los);
+			sprintf(disp_string, " %-13s%5.1f  %5.1f %8s  %6.0f %6.0f %c %c %12s ", Abbreviate(orbit->name, 12), obs.azimuth*180.0/M_PI, obs.elevation*180.0/M_PI, abs_pos_string, orbit->altitude, obs.range, sunstat, rangestat, aos_los);
 
 			//overwrite everything if orbit was decayed
 			if (predict_decayed(orbit)) {
 				attributes[i] = COLOR_PAIR(2);
-				sprintf(disp_string, "%-10s    ----------------       Decayed        ---------------", Abbreviate(orbit->name,9));
+				sprintf(disp_string, " %-10s   ----------------       Decayed        ---------------", Abbreviate(orbit->name,9));
 			}
 
 			memcpy(string_lines[i], disp_string, sizeof(char)*MAX_NUM_CHARS);
@@ -5153,13 +5153,13 @@ void MultiTrack(predict_observer_t *qth, int num_orbits, predict_orbit_t **orbit
 		}
 		attrset(0);
 		mvprintw((line++), 1, "                                                                   ");
-		for (int i=above_horizon_counter; i < (below_horizon_counter + above_horizon_counter); i++) {
+		for (int i=above_horizon_counter; i < (below_horizon_counter + above_horizon_counter + nevervisible_counter); i++) {
 			attrset(attributes[satindex[i]]);
 			mvprintw((line++), 1, "%s", string_lines[satindex[i]]);
 		}
 		attrset(0);
 		mvprintw((line++), 1, "                                                                   ");
-		for (int i=above_horizon_counter + below_horizon_counter; i < num_orbits; i++) {
+		for (int i=above_horizon_counter + below_horizon_counter + nevervisible_counter; i < num_orbits; i++) {
 			attrset(attributes[satindex[i]]);
 			mvprintw((line++), 1, "%s", string_lines[satindex[i]]);
 		}
