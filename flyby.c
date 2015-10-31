@@ -5015,19 +5015,19 @@ void MultiTrack(predict_observer_t *qth, int num_orbits, predict_orbit_t **orbit
 				if (predict_is_geostationary(orbit)){
 					sprintf(aos_los, "*GeoS*");
 				} else {
-					time_t epoch = predict_from_julian(los[indx] - daynum);
-					strftime(aos_los, MAX_NUM_CHARS, "%H:%M:%S", gmtime(&epoch)); //time for LOS
+					time_t epoch = predict_from_julian(los[i] - daynum);
+					strftime(aos_los, MAX_NUM_CHARS, "%M:%S", gmtime(&epoch)); //time for LOS
 				}
 			} else if ((obs.elevation < 0) && can_predict) {
-				if ((aos[(int)satindex[indx]]-daynum) < 0.00694) {
+				if ((aos[(int)satindex[i]]-daynum) < 0.00694) {
 					//satellite is close, set bold
 					attributes[i] = COLOR_PAIR(2);
-					time_t epoch = predict_from_julian(aos[indx] - daynum);
+					time_t epoch = predict_from_julian(aos[i] - daynum);
 					strftime(aos_los, MAX_NUM_CHARS, "%M:%S", gmtime(&epoch)); //minutes and seconds left until AOS
 				} else {
 					//satellite is far, set normal coloring
 					attributes[i] = COLOR_PAIR(4);
-					time_t epoch = predict_from_julian(aos[indx]);
+					time_t epoch = predict_from_julian(aos[i]);
 					strftime(aos_los, MAX_NUM_CHARS, "%j.%H:%M:%S", gmtime(&epoch)); //time for AOS
 				}
 			} else if (!can_predict) {
@@ -5055,7 +5055,7 @@ void MultiTrack(predict_observer_t *qth, int num_orbits, predict_orbit_t **orbit
 
 			//set string to display
 			char disp_string[MAX_NUM_CHARS];
-			sprintf(disp_string, "%-13s%5.1f  %5.1f  %s %6.0f %6.0f  %c %c     %8s", Abbreviate(orbit->name, 12), obs.azimuth*180.0/M_PI, obs.elevation*180.0/M_PI, abs_pos_string, orbit->altitude, obs.range, sunstat, rangestat, aos_los);
+			sprintf(disp_string, "%-13s %5.1f  %5.1f %8s  %6.0f %6.0f %c %c %12s", Abbreviate(orbit->name, 12), obs.azimuth*180.0/M_PI, obs.elevation*180.0/M_PI, abs_pos_string, orbit->altitude, obs.range, sunstat, rangestat, aos_los);
 
 			//overwrite everything if orbit was decayed
 			if (predict_decayed(orbit)) {
@@ -5090,23 +5090,33 @@ void MultiTrack(predict_observer_t *qth, int num_orbits, predict_orbit_t **orbit
 			}
 		}
 
-		//the rest at the bottom
+		//satellites that will eventually rise above the horizon
 		int below_horizon_counter = 0;
-		int decayed_counter = 0;
 		for (int i=0; i < num_orbits; i++){
-			bool ok_predict = !predict_decayed(orbits[i]) && predict_aos_happens(orbits[i], qth->latitude);
-			if ((observations[i].elevation <= 0) && ok_predict) {
+			bool will_be_visible = !predict_decayed(orbits[i]) && predict_aos_happens(orbits[i], qth->latitude) && !predict_is_geostationary(orbits[i]);
+			if ((observations[i].elevation <= 0) && will_be_visible) {
 				satindex[below_horizon_counter + above_horizon_counter] = i;
 				below_horizon_counter++;
-			} else if (!ok_predict) {
+			} 
+		}
+		
+		//satellites that will never be visible, with decayed orbits last
+		int nevervisible_counter = 0;
+		int decayed_counter = 0;
+		for (int i=0; i < num_orbits; i++){
+			bool never_visible = !predict_aos_happens(orbits[i], qth->latitude) || predict_is_geostationary(orbits[i]);
+			if ((observations[i].elevation <= 0) && never_visible && !predict_decayed(orbits[i])) {
+				satindex[below_horizon_counter + above_horizon_counter + nevervisible_counter] = i;
+				nevervisible_counter++;
+			} else if (predict_decayed(orbits[i])) {
 				satindex[num_orbits - 1 - decayed_counter] = i;
 				decayed_counter++;
 			}
 		}
 
 		//sort internally according to AOS/LOS
-		for (int i=0; i < num_orbits-decayed_counter; i++) {
-			for (int j=0; j < num_orbits-decayed_counter-1; j++){
+		for (int i=0; i < above_horizon_counter + below_horizon_counter; i++) {
+			for (int j=0; j < above_horizon_counter + below_horizon_counter - 1; j++){
 				if (aos[satindex[j]]>aos[satindex[j+1]]) {
 					int x = satindex[j];
 					satindex[j] = satindex[j+1];
@@ -5114,53 +5124,29 @@ void MultiTrack(predict_observer_t *qth, int num_orbits, predict_orbit_t **orbit
 				}
 			}
 		}
-		/*
-
-		y=0; z=0; siv=0;
-		do {
-			indx=z;
-			mvprintw(y+5,1,"                                                                   ");
-		}
-
-		w=siv+(siv==0 ? 5 : 6); y=0; z=0;
-		do {
-			indx=z;
-
-	if (multitype=='m')
-
-			}
-		} while ((w+y)<=(LINES-2) && z++<(totalsats));
-
-
-		w=w+y; y=0; z=0;
-		if (w<=(LINES-2))
-		do {
-
-					y++;
-				}
-			}
-		} while ((w+y)<=(LINES-2) && z++<(totalsats));*/
-/*
-		mvprintw(w+y  ,1,"                                                                    ");
-		mvprintw(w+y+1,1,"                                                                    ");
-		mvprintw(w+y+2,1,"                                                                    ");
 
 		attrset(COLOR_PAIR(6)|A_REVERSE|A_BOLD);
-
 		daynum=CurrentDaynum();
 		mvprintw(1,54,"%s",Daynum2String(daynum,24,"%a %d%b%y %j.%H:%M:%S"));
+		mvprintw(1,35,"(%d/%d in view)  ", above_horizon_counter, num_orbits);
 
-		mvprintw(1,35,"(%d/%d in view)  ", siv,totalsats);
-
-		*/
+		//display satellites
+		int line = 5;
 		for (int i=0; i < above_horizon_counter; i++) {
 			attrset(attributes[satindex[i]]);
-			mvprintw(i+5, 1, "%s", string_lines[satindex[i]]);
+			mvprintw((line++), 1, "%s", string_lines[satindex[i]]);
 		}
-		mvprintw(above_horizon_counter, 1, "");
-		for (int i=above_horizon_counter; i < num_orbits; i++) {
+		attrset(0);
+		mvprintw((line++), 1, "                                                                   ");
+		for (int i=above_horizon_counter; i < (below_horizon_counter + above_horizon_counter); i++) {
 			attrset(attributes[satindex[i]]);
-			mvprintw(i+6, 1, "%s", string_lines[satindex[i]]);
+			mvprintw((line++), 1, "%s", string_lines[satindex[i]]);
+		}
+		attrset(0);
+		mvprintw((line++), 1, "                                                                   ");
+		for (int i=above_horizon_counter + below_horizon_counter; i < num_orbits; i++) {
+			attrset(attributes[satindex[i]]);
+			mvprintw((line++), 1, "%s", string_lines[satindex[i]]);
 		}
 
 		refresh();
