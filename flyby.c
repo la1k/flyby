@@ -5060,7 +5060,7 @@ void MultiTrack(predict_observer_t *qth, int num_orbits, predict_orbit_t **orbit
 			//overwrite everything if orbit was decayed
 			if (predict_decayed(orbit)) {
 				attributes[i] = COLOR_PAIR(2);
-				sprintf(disp_string, "%-10s---------- Decayed ---------", Abbreviate(orbit->name,9));
+				sprintf(disp_string, "%-10s    ----------------       Decayed        ---------------", Abbreviate(orbit->name,9));
 			}
 
 			memcpy(string_lines[i], disp_string, sizeof(char)*MAX_NUM_CHARS);
@@ -5170,6 +5170,16 @@ void MultiTrack(predict_observer_t *qth, int num_orbits, predict_orbit_t **orbit
 
 	cbreak();
 	sprintf(tracking_mode, "NONE\n%c",0);
+
+	free(satindex);
+	free(aos);
+	free(los);
+	free(observations)
+	free(attributes)
+	for (int i=0; i < num_orbits; i++) {
+		free(string_lines[i]);
+	}
+	free(string_lines);
 }
 
 void Illumination()
