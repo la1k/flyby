@@ -4925,7 +4925,7 @@ void MultiTrack(predict_observer_t *qth, int num_orbits, predict_orbit_t **orbit
 
 	struct predict_observation *observations = (struct predict_observation*)malloc(sizeof(struct predict_observation)*num_orbits);
 	NCURSES_ATTR_T *attributes = (NCURSES_ATTR_T*)malloc(sizeof(NCURSES_ATTR_T)*num_orbits);
-	char **string_lines = (char*)malloc(sizeof(char*)*num_orbits);
+	char **string_lines = (char**)malloc(sizeof(char*)*num_orbits);
 	for (int i=0; i < num_orbits; i++) {
 		string_lines[i] = (char*)malloc(sizeof(char)*MAX_NUM_CHARS);
 	}
@@ -5067,16 +5067,31 @@ void MultiTrack(predict_observer_t *qth, int num_orbits, predict_orbit_t **orbit
 			observations[i] = obs;
 		}
 
-		//sun/moon
+		//predict and observe sun and moon
+		struct predict_observation sun;
+		predict_observe_sun(qth, daynum, &sun);
+
+		struct predict_observation moon;
+		predict_observe_moon(qth, daynum, &moon);
+
+		//display sun and moon
 		attrset(COLOR_PAIR(4)|A_REVERSE|A_BOLD);
 		mvprintw(16,70,"   Sun   ");
-		if (sun_ele > 0.0)
+		mvprintw(20,70,"   Moon  ");
+		if (sun.elevation > 0.0)
 			attrset(COLOR_PAIR(3)|A_BOLD);
 		else
 			attrset(COLOR_PAIR(2));
-		mvprintw(17,70,"%-7.2fAz",sun_azi);
-		mvprintw(18,70,"%+-6.2f El",sun_ele);
-		FindMoon(daynum);
+		mvprintw(17,70,"%-7.2fAz",sun.azimuth*180.0/M_PI);
+		mvprintw(18,70,"%+-6.2f El",sun.elevation*180.0/M_PI);
+
+		attrset(COLOR_PAIR(3)|A_BOLD);
+		if (moon.elevation > 0.0)
+			attrset(COLOR_PAIR(1)|A_BOLD);
+		else
+			attrset(COLOR_PAIR(1));
+		mvprintw(21,70,"%-7.2fAz",moon.azimuth*180.0/M_PI);
+		mvprintw(22,70,"%+-6.2f El",moon.elevation*180.0/M_PI);
 	
 
 		//sort satellites before displaying them
@@ -5174,8 +5189,8 @@ void MultiTrack(predict_observer_t *qth, int num_orbits, predict_orbit_t **orbit
 	free(satindex);
 	free(aos);
 	free(los);
-	free(observations)
-	free(attributes)
+	free(observations);
+	free(attributes);
 	for (int i=0; i < num_orbits; i++) {
 		free(string_lines[i]);
 	}
