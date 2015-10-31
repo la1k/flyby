@@ -4883,6 +4883,33 @@ double scrk, scel;
 		attrset(COLOR_PAIR(2)|A_REVERSE); /* reverse */
 }
 
+NCURSES_ATTR_T MultiColours_retattr(scrk, scel)
+double scrk, scel;
+{
+	if (scrk < 8000)
+		if (scrk < 4000)
+			if (scrk < 2000)
+				if (scrk < 1000)
+					if (scel > 10)
+						return (COLOR_PAIR(6)|A_REVERSE); /* red */
+					else
+						return (COLOR_PAIR(3)|A_REVERSE); /* yellow */
+				else
+					if (scel > 20)
+						return (COLOR_PAIR(3)|A_REVERSE); /* yellow */
+					else
+						return (COLOR_PAIR(4)|A_REVERSE); /* cyan */
+			else
+				if (scel > 40)
+					return (COLOR_PAIR(4)|A_REVERSE); /* cyan */
+				else
+					return (COLOR_PAIR(1)|A_REVERSE); /* white */
+		else
+			return (COLOR_PAIR(1)|A_REVERSE); /* white */
+	else
+		return (COLOR_PAIR(2)|A_REVERSE); /* reverse */
+}
+
 void MultiTrack(predict_observer_t *qth, int num_orbits, predict_orbit_t **orbits, char multitype, char disttype)
 {
 	/* This function tracks all satellites in the program's
@@ -4898,6 +4925,9 @@ void MultiTrack(predict_observer_t *qth, int num_orbits, predict_orbit_t **orbit
 
 	double		aos[num_orbits],
 			los[num_orbits];
+
+	struct predict_observation *observations = (struct predict_observation*)malloc(sizeof(struct predict_observation)*num_orbits);
+	NCURSES_ATTR_T *attributes = (NCURSES_ATTR_T*)malloc(sizeof(NCURSES_ATTR_T)*num_orbits);
 
 	curs_set(0);
 	attrset(COLOR_PAIR(6)|A_REVERSE|A_BOLD);
@@ -4922,7 +4952,6 @@ void MultiTrack(predict_observer_t *qth, int num_orbits, predict_orbit_t **orbit
 
 	for (x=0; x < num_orbits; x++) {
 		predict_orbit(orbits[x], daynum);
-		ok2predict[x] = !predict_is_geostationary(orbits[x]) && predict_aos_happens(orbits[x], qth->latitude) && !predict_decayed(orbits[x]);
 		los[x]=0.0;
 		aos[x]=0.0;
 		satindex[x]=x;
@@ -4941,108 +4970,105 @@ void MultiTrack(predict_observer_t *qth, int num_orbits, predict_orbit_t **orbit
 		mvprintw(10,70," ik lm q ");
 		mvprintw(10,(disttype=='i') ? 71 : 72," ");
 		mvprintw(10,(multitype=='m') ? 75 : 74," ");
+		
+		
+		daynum = predict_to_julian(time(NULL));
 
-/* Above Horizon */
+		//predict orbits
+		for (int i=0; i < num_orbits; i++){
+			predict_orbit(orbits[i], daynum);
+			predict_observe_orbit(qth, orbits[i], &(observations[i]));
 
-		y=0; z=0; siv=0;
-		do {
-			indx=z;
-			attrset(COLOR_PAIR(2));
-			mvprintw(y+5,1,"                                                                   ");
-
-			if (sat[indx].meanmo!=0.0 && Decayed(indx,0.0)!=1) {
-				daynum=CurrentDaynum();
-				PreCalc(indx);
-				Calc();
-
-				if (sat_ele >= 0.0) {
-					MultiColours(sat_range, sat_ele);
-					inrange[indx]=1;
+			//sun status
+			char sunstat;
+			if (!orbit->eclipsed) {
+				if (obs.visible) {
+					sunstat='V';
 				} else {
-					inrange[indx]=0;
+					sunstat='D';
 				}
-
-				if (sat_sun_status) {
-					if (sun_ele<=-12.0 && sat_ele>=0.0)
-						sunstat='V';
-					else
-						sunstat='D';
-				} else
-					sunstat='N';
-
-				if (sat_ele >= 0.0) {
-					getMaidenHead(sat_lat,sat_lon,maidenstr);
-	if (multitype=='m') {
-		mvprintw(y+5,1,
-    " %-13s%5.1f  %5.1f  %7s  %6.0f %6.0f %c       %8s ",
-    ((strlen(sat[indx].name)>12)
-      ? Abbreviate(sat[indx].name,12)
-		  : sat[indx].name),
-    sat_azi, sat_ele, maidenstr,
-    ((disttype=='i') ? sat_alt*km2mi : sat_alt),
-    ((disttype=='i') ? sat_range*km2mi : sat_range),
-    sunstat, Daynum2String(los[indx]-daynum,8,"%H:%M:%S"));
-
-	} else {
-		mvprintw(y+5,1,
-		" %-13s%5.1f  %5.1f  %3.0f  %3.0f %6.0f %6.0f %c       %8s ",
-    ((strlen(sat[indx].name)>12)
-		  ? Abbreviate(sat[indx].name,12)
-		  : sat[indx].name),
-		sat_azi, sat_ele, sat_lat, 360.0-sat_lon,
-		((disttype=='i') ? sat_alt*km2mi : sat_alt),
-		((disttype=='i') ? sat_range*km2mi : sat_range),
-		sunstat, Daynum2String(los[indx]-daynum,8,"%H:%M:%S"));
-	}
-
-					if (fabs(sat_range_rate)<0.1)
-						mvprintw(y+5,54,"=");
-					else {
-						if (sat_range_rate<0.0)
-							mvprintw(y+5,54,"/");
-						if (sat_range_rate>0.0)
-							mvprintw(y+5,54,"\\");
-					}
-
-					attrset(COLOR_PAIR(2));
-					mvprintw(y+6,1, "                                                                     ");
-
-					y++;
-					siv++;
-				}
-
-				attrset(COLOR_PAIR(4)|A_REVERSE|A_BOLD);
-				mvprintw(16,70,"   Sun   ");
-				if (sun_ele > 0.0)
-					attrset(COLOR_PAIR(3)|A_BOLD);
-				else
-					attrset(COLOR_PAIR(2));
-				mvprintw(17,70,"%-7.2fAz",sun_azi);
-				mvprintw(18,70,"%+-6.2f El",sun_ele);
-
-				FindMoon(daynum);
-
-				/* Calculate Next Event (AOS/LOS) Times */
-
-				if (ok2predict[indx] && daynum>los[indx] && inrange[indx])
-					los[indx]=FindLOS2();
-
-				if (ok2predict[indx] && daynum>aos[indx]) {
-					if (inrange[indx])
-						aos[indx]=NextAOS();
-					else
-						aos[indx]=FindAOS();
-				}
-
+			} else {
+				sunstat='N';
 			}
+			
+			//satellite approaching status
+			char rangestat;
+			double range = observations[i].range_rate;
+			if (fabs(range_rate) < 0.1) {
+				rangestat = "=";
+			} else if (range_rate < 0.0) {
+				rangestat = "/";
+			} else if (range_rate > 0.0) {
+				rangestat = "\\";
+			}
+
+			//set text formatting attributes according to satellite state, set AOS/LOS string
+			bool can_predict = !predict_is_geostationary(orbits[x]) && predict_aos_happens(orbits[x], qth->latitude) && !predict_decayed(orbits[x]);
+			char aos_los[MAX_NUM_CHARS] = {0};
+			if (observations[i].elevation >= 0) {
+				//different colours according to range and elevation
+				attributes[i] = MultiColours_retattr(obs.range, obs.elevation*180/M_PI);
+				time_t epoch = predict_from_julian(los[indx] - daynum);
+				strftime(aos_los, MAX_NUM_CHARS, "%H:%M:%S", gmtime(&epoch)); //time for LOS
+			} else if ((observations[i].elevation < 0) && can_predict) {
+				if ((aos[(int)satindex[indx]]-daynum) < 0.00694) {
+					//satellite is close, set bold
+					attributes[i] = COLOR_PAIR(2);
+					time_t epoch = predict_from_julian(aos[indx] - daynum);
+					strftime(aos_los, MAX_NUM_CHARS, "%M:%S", gmtime(&epoch)); //minutes and seconds left until AOS
+				} else {
+					//satellite is far, set normal coloring
+					attributes[i] = COLOR_PAIR(4);
+					time_t epoch = predict_from_julian(aos[indx]);
+					strftime(aos_los, MAX_NUM_CHARS, "%j.%H:%M:%S", gmtime(&epoch)); //time for AOS
+				}
+			} else if (!can_predict) {
+				attributes[i] = COLOR_PAIR(3);
+				sscanf(aos_los, "*GeoS-NoAOS*");
+			}
+			
+			char abs_pos_string[MAX_NUM_CHAR] = {0};
+			if (tjafs med maidenhead) {
+				getMaidenHead(sat_lat, sat_lon, abs_pos_string);
+			} else {
+				sscanf(abs_pos_string, "%3.0f  %3.0f", orbit->latitude, orbit->longitude);
+			}
+
+			/* Calculate Next Event (AOS/LOS) Times */
+			if (ok2predict[indx] && daynum>los[indx] && inrange[indx])
+				los[indx]=FindLOS2();
+
+			if (ok2predict[indx] && daynum>aos[indx]) {
+				if (inrange[indx])
+					aos[indx]=NextAOS();
+				else
+					aos[indx]=FindAOS();
+			}
+
+			//set string to display
+			char disp_string[MAX_NUM_CHAR];
+			sscanf(disp_string, "-13s%5.1f  %5.1f  %s %6.0f %6.0f  %c      %8s", Abbreviate(sat[indx].name, 12), obs.azimuth, obs.elevation, abs_pos_string, sat_alt, sat_range, sunstat, aos_los);
+
 
 			if (Decayed(indx,0.0)) {
 				attrset(COLOR_PAIR(2));
 				mvprintw(y+5,1,"%-10s---------- Decayed ---------", Abbreviate(sat[indx].name,9));
 			}
-		} while (y<=(LINES-6) && z++<totalsats);
+		}
 
-/* Sort */
+		//sun/moon
+		attrset(COLOR_PAIR(4)|A_REVERSE|A_BOLD);
+		mvprintw(16,70,"   Sun   ");
+		if (sun_ele > 0.0)
+			attrset(COLOR_PAIR(3)|A_BOLD);
+		else
+			attrset(COLOR_PAIR(2));
+		mvprintw(17,70,"%-7.2fAz",sun_azi);
+		mvprintw(18,70,"%+-6.2f El",sun_ele);
+		FindMoon(daynum);
+	
+
+/*
 
 		for (z=0; z<totalsats; z++)
 			for (y=0; y<totalsats-1; y++)
@@ -5052,135 +5078,30 @@ void MultiTrack(predict_observer_t *qth, int num_orbits, predict_orbit_t **orbit
 					satindex[y+1]=x;
 				}
 
-/* Below Horizon */
+		y=0; z=0; siv=0;
+		do {
+			indx=z;
+			mvprintw(y+5,1,"                                                                   ");
+		}
 
 		w=siv+(siv==0 ? 5 : 6); y=0; z=0;
 		do {
 			indx=z;
 
-			if (sat[(int)satindex[indx]].meanmo!=0.0
-				&& Decayed((int)satindex[indx],0.0)!=1
-				&& (indx < totalsats))
-			{
-				daynum=CurrentDaynum();
-				PreCalc((int)satindex[indx]);
-				Calc();
-
-				inrange[(int)satindex[indx]]=0;
-
-				if (sat_sun_status) {
-					if (sun_ele<=-12.0 && sat_ele>=0.0)
-						sunstat='V';
-					else
-						sunstat='D';
-				} else
-					sunstat='N';
-
-				if ((sat_ele < 0.0) && ok2predict[(int)satindex[indx]]) {
-					getMaidenHead(sat_lat,sat_lon,maidenstr);
-					if ((aos[(int)satindex[indx]]-daynum) < 0.00694)
-						attrset(COLOR_PAIR(2));
-					else
-						attrset(COLOR_PAIR(4));
 	if (multitype=='m')
-						mvprintw(w+y,1,
-	" %-13s%5.1f  %5.1f  %7s  %6.0f %6.0f %c   %12s ",
-	(strlen(sat[(int)satindex[indx]].name)>12)
-    ? Abbreviate(sat[(int)satindex[indx]].name,12)
-	  : sat[(int)satindex[indx]].name,
-	sat_azi, sat_ele, maidenstr,
-	(disttype=='i') ? sat_alt*km2mi : sat_alt,
-	(disttype=='i') ? sat_range*km2mi : sat_range,
-	sunstat,
-	((aos[(int)satindex[indx]]-daynum) < 0.0069)
-	? Daynum2String(aos[(int)satindex[indx]]-daynum,12,"       %M:%S")
-	: Daynum2String(aos[(int)satindex[indx]],12,"%j.%H:%M:%S"));
-					else
-						mvprintw(w+y,1,
-            " %-13s%5.1f  %5.1f  %3.0f  %3.0f %6.0f %6.0f %c   %12s ",
-	(strlen(sat[(int)satindex[indx]].name)>12)
-    ? Abbreviate(sat[(int)satindex[indx]].name,12)
-		: sat[(int)satindex[indx]].name,
-	sat_azi, sat_ele, sat_lat, 360.0-sat_lon,
-	(disttype=='i') ? sat_alt*km2mi : sat_alt,
-	(disttype=='i') ? sat_range*km2mi : sat_range,
-	sunstat,
-	((aos[(int)satindex[indx]]-daynum) < 0.0069)
-	? Daynum2String(aos[(int)satindex[indx]]-daynum,12,"       %M:%S")
-	: Daynum2String(aos[(int)satindex[indx]],12,"%j.%H:%M:%S"));
 
-					if (fabs(sat_range_rate)<0.1)
-						mvprintw(w+y,54,"=");
-					else
-						if (sat_range_rate<0.0)
-							mvprintw(w+y,54,"/");
-						if (sat_range_rate>0.0)
-							mvprintw(w+y,54,"\\");
-					y++;
-				}
 			}
 		} while ((w+y)<=(LINES-2) && z++<(totalsats));
 
-/* Geostationary / Never reaches AOS */
 
 		w=w+y; y=0; z=0;
 		if (w<=(LINES-2))
 		do {
-			indx=z;
 
-			if (sat[(int)satindex[indx]].meanmo!=0.0 && Decayed((int)satindex[indx],0.0)!=1) {
-				daynum=CurrentDaynum();
-				PreCalc((int)satindex[indx]);
-				Calc();
-
-				if (sat_ele >= 0.0)
-					inrange[(int)satindex[indx]]=1;
-				else
-					inrange[(int)satindex[indx]]=0;
-
-				if (sat_sun_status) {
-					if (sun_ele<=-12.0 && sat_ele>=0.0)
-						sunstat='V';
-					else
-						sunstat='D';
-				} else
-					sunstat='N';
-
-				if (!ok2predict[(int)satindex[indx]]) {
-					getMaidenHead(sat_lat,sat_lon,maidenstr);
-					attrset(COLOR_PAIR(3));
-	if (multitype=='m')
-						mvprintw(w+y,1,
-		" %-13s%5.1f  %5.1f  %7s  %6.0f %6.0f %c   %12s ",
-	(strlen(sat[(int)satindex[indx]].name)>12)
-		? Abbreviate(sat[(int)satindex[indx]].name,12)
-		: sat[(int)satindex[indx]].name,
-	sat_azi, sat_ele, maidenstr,
-	(disttype=='i') ? sat_alt*km2mi : sat_alt,
-	(disttype=='i') ? sat_range*km2mi : sat_range,
-	sunstat, "*GeoS-NoAOS*");
-					else
-						mvprintw(w+y,1,
-		" %-13s%5.1f  %5.1f  %3.0f  %3.0f %6.0f %6.0f %c   %12s ",
-	(strlen(sat[(int)satindex[indx]].name)>12)
-    ? Abbreviate(sat[(int)satindex[indx]].name,12)
-		: sat[(int)satindex[indx]].name,
-	sat_azi, sat_ele, sat_lat, 360.0-sat_lon,
-	(disttype=='i') ? sat_alt*km2mi : sat_alt,
-	(disttype=='i') ? sat_range*km2mi : sat_range,
-	sunstat, "*GeoS-NoAOS*");
-
-					if (fabs(sat_range_rate)<0.1)
-						mvprintw(w+y,54,"=");
-					else
-						if (sat_range_rate<0.0)
-							mvprintw(w+y,54,"/");
-						if (sat_range_rate>0.0)
-							mvprintw(w+y,54,"\\");
 					y++;
 				}
 			}
-		} while ((w+y)<=(LINES-2) && z++<(totalsats));
+		} while ((w+y)<=(LINES-2) && z++<(totalsats));*/
 
 		mvprintw(w+y  ,1,"                                                                    ");
 		mvprintw(w+y+1,1,"                                                                    ");
