@@ -5019,7 +5019,7 @@ void MultiTrack(predict_observer_t *qth, int num_orbits, predict_orbit_t **orbit
 					strftime(aos_los, MAX_NUM_CHARS, "%M:%S", gmtime(&epoch)); //time for LOS
 				}
 			} else if ((obs.elevation < 0) && can_predict) {
-				if ((aos[(int)satindex[i]]-daynum) < 0.00694) {
+				if ((aos[i]-daynum) < 0.00694) {
 					//satellite is close, set bold
 					attributes[i] = COLOR_PAIR(2);
 					time_t epoch = predict_from_julian(aos[i] - daynum);
@@ -6142,7 +6142,7 @@ char argc, *argv[];
 						orbits[i] = predict_create_orbit(predict_parse_tle(tle));
 						memcpy(orbits[i]->name, sat[i].name, 25);
 					}
-					predict_observer_t *observer = predict_create_observer("test_qth", qth.stnlat*M_PI/180.0, qth.stnlong*M_PI/180.0, qth.stnalt);
+					predict_observer_t *observer = predict_create_observer("test_qth", qth.stnlat*M_PI/180.0, -qth.stnlong*M_PI/180.0, qth.stnalt);
 
 					MultiTrack(observer, num_sats, orbits, key, 'k');
 					for (int i=0; i < num_sats; i++){
