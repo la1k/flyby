@@ -3508,33 +3508,6 @@ double daynum;
 	sun_dec=Degrees(solar_rad.y);
 }
 
-
-char AosHappens(x)
-int x;
-{
-	/* This function returns a 1 if the satellite pointed to by
-	   "x" can ever rise above the horizon of the ground station. */
-
-	double lin, sma, apogee;
-
-	if (sat[x].meanmo==0.0)
-		return 0;
-	else {
-		lin=sat[x].incl;
-
-		if (lin>=90.0)
-			lin=180.0-lin;
-
-		sma=331.25*exp(log(1440.0/sat[x].meanmo)*(2.0/3.0));
-		apogee=sma*(1.0+sat[x].eccn)-xkmper;
-
-		if ((acos(xkmper/(apogee+xkmper))+(lin*deg2rad)) > fabs(qth.stnlat*deg2rad))
-			return 1;
-		else
-			return 0;
-	}
-}
-
 int Print(string,mode)
 char *string, mode;
 {
