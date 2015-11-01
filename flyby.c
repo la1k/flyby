@@ -4086,6 +4086,9 @@ void PredictSunMoon(enum celestial_object object, predict_observer_t *qth)
 	const double HORIZON_THRESHOLD = 0.03;
 	const double REDUCTION_FACTOR = 0.004;
 
+	double right_ascension = 0;
+	double declination = 0;
+	double longitude = 0;
 
 	do {
 		//determine sun- or moonrise
@@ -4111,7 +4114,7 @@ void PredictSunMoon(enum celestial_object object, predict_observer_t *qth)
 			//display data
 			time_t epoch = predict_from_julian(daynum);
 			strftime(time_string, MAX_NUM_CHARS, "%a %d%b%y %H:%M:%S", gmtime(&epoch));
-			sprintf(string,"      %s%4d %4d  %5.1f  %5.1f  %5.1f  %6.1f%7.3f\n",time_string, iel, iaz, sun_ra, sun_dec, sun_lon, obs.range_rate, obs.range);
+			sprintf(string,"      %s%4d %4d  %5.1f  %5.1f  %5.1f  %6.1f%7.3f\n",time_string, iel, iaz, right_ascension, declination, longitude, obs.range_rate, obs.range);
 			quit=Print(string,print_mode);
 			lastel=iel;
 			lastdaynum=daynum;
@@ -4137,7 +4140,8 @@ void PredictSunMoon(enum celestial_object object, predict_observer_t *qth)
 
 			time_t epoch = predict_from_julian(daynum);
 			strftime(time_string, MAX_NUM_CHARS, "%a %d%b%y %H:%M:%S", gmtime(&epoch));
-			sprintf(string,"      %s%4d %4d  %5.1f  %5.1f  %5.1f  %6.1f%7.3f\n",time_string, iel, iaz, sun_ra, sun_dec, sun_lon, obs.range_rate, obs.range);
+
+			sprintf(string,"      %s%4d %4d  %5.1f  %5.1f  %5.1f  %6.1f%7.3f\n",time_string, iel, iaz, right_ascension, declination, longitude, obs.range_rate, obs.range);
 			quit=Print(string,print_mode);
 			lastel=iel;
 		} //will continue until we have elevation 0 at the end of the pass
