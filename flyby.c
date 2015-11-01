@@ -1958,149 +1958,6 @@ void ShowOrbitData()
 	 };
 }
 
-void KepEdit()
-{
-	/* This function permits keyboard editing of the orbital database. */
-
-	int x;
-
-	do {
-		x=Select();
-
-		if (x!=-1) {
-			bkgdset(COLOR_PAIR(3)|A_BOLD);
-			attrset(COLOR_PAIR(6)|A_REVERSE|A_BOLD);
-			clear();
-
-			mvprintw(0,0,"                                                                                ");
-			mvprintw(1,0,"  flyby Orbital Database Editing                                                ");
-			mvprintw(2,0,"                                                                                ");
-
-			attrset(COLOR_PAIR(4)|A_BOLD);
-
-			mvprintw( 7,20,"Spacecraft Name :");
-			mvprintw( 8,20,"Catalog Number  :");
-			mvprintw( 9,20,"Designator      :");
-			mvprintw(10,20,"Reference Epoch :");
-			mvprintw(11,20,"Inclination     :");
-			mvprintw(12,20,"RAAN            :");
-			mvprintw(13,20,"Eccentricity    :");
-			mvprintw(14,20,"Arg of Perigee  :");
-			mvprintw(15,20,"Mean Anomaly    :");
-			mvprintw(16,20,"Mean Motion     :");
-			mvprintw(17,20,"Decay Rate      :");
-			mvprintw(18,20,"Nddot/6         :");
-			mvprintw(19,20,"Bstar Drag Term :");
-			mvprintw(20,20,"Orbit Number    :");
-			mvprintw(21,20,"Element Set No. :");
-
-			attrset(COLOR_PAIR(2)|A_BOLD);
-
-			mvprintw( 7,38,"%s",sat[x].name);
-			mvprintw( 8,38,"%ld",sat[x].catnum);
-			mvprintw( 9,38,"%s",sat[x].designator);
-			mvprintw(10,38,"%02d %.8f",sat[x].year,sat[x].refepoch);
-			mvprintw(11,38,"%.4f",sat[x].incl);
-			mvprintw(12,38,"%.4f",sat[x].raan);
-			mvprintw(13,38,"%g",sat[x].eccn);
-			mvprintw(14,38,"%.4f",sat[x].argper);
-			mvprintw(15,38,"%.4f",sat[x].meanan);
-			mvprintw(16,38,"%.8f",sat[x].meanmo);
-			mvprintw(17,38,"%g",sat[x].drag);
-			mvprintw(18,38,"%g",sat[x].nddot6);
-			mvprintw(19,38,"%g",sat[x].bstar);
-			mvprintw(20,38,"%ld",sat[x].orbitnum);
-			mvprintw(21,38,"%ld",sat[x].setnum);
-
-			curs_set(1);
-			refresh();
-
-			sprintf(temp,"%s",sat[x].name);
-
-			if (KbEdit(39,8))
-				strncpy(sat[x].name,temp,24);
-
-			sprintf(temp,"%ld",sat[x].catnum);
-
-			if (KbEdit(39,9))
-				sscanf(temp,"%ld",&sat[x].catnum);
-
-			sprintf(temp,"%s",sat[x].designator);
-
-			if (KbEdit(39,10))
-				sscanf(temp,"%s",sat[x].designator);
-
-			sprintf(temp,"%02d %4.8f",sat[x].year,sat[x].refepoch);
-
-			if (KbEdit(39,11))
-				sscanf(temp,"%d %lf",&sat[x].year,&sat[x].refepoch);
-
-			sprintf(temp,"%4.4f",sat[x].incl);
-
-			if (KbEdit(39,12))
-				sscanf(temp,"%lf",&sat[x].incl);
-
-			sprintf(temp,"%4.4f",sat[x].raan);
-
-			if (KbEdit(39,13))
-				sscanf(temp,"%lf",&sat[x].raan);
-
-			sprintf(temp,"%g",sat[x].eccn);
-
-			if (KbEdit(39,14))
-				sscanf(temp,"%lf",&sat[x].eccn);
-
-			sprintf(temp,"%4.4f",sat[x].argper);
-
-			if (KbEdit(39,15))
-				sscanf(temp,"%lf",&sat[x].argper);
-
-			sprintf(temp,"%4.4f",sat[x].meanan);
-
-			if (KbEdit(39,16))
-				sscanf(temp,"%lf",&sat[x].meanan);
-
-			sprintf(temp,"%4.8f",sat[x].meanmo);
-
-			if (KbEdit(39,17))
-				sscanf(temp,"%lf",&sat[x].meanmo);
-
-			sprintf(temp,"%g",sat[x].drag);
-
-			if (KbEdit(39,18))
-				sscanf(temp,"%lf",&sat[x].drag);
-
-			sprintf(temp,"%g",sat[x].nddot6);
-
-			if (KbEdit(39,19))
-				sscanf(temp,"%lf",&sat[x].nddot6);
-
-			sprintf(temp,"%g",sat[x].bstar);
-
-			if (KbEdit(39,20))
-				sscanf(temp,"%lf",&sat[x].bstar);
-
-			sprintf(temp,"%ld",sat[x].orbitnum);
-
-			if (KbEdit(39,21))
-				sscanf(temp,"%ld",&sat[x].orbitnum);
-
-			sprintf(temp,"%ld",sat[x].setnum);
-
-			if (KbEdit(39,22))
-				sscanf(temp,"%ld",&sat[x].setnum);
-
-			curs_set(0);
-		}
-
-	} while (x!=-1);
-
-	if (resave) {
-		SaveTLE();
-		resave=0;
-	}
-}
-
 void QthEdit()
 {
 	/* This function permits keyboard editing of
@@ -3154,12 +3011,6 @@ void MainMenu()
 	mvprintw(15,45," Update Sat Elements From File");
 
 	attrset(COLOR_PAIR(6)|A_REVERSE|A_BOLD);
-	mvprintw(17,41," E ");
-	attrset(COLOR_PAIR(3)|A_BOLD);
-	mvprintw(17,45," Manually Edit Orbital Database");
-
-
-	attrset(COLOR_PAIR(6)|A_REVERSE|A_BOLD);
 	mvprintw(21,41," Q ");
 	attrset(COLOR_PAIR(3)|A_BOLD);
 	mvprintw(21,45," Exit flyby");
@@ -3698,11 +3549,6 @@ char argc, *argv[];
 
 				case 'u':
 					AutoUpdate("");
-					MainMenu();
-					break;
-
-				case 'e':
-					KepEdit();
 					MainMenu();
 					break;
 
