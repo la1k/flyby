@@ -121,26 +121,11 @@ char	qthfile[50], tlefile[50], dbfile[50], temp[80], output[25],
 	once_per_second=0, ephem[5], sat_sun_status, findsun,
 	calc_squint, database=0, io_lat='N', io_lon='E', maidenstr[9];
 
-int	indx, iaz, iel, ma256, isplat, isplong,
-	Flags=0, rotctld_socket, uplink_socket, downlink_socket, totalsats=0;
-
-long	rv, irk;
+int	indx, rotctld_socket, uplink_socket, downlink_socket, totalsats=0;
 
 unsigned char val[256];
 
-/* The following variables are used by the socket server.  They
-	are updated in the MultiTrack() and SingleTrack() functions. */
-
-char	visibility_array[maxsats], tracking_mode[30];
-
-float	az_array[maxsats], el_array[maxsats], long_array[maxsats], lat_array[maxsats],
-	footprint_array[maxsats], range_array[maxsats], altitude_array[maxsats],
-	velocity_array[maxsats], eclipse_depth_array[maxsats], phase_array[maxsats],
-  squint_array[maxsats];
-
-double	doppler[maxsats], nextevent[maxsats];
-
-long	aos_array[maxsats], orbitnum_array[maxsats];
+char	tracking_mode[30];
 
 unsigned short portbase=0;
 
