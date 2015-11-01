@@ -1719,63 +1719,6 @@ void SDP4(double tsince, tle_t * tle, vector_t * pos, vector_t * vel)
 	phase=FMod2p(phase);
 }
 
-void Calculate_User_PosVel(double time, geodetic_t *geodetic, vector_t *obs_pos, vector_t *obs_vel)
-{
-	/* Calculate_User_PosVel() passes the user's geodetic position
-	   and the time of interest and returns the ECI position and
-	   velocity of the observer.  The velocity calculation assumes
-	   the geodetic position is stationary relative to the earth's
-	   surface. */
-
-	/* Reference:  The 1992 Astronomical Almanac, page K11. */
-
-	double c, sq, achcp;
-
-	geodetic->theta=FMod2p(ThetaG_JD(time)+geodetic->lon); /* LMST */
-	c=1/sqrt(1+f*(f-2)*Sqr(sin(geodetic->lat)));
-	sq=Sqr(1-f)*c;
-	achcp=(xkmper*c+geodetic->alt)*cos(geodetic->lat);
-	obs_pos->x=achcp*cos(geodetic->theta); /* kilometers */
-	obs_pos->y=achcp*sin(geodetic->theta);
-	obs_pos->z=(xkmper*sq+geodetic->alt)*sin(geodetic->lat);
-	obs_vel->x=-mfactor*obs_pos->y; /* kilometers/second */
-	obs_vel->y=mfactor*obs_pos->x;
-	obs_vel->z=0;
-	Magnitude(obs_pos);
-	Magnitude(obs_vel);
-}
-
-void Calculate_LatLonAlt(double time, vector_t *pos,  geodetic_t *geodetic)
-{
-	/* Procedure Calculate_LatLonAlt will calculate the geodetic  */
-	/* position of an object given its ECI position pos and time. */
-	/* It is intended to be used to determine the ground track of */
-	/* a satellite.  The calculations  assume the earth to be an  */
-	/* oblate spheroid as defined in WGS '72.                     */
-
-	/* Reference:  The 1992 Astronomical Almanac, page K12. */
-
-	double r, e2, phi, c;
-
-	geodetic->theta=AcTan(pos->y,pos->x); /* radians */
-	geodetic->lon=FMod2p(geodetic->theta-ThetaG_JD(time)); /* radians */
-	r=sqrt(Sqr(pos->x)+Sqr(pos->y));
-	e2=f*(2-f);
-	geodetic->lat=AcTan(pos->z,r); /* radians */
-
-	do {
-		phi=geodetic->lat;
-		c=1/sqrt(1-e2*Sqr(sin(phi)));
-		geodetic->lat=AcTan(pos->z+xkmper*c*e2*sin(phi),r);
-
-	} while (fabs(geodetic->lat-phi)>=1E-10);
-
-	geodetic->alt=r/cos(geodetic->lat)-xkmper*c; /* kilometers */
-
-	if (geodetic->lat>pio2)
-		geodetic->lat-=twopi;
-}
-
 double reduce(value,rangeMin,rangeMax)
 double value, rangeMin, rangeMax;
 {
