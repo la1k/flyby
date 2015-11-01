@@ -228,52 +228,6 @@ long	aos_array[maxsats], orbitnum_array[maxsats];
 
 unsigned short portbase=0;
 
-/** Type definitions **/
-
-/* Two-line-element satellite orbital data
-	structure used directly by the SGP4/SDP4 code. */
-
-typedef struct	{
-		   double  epoch, xndt2o, xndd6o, bstar, xincl,
-			   xnodeo, eo, omegao, xmo, xno;
-		   int	   catnr, elset, revnum;
-		   char	   sat_name[25], idesg[9];
-		}  tle_t;
-
-/* Geodetic position structure used by SGP4/SDP4 code. */
-
-typedef struct	{
-		   double lat, lon, alt, theta;
-		}  geodetic_t;
-
-/* General three-dimensional vector structure used by SGP4/SDP4 code. */
-
-typedef struct	{
-		   double x, y, z, w;
-		}  vector_t;
-
-/* Common arguments between deep-space functions used by SGP4/SDP4 code. */
-
-typedef struct	{
-		   	   /* Used by dpinit part of Deep() */
-		   double  eosq, sinio, cosio, betao, aodp, theta2,
-			   sing, cosg, betao2, xmdot, omgdot, xnodot, xnodp;
-
-			   /* Used by dpsec and dpper parts of Deep() */
-		   double  xll, omgadf, xnode, em, xinc, xn, t;
-
-		 	   /* Used by thetg and Deep() */
-		   double  ds50;
-		}  deep_arg_t;
-
-/* Global structure used by SGP4/SDP4 code. */
-
-geodetic_t obs_geodetic;
-
-/* Two-line Orbital Elements for the satellite used by SGP4/SDP4 code. */
-
-tle_t tle;
-
 double reduce(value,rangeMin,rangeMax)
 double value, rangeMin, rangeMax;
 {
@@ -869,11 +823,6 @@ char ReadDataFiles()
 		fscanf(fd,"%d", &qth.stnalt);
 		fscanf(fd,"%d", &qth.tzoffset);
 		fclose(fd);
-
-		obs_geodetic.lat=qth.stnlat*deg2rad;
-		obs_geodetic.lon=-qth.stnlong*deg2rad;
-		obs_geodetic.alt=((double)qth.stnalt)/1000.0;
-		obs_geodetic.theta=0.0;
 
 		flag=1;
 	}
