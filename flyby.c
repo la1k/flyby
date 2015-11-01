@@ -3535,19 +3535,6 @@ int x;
 	}
 }
 
-char Geostationary(x)
-int x;
-{
-	/* This function returns a 1 if the satellite pointed
-	   to by "x" appears to be in a geostationary orbit */
-
-	if (fabs(sat[x].meanmo-1.0027)<0.0002)
-
-		return 1;
-	else
-		return 0;
-}
-
 int Print(string,mode)
 char *string, mode;
 {
