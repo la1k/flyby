@@ -3787,6 +3787,7 @@ char *string;
 	return quit;
 }
 
+#define MAX_NUM_CHARS 80
 void Predict(predict_orbit_t *orbit, predict_observer_t *qth, char mode)
 {
 	/* This function predicts satellite passes.  It displays
@@ -3796,7 +3797,6 @@ void Predict(predict_orbit_t *orbit, predict_observer_t *qth, char mode)
 
 	bool should_quit = false;
 	bool should_break = false;
-	const int MAX_NUM_CHARS = 80;
 	char data_string[MAX_NUM_CHARS];
 	char time_string[MAX_NUM_CHARS];
 
@@ -5218,21 +5218,22 @@ char multitype, disttype;
 	sprintf(tracking_mode, "NONE\n%c",0);
 }
 
-void Illumination()
+void Illumination(predict_orbit_t *orbit)
 {
 	double startday, oneminute, sunpercent;
-	int eclipses, minutes, quit, breakout=0;
-	char string1[40], string[80], datestring[25], count;
+	int eclipses, minutes, quit, breakout=0, count;
+	char string1[MAX_NUM_CHARS], string[MAX_NUM_CHARS], datestring[MAX_NUM_CHARS];
 
 	oneminute=1.0/(24.0*60.0);
 
-	PreCalc(indx);
 	daynum=floor(GetStartTime(0));
 	startday=daynum;
 	count=0;
 
 	curs_set(0);
 	clear();
+
+	const int NUM_MINUTES = 1440;
 
 
 	do {
@@ -5243,11 +5244,12 @@ void Illumination()
 		count++;
 		daynum=startday;
 
-		for (minutes=0, eclipses=0; minutes<1440; minutes++) {
-			Calc();
+		for (minutes=0, eclipses=0; minutes<NUM_MINUTES; minutes++) {
+			predict_orbit(orbit, daynum);
 
-			if (sat_sun_status==0)
+			if (orbit->eclipsed) {
 				eclipses++;
+			}
 
 			daynum=startday+(oneminute*(double)minutes);
 		}
@@ -5255,9 +5257,11 @@ void Illumination()
 		sunpercent=((double)eclipses)/((double)minutes);
 		sunpercent=100.0-(sunpercent*100.0);
 
-		strcpy(datestring,Daynum2String(startday,20,"%a %d%b%y %H:%M:%S"));
+		time_t epoch = predict_from_julian(startday);
+		strftime(datestring, MAX_NUM_CHARS, "%a %d%b%y %H:%M:%S", gmtime(&epoch));
 		datestring[11]=0;
-		sprintf(string1,"      %s    %4d    %6.2f%c",datestring,1440-eclipses,sunpercent,37);
+
+		sprintf(string1,"      %s    %4d    %6.2f%c",datestring,NUM_MINUTES-eclipses,sunpercent,37);
 
 		/* Allow a quick way out */
 
@@ -5272,11 +5276,12 @@ void Illumination()
 
 		daynum=startday;
 
-		for (minutes=0, eclipses=0; minutes<1440; minutes++) {
-			Calc();
+		for (minutes=0, eclipses=0; minutes<NUM_MINUTES; minutes++) {
+			predict_orbit(orbit, daynum);
 
-			if (sat_sun_status==0)
+			if (orbit->eclipsed) {
 				eclipses++;
+			}
 
 			daynum=startday+(oneminute*(double)minutes);
 		}
@@ -5284,7 +5289,9 @@ void Illumination()
 		sunpercent=((double)eclipses)/((double)minutes);
 		sunpercent=100.0-(sunpercent*100.0);
 
-		strcpy(datestring,Daynum2String(startday,20,"%a %d%b%y %H:%M:%S"));
+		epoch = predict_from_julian(startday);
+		strftime(datestring, MAX_NUM_CHARS, "%a %d%b%y %H:%M:%S", gmtime(&epoch));
+		
 		datestring[11]=0;
 		sprintf(string,"%s\t %s    %4d    %6.2f%c\n",string1,datestring,1440-eclipses,sunpercent,37);
 		quit=Print(string,'s');
@@ -6167,8 +6174,14 @@ char argc, *argv[];
 					indx=Select();
 					if (indx!=-1 && sat[indx].meanmo!=0.0 && Decayed(indx,0.0)==0) {
 						Print("",0);
-						Illumination();
+						const char *tle[2] = {sat[indx].line1, sat[indx].line2};
+						predict_orbit_t *orbit = predict_create_orbit(predict_parse_tle(tle));
+						
+						Illumination(orbit);
+
+						predict_destroy_orbit(orbit);
 					}
+
 					MainMenu();
 					break;
 			}
