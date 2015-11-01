@@ -63,18 +63,12 @@
 
 char *flybypath={"/etc/flyby"}, soundcard=0;
 
-struct	{  char line1[70];
+struct	tle_db_entry {  char line1[70];
 	   char line2[70];
 	   char name[25];
 	   int catnum;
-	}  sat[maxsats];
+	};
 
-struct	{  char callsign[17];
-	   double stnlat;
-	   double stnlong;
-	   int stnalt;
-	   int tzoffset;
-	}  qth;
 
 struct sat_db_entry {
 	   char name[25];
@@ -93,6 +87,7 @@ struct sat_db_entry {
 	   int phase_end[10];
 	};
 
+struct tle_db_entry sats[maxsats];
 struct sat_db_entry sat_db[maxsats];
 
 
@@ -506,7 +501,7 @@ char *input;
 	return bearing;
 }
 
-char ReadDataFiles()
+char ReadDataFiles(int max_num_sats, struct sat_db_entry *sat_db, struct tle_db_entry *sats, predict_observer_t **observer)
 {
 	/* This function reads "flyby.qth" and "flyby.tle"
 	   files into memory.  Return values are as follows:
@@ -521,25 +516,33 @@ char ReadDataFiles()
 	unsigned char dayofweek;
 	int x=0, y, entry=0, max_entries=10, transponders=0;
 	char flag=0, match, name[80], line1[80], line2[80];
+	char callsign[MAX_NUM_CHARS];
 
 	fd=fopen(qthfile,"r");
 
 	if (fd!=NULL) {
-		fgets(qth.callsign,16,fd);
-		qth.callsign[strlen(qth.callsign)-1]=0;
-		fscanf(fd,"%lf", &qth.stnlat);
-		fscanf(fd,"%lf", &qth.stnlong);
-		fscanf(fd,"%d", &qth.stnalt);
-		fscanf(fd,"%d", &qth.tzoffset);
+
+		fgets(callsign,16,fd);
+		callsign[strlen(callsign)-1]=0;
+
+		double latitude, longitude;
+		int altitude;
+		fscanf(fd,"%lf", &latitude);
+		fscanf(fd,"%lf", &longitude);
+		fscanf(fd,"%d", &altitude);
 		fclose(fd);
 
+		if (*observer != NULL) {
+			predict_destroy_observer(*observer);
+		}
+		*observer = predict_create_observer(callsign, latitude*M_PI/180.0, longitude*M_PI/180.0, altitude);
 		flag=1;
 	}
 
 	fd=fopen(tlefile,"r");
 
 	if (fd!=NULL) {
-		while (x<maxsats && feof(fd)==0) {
+		while (x<max_num_sats && feof(fd)==0) {
 			/* Initialize variables */
 
 			name[0]=0;
@@ -570,9 +573,9 @@ char ReadDataFiles()
 
 				/* Copy TLE data into the sat data structure */
 
-				strncpy(sat[x].name,name,24);
-				strncpy(sat[x].line1,line1,69);
-				strncpy(sat[x].line2,line2,69);
+				strncpy(sats[x].name,name,24);
+				strncpy(sats[x].line1,line1,69);
+				strncpy(sats[x].line2,line2,69);
 
 				x++;
 
@@ -605,8 +608,8 @@ char ReadDataFiles()
 
 			/* Search for match */
 
-				for (y=0, match=0; y<maxsats && match==0; y++) {
-					if (catnum==sat[y].catnum)
+				for (y=0, match=0; y<max_num_sats && match==0; y++) {
+					if (catnum==sats[y].catnum)
 						match=1;
 				}
 
@@ -737,7 +740,7 @@ char *destination;
 	return error;
 }
 
-void SaveQTH()
+void SaveQTH(predict_observer_t *qth)
 {
 	/* This function saves QTH data file normally
 	   found under ~/.flyby/flyby.qth */
@@ -746,16 +749,15 @@ void SaveQTH()
 
 	fd=fopen(qthfile,"w");
 
-	fprintf(fd,"%s\n",qth.callsign);
-	fprintf(fd," %g\n",qth.stnlat);
-	fprintf(fd," %g\n",qth.stnlong);
-	fprintf(fd," %d\n",qth.stnalt);
-	fprintf(fd," %d\n",qth.tzoffset);
+	fprintf(fd,"%s\n",qth->name);
+	fprintf(fd," %g\n",qth->latitude*180.0/M_PI);
+	fprintf(fd," %g\n",qth->longitude*180.0/M_PI);
+	fprintf(fd," %d\n",qth->altitude);
 
 	fclose(fd);
 }
 
-void SaveTLE()
+void SaveTLE(int num_sats, struct tle_db_entry *sats)
 {
 	int x;
 	FILE *fd;
@@ -764,12 +766,12 @@ void SaveTLE()
 
 	fd=fopen(tlefile,"w");
 
-	for (x=0; x<totalsats; x++) {
+	for (x=0; x<num_sats; x++) {
 		/* Write name, line1, line2 to flyby.tle */
 
-		fprintf(fd,"%s\n", sat[x].name);
-		fprintf(fd,"%s\n", sat[x].line1);
-		fprintf(fd,"%s\n", sat[x].line2);
+		fprintf(fd,"%s\n", sats[x].name);
+		fprintf(fd,"%s\n", sats[x].line1);
+		fprintf(fd,"%s\n", sats[x].line2);
 	}
 
 	fclose(fd);
@@ -1110,7 +1112,7 @@ double GetStartTime(const char* info_str)
 		bkgdset(COLOR_PAIR(2)|A_BOLD);
 		clear();
 
-		printw("\n\n\n\t     Starting %s Date and Time for Predictions of ",(qth.tzoffset==0) ? "GMT" : "Local");
+		printw("\n\n\n\t     Starting %s Date and Time for Predictions of");
 
 		printw("%-15s\n\n", info_str);
 
@@ -1742,6 +1744,7 @@ void ShowOrbitData(int num_orbits, predict_orbit_t **orbits)
 
 void QthEdit()
 {
+#if 0
 	/* This function permits keyboard editing of
 	   the ground station's location information. */
 
@@ -1831,6 +1834,7 @@ void QthEdit()
 		SaveQTH();
 		resave=0;
 	}
+#endif
 }
 
 void SingleTrack(double horizon, predict_orbit_t *orbit, predict_observer_t *qth, struct sat_db_entry sat_db)
@@ -2612,14 +2616,6 @@ void MultiTrack(predict_observer_t *qth, int num_orbits, predict_orbit_t **orbit
 		if (ans=='k') disttype ='k';
 		if (ans=='i') disttype ='i';
 
-		// If we receive a RELOAD_TLE command through the
-		//   socket connection, or an 'r' through the keyboard,
-		//   reload the TLE file.  
-
-		if (reload_tle || ans=='r') {
-			ReadDataFiles();
-			reload_tle=0;
-		}
 	} while (ans!='q' && ans!=27);
 
 	cbreak();
@@ -3098,7 +3094,8 @@ char argc, *argv[];
 			fclose(db);
 	}
 
-	x=ReadDataFiles();
+	predict_observer_t *observer = NULL;
+	x=ReadDataFiles(maxsats, sat_db, sats, &observer);
 
 	if (x>1)  /* TLE file was loaded successfully */ {
 		if (updatefile[0]) {
@@ -3168,7 +3165,7 @@ char argc, *argv[];
 
 		if (x<3) {
 			NewUser();
-			x=ReadDataFiles();
+			x=ReadDataFiles(maxsats, sat_db, sats, &observer);
 			QthEdit();
 		}
 	}
@@ -3288,13 +3285,12 @@ char argc, *argv[];
 
 		MainMenu();
 		int num_sats;
-		predict_observer_t *observer = predict_create_observer("test_qth", qth.stnlat*M_PI/180.0, qth.stnlong*M_PI/180.0, qth.stnalt);
 		num_sats = totalsats;
 		predict_orbit_t **orbits = (predict_orbit_t**)malloc(sizeof(predict_orbit_t*)*num_sats);
 		for (int i=0; i < num_sats; i++){
-			const char *tle[2] = {sat[i].line1, sat[i].line2};
+			const char *tle[2] = {sats[i].line1, sats[i].line2};
 			orbits[i] = predict_create_orbit(predict_parse_tle(tle));
-			memcpy(orbits[i]->name, sat[i].name, 25);
+			memcpy(orbits[i]->name, sats[i].name, 25);
 		}
 
 		int indx = 0;
