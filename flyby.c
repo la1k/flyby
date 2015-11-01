@@ -121,7 +121,7 @@ char	qthfile[50], tlefile[50], dbfile[50], temp[80], output[25],
 	once_per_second=0, ephem[5], sat_sun_status, findsun,
 	calc_squint, database=0, io_lat='N', io_lon='E', maidenstr[9];
 
-int	indx, rotctld_socket, uplink_socket, downlink_socket, totalsats=0;
+int	rotctld_socket, uplink_socket, downlink_socket, totalsats=0;
 
 unsigned char val[256];
 
@@ -1314,8 +1314,7 @@ char *stfmt;
 	return output;
 }
 
-double GetStartTime(mode)
-char mode;
+double GetStartTime(const char* info_str)
 {
 	/* This function prompts the user for the time and date
 	   the user wishes to begin prediction calculations,
@@ -1333,14 +1332,7 @@ char mode;
 
 		printw("\n\n\n\t     Starting %s Date and Time for Predictions of ",(qth.tzoffset==0) ? "GMT" : "Local");
 
-		if (mode=='m')
-				printw("the Moon\n\n");
-
-		if (mode=='o')
-				printw("the Sun\n\n");
-
-		if (mode!='m' && mode!='o')
-				printw("%-15s\n\n",sat[indx].name);
+		printw("%-15s\n\n", info_str);
 
 		bozo_count++;
 
@@ -1460,8 +1452,8 @@ char *string, mode;
 	/* This function buffers and displays orbital predictions
 	   and allows screens to be saved to a disk file. */
 
-	char type[20], spaces[80], head1[80], head2[81];
-	int key, ans=0, l, x, t;
+	char type[20], head2[81];
+	int key, ans=0;
 	static char buffer[5000], lines, quit;
 	static FILE *fd;
 
@@ -1491,21 +1483,10 @@ char *string, mode;
 		}
 
 		if (mode=='m' || mode=='o') {
-			sprintf(head1,"                    %s's Orbit Calendar for the %s",qth.callsign,type);
 			sprintf(head2,"           Date     Time    El   Az   RA     Dec    GHA     Vel   Range         ");
 		}
 
 		if (mode!='m' && mode!='o') {
-
-			l=strlen(qth.callsign)+strlen(sat[indx].name)+strlen(type);
-
-			spaces[0]=0;
-
-			for (x=l; x<60; x+=2)
-				strcat(spaces," ");
-
-			sprintf(head1,"%s%s's %s Calendar for %s", spaces, qth.callsign, type, sat[indx].name);
-
 			if (mode=='s')
 				sprintf(head2,"           Date     Mins/Day    Sun           Date     Mins/Day    Sun          ");
 			else {
@@ -1525,9 +1506,6 @@ char *string, mode;
 			mvprintw(0,0,"                                                                                ");
 			mvprintw(1,0,"  flyby Calendar :                                                              ");
 			mvprintw(1,21,"%-24s", type);
-			if (mode == 'p' || mode == 'v' || mode == 's') {
-				mvprintw(1,60, "%s (%d)", sat[indx].name, sat[indx].catnum);
-			}
 			mvprintw(2,0,"                                                                                ");
 			attrset(COLOR_PAIR(2)|A_REVERSE|A_BOLD);
 			mvprintw(3,0,head2);
@@ -1565,39 +1543,6 @@ char *string, mode;
 					quit=1;
 				}
 
-				/* 'L' logs output to "satname.txt" */
-
-				if (key=='L' && fd==NULL && buffer[0]) {
-					sprintf(temp,"%s.txt",sat[indx].name);
-
-					l=strlen(temp)-4;
-
-					for (x=0; x<l; x++) {
-						t=temp[x];
-
-						if (t==32 || t==17 || t==92 || t==42 || t==46 || t==47)
-							t='_';
-
-						temp[x]=t;
-					}
-
-					fd=fopen(temp,"a");
-					fprintf(fd,"%s%s\n",head1,head2);
-					fprintf(fd,"%s",buffer);
-					mvprintw(LINES-2,63,"Log = ON");
-					move(LINES-2,21);
-					refresh();
-				} else if (fd!=NULL) {
-					if (key=='L' || key=='N') {
-						fprintf(fd,"%s\n\n",buffer);
-						fclose(fd);
-						fd=NULL;
-						mvprintw(LINES-2,63,"        ");
-						move(LINES-2,21);
-						refresh();
-					} else
-						fprintf(fd,"%s",buffer);
-				}
 				buffer[0]=0;
 			}
 
@@ -1683,7 +1628,7 @@ void Predict(predict_orbit_t *orbit, predict_observer_t *qth, char mode)
 	char data_string[MAX_NUM_CHARS];
 	char time_string[MAX_NUM_CHARS];
 
-	predict_julian_date_t curr_time = GetStartTime(mode);
+	predict_julian_date_t curr_time = GetStartTime(orbit->name);
 	predict_orbit(orbit, curr_time);
 	clear();
 
@@ -1698,6 +1643,8 @@ void Predict(predict_orbit_t *orbit, predict_observer_t *qth, char mode)
 			predict_observe_orbit(qth, orbit, &obs);
 			bool has_printed_last_entry = false;
 			do {
+				mvprintw(1,60, "%s (%d)", orbit->name, orbit->orbital_elements.element_number);
+
 				//get formatted time
 				time_t epoch = predict_from_julian(curr_time);
 				strftime(time_string, MAX_NUM_CHARS, "%a %d%b%y %H:%M:%S", gmtime(&epoch));
@@ -1771,7 +1718,7 @@ void Predict(predict_orbit_t *orbit, predict_observer_t *qth, char mode)
 		clear();
 
 		if (!predict_aos_happens(orbit, qth->latitude) || predict_decayed(orbit)) {
-			mvprintw(12,5,"*** Passes for %s cannot occur for your ground station! ***\n",sat[indx].name);
+			mvprintw(12,5,"*** Passes for %s cannot occur for your ground station! ***\n",orbit->name);
 		}
 
 		if (predict_is_geostationary(orbit)) {
@@ -1801,12 +1748,15 @@ void celestial_predict(enum celestial_object object, predict_observer_t *qth, pr
 void PredictSunMoon(enum celestial_object object, predict_observer_t *qth)
 {
 	char print_mode;
+	char name_str[MAX_NUM_CHARS];
 	switch (object){
 		case PREDICT_SUN:
 			print_mode='o';
+			strcpy(name_str, "the Sun");
 		break;
 		case PREDICT_MOON:
 			print_mode='m';
+			strcpy(name_str, "the Moon");
 		break;
 	}
 
@@ -1815,7 +1765,7 @@ void PredictSunMoon(enum celestial_object object, predict_observer_t *qth)
 	double lastdaynum, rise=0.0;
 	char time_string[MAX_NUM_CHARS];
 
-	predict_julian_date_t daynum = GetStartTime(print_mode);
+	predict_julian_date_t daynum = GetStartTime(name_str);
 	clear();
 	struct predict_observation obs;
 
@@ -3069,6 +3019,8 @@ void Illumination(predict_orbit_t *orbit)
 		count++;
 		daynum=startday;
 
+		mvprintw(1,60, "%s (%d)", orbit->name, orbit->orbital_elements.element_number);
+
 		for (minutes=0, eclipses=0; minutes<NUM_MINUTES; minutes++) {
 			predict_orbit(orbit, daynum);
 
@@ -3701,6 +3653,7 @@ char argc, *argv[];
 		int num_sats;
 		predict_observer_t *observer = predict_create_observer("test_qth", qth.stnlat*M_PI/180.0, qth.stnlong*M_PI/180.0, qth.stnalt);
 		predict_orbit_t *orbit;
+		int indx = 0;
 
 		do {
 			key=getch();
