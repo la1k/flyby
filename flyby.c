@@ -50,12 +50,11 @@
 #include <netdb.h>
 #include <unistd.h>
 #include <fcntl.h>
+#include <predict/predict.h>
 
 #define maxsats		250
 #define ARRAY_SIZE(a) (sizeof(a) / sizeof(a[0]))
 #define halfdelaytime	5
-
-int PredictAt ( int iSatID, time_t ttDayNum, double dLat, double dLong );
 
 /* Constants used by SGP4/SDP4 code */
 
@@ -201,9 +200,9 @@ char	qthfile[50], tlefile[50], dbfile[50], temp[80], output[25],
 	downlink_host[256], downlink_port[6]="4532\0\0", downlink_vfo[30],
 	resave=0, reload_tle=0, netport[8],
 	once_per_second=0, ephem[5], sat_sun_status, findsun,
-	calc_squint, database=0, xterm, io_lat='N', io_lon='W', maidenstr[9];
+	calc_squint, database=0, io_lat='N', io_lon='E', maidenstr[9];
 
-int	indx, iaz, iel, ma256, isplat, isplong, socket_flag=0,
+int	indx, iaz, iel, ma256, isplat, isplong,
 	Flags=0, rotctld_socket, uplink_socket, downlink_socket, totalsats=0;
 
 long	rv, irk;
@@ -2141,313 +2140,6 @@ int passivesock(char *service, char *protocol, int qlen)
 	return sd;
 }
 
-void socket_server(predict_name)
-char *predict_name;
-{
-	/* This is the socket server code */
-
-	int i, j, n, sock;
-	socklen_t alen;
-	double dLat, dLong;           /* parameters for PredictAt */
-	struct sockaddr_in fsin;
-	char buf[80], buff[1000], satname[50], tempname[30], ok;
-	time_t t;
-	long nxtevt;
-	FILE *fd=NULL;
-
-	/* Open a socket port at "predict" or netport if defined */
-
-	if (netport[0]==0)
-		strncpy(netport,"predict",7);
-
-	sock=passivesock(netport,"udp",10);
-	alen=sizeof(fsin);
-
-	/* This is the main loop for monitoring the socket
-	   port and sending back replies to clients */
-
-	while (1) {
-		/* Get datagram from socket port */
-		if ((n=recvfrom(sock,buf,sizeof(buf),0,(struct sockaddr *)&fsin,&alen)) < 0)
-			exit (-1);
-
-		buf[n]=0;
-		ok=0;
-
-		/* Parse the command in the datagram */
-		if ((strncmp("GET_SAT",buf,7)==0) && (strncmp("GET_SAT_POS",buf,11)!=0)) {
-			/* Parse "buf" for satellite name */
-			for (i=0; buf[i]!=32 && buf[i]!=0 && i<39; i++);
-
-			for (j=++i; buf[j]!='\n' && buf[j]!=0 && (j-i)<25; j++)
-				satname[j-i]=buf[j];
-
-			satname[j-i]=0;
-
-			/* Do a simple search for the matching satellite name */
-
-			for (i=0; i<maxsats; i++) {
-				if ((strncmp(satname,sat[i].name,25)==0) || (atol(satname)==sat[i].catnum)) {
-					nxtevt=(long)rint(86400.0*(nextevent[i]+3651.0));
-
-					/* Build text buffer with satellite data */
-					sprintf(buff,"%s\n%-7.2f\n%+-6.2f\n%-7.2f\n%+-6.2f\n%ld\n%-7.2f\n%-7.2f\n%-7.2f\n%-7.2f\n%ld\n%c\n%-7.2f\n%-7.2f\n%-7.2f\n",sat[i].name,long_array[i],lat_array[i],az_array[i],el_array[i],nxtevt,footprint_array[i],range_array[i],altitude_array[i],velocity_array[i],orbitnum_array[i],visibility_array[i],phase_array[i],eclipse_depth_array[i],squint_array[i]);
-
-					/* Send buffer back to the client that sent the request */
-					sendto(sock,buff,strlen(buff),0,(struct sockaddr*)&fsin,sizeof(fsin));
-					ok=1;
-					break;
-				}
-			}
-		}
-
-		if (strncmp("GET_TLE",buf,7)==0) {
-			/* Parse "buf" for satellite name */
-			for (i=0; buf[i]!=32 && buf[i]!=0 && i<39; i++);
-
-			for (j=++i; buf[j]!='\n' && buf[j]!=0 && (j-i)<25; j++)
-				satname[j-i]=buf[j];
-
-			satname[j-i]=0;
-
-			/* Do a simple search for the matching satellite name */
-
-			for (i=0; i<maxsats; i++) {
-				if ((strncmp(satname,sat[i].name,25)==0) || (atol(satname)==sat[i].catnum)) {
-					/* Build text buffer with satellite data */
-					sprintf(buff,"%s\n%s\n%s\n",sat[i].name,sat[i].line1, sat[i].line2);
-
-					/* Send buffer back to the client that sent the request */
-					sendto(sock,buff,strlen(buff),0,(struct sockaddr*)&fsin,sizeof(fsin));
-					ok=1;
-					break;
-				}
-			}
-		}
-
-		if (strncmp("GET_DOPPLER",buf,11)==0) {
-			/* Parse "buf" for satellite name */
-			for (i=0; buf[i]!=32 && buf[i]!=0 && i<39; i++);
-
-			for (j=++i; buf[j]!='\n' && buf[j]!=0 && (j-i)<25; j++)
-				satname[j-i]=buf[j];
-
-			satname[j-i]=0;
-
-			/* Do a simple search for the matching satellite name */
-
-			for (i=0; i<maxsats; i++) {
-				if ((strncmp(satname,sat[i].name,25)==0) || (atol(satname)==sat[i].catnum)) {
-					/* Get Normalized (100 MHz)
-					   Doppler shift for sat[i] */
-
-					sprintf(buff,"%f\n",doppler[i]);
-
-					/* Send buffer back to client who sent request */
-					sendto(sock,buff,strlen(buff),0,(struct sockaddr*)&fsin,sizeof(fsin));
-					ok=1;
-					break;
-				}
-			}
-		}
-
-		if (strncmp("GET_LIST",buf,8)==0) {
-			buff[0]=0;
-
-			for (i=0; i<totalsats; i++) {
-				if (sat[i].name[0]!=0)
-					strcat(buff,sat[i].name);
-
-				strcat(buff,"\n");
-			}
-
-			sendto(sock,buff,strlen(buff),0,(struct sockaddr *)&fsin,sizeof(fsin));
-			ok=1;
-		}
-
-		if (strncmp("RELOAD_TLE",buf,10)==0) {
-			buff[0]=0;
-			sendto(sock,buff,strlen(buff),0,(struct sockaddr *)&fsin,sizeof(fsin));
-			reload_tle=1;
-			ok=1;
-		}
-
-		if (strncmp("GET_SUN",buf,7)==0) {
-			buff[0]=0;
-			sprintf(buff,"%-7.2f\n%+-6.2f\n%-7.2f\n%-7.2f\n%-7.2f\n",sun_azi, sun_ele, sun_lat, sun_lon, sun_ra);
-			sendto(sock,buff,strlen(buff),0,(struct sockaddr *)&fsin,sizeof(fsin));
-			ok=1;
-		}
-
-		if (strncmp("GET_MOON",buf,8)==0) {
-			buff[0]=0;
-			sprintf(buff,"%-7.2f\n%+-6.2f\n%-7.2f\n%-7.2f\n%-7.2f\n",moon_az, moon_el, moon_dec, moon_gha, moon_ra);
-			sendto(sock,buff,strlen(buff),0,(struct sockaddr *)&fsin,sizeof(fsin));
-			ok=1;
-		}
-
-		if (strncmp("GET_MODE",buf,8)==0) {
-			sendto(sock,tracking_mode,strlen(tracking_mode),0,(struct sockaddr *)&fsin,sizeof(fsin));
-			ok=1;
-		}
-
-		if (strncmp("GET_VERSION",buf,11)==0) {
-			buff[0]=0;
-			sprintf(buff,"%s\n",FLYBY_VERSION);
-			sendto(sock,buff,strlen(buff),0,(struct sockaddr *)&fsin,sizeof(fsin));
-			ok=1;
-		}
-
-		if (strncmp("GET_QTH",buf,7)==0) {
-			buff[0]=0;
-			sprintf(buff,"%s\n%g\n%g\n%d\n",qth.callsign, qth.stnlat, qth.stnlong, qth.stnalt);
-			sendto(sock,buff,strlen(buff),0,(struct sockaddr *)&fsin,sizeof(fsin));
-			ok=1;
-		}
-
-		// calculate the satellite position at a given moment in time...
-		if ( strncmp ( "GET_SAT_AT", buf, 10 ) == 0 ) {
-		  // get the parameters...
-		  sscanf ( &buf[10], "%s %ld %lf %lf", satname, (unsigned long *) &t, &dLat, &dLong );
-
-		  // find the satellite id
-		  for ( i=0; i<24; i++ ) {
-		    if ( strcmp ( sat[i].name, satname ) == 0) {
-		      //syslog ( LOG_INFO, "%s | %ld\n", sat[i].name, (unsigned long) t );
-
-		      // get the position
-		      PredictAt ( i, t, dLat, dLong );
-
-		      // print out the info...
-		      sprintf ( buff, "GOT_SAT_AT %ld %f %f %f %f %ld %f %f\n",   \
-				(unsigned long)t,                \
-				long_array[i],                   \
-				lat_array[i],                    \
-				az_array[i],                     \
-				el_array[i],                     \
-				aos_array[i],                    \
-				range_array[i],                  \
-				doppler[i] );
-		      sendto(sock,buff,strlen(buff),0,(struct sockaddr *)&fsin,sizeof(fsin));
-		    }
-		  }
-		}
-
-		if (strncmp("GET_TIME$",buf,9)==0) {
-			buff[0]=0;
-			t=time(NULL);
-			sprintf(buff,"%s",asctime(gmtime(&t)));
-
-			if (buff[8]==32)
-				buff[8]='0';
-
-			sendto(sock,buff,strlen(buff),0,(struct sockaddr *)&fsin,sizeof(fsin));
-			buf[0]=0;
-			ok=1;
-		}
-
-		if (strncmp("GET_TIME",buf,8)==0) {
-			buff[0]=0;
-			t=time(NULL);
-			sprintf(buff,"%lu\n",(unsigned long)t);
-			sendto(sock,buff,strlen(buff),0,(struct sockaddr *)&fsin,sizeof(fsin));
-			ok=1;
-		}
-
-		if (strncmp("GET_SAT_POS",buf,11)==0) {
-			/* Parse "buf" for satellite name and arguments */
-			for (i=0; buf[i]!=32 && buf[i]!=0 && i<39; i++);
-
-			for (j=++i; buf[j]!='\n' && buf[j]!=0 && (j-i)<49; j++)
-				satname[j-i]=buf[j];
-
-			satname[j-i]=0;
-
-			/* Send request to predict with output
-			   directed to a temporary file under /tmp */
-
-			strcpy(tempname,"/tmp/XXXXXX\0");
-			i=mkstemp(tempname);
-
-			sprintf(buff,"%s -f %s -t %s -q %s -o %s\n",predict_name,satname,tlefile,qthfile,tempname);
-			system(buff);
-
-			/* Append an EOF marker (CNTRL-Z) to the end of file */
-
-			fd=fopen(tempname,"a");
-			fprintf(fd,"%c\n",26);  /* Control-Z */
-			fclose(fd);
-
-			buff[0]=0;
-
-			/* Send the file to the client */
-
-			fd=fopen(tempname,"rb");
-
-			fgets(buff,80,fd);
-
-			do {
-				sendto(sock,buff,strlen(buff),0,(struct sockaddr *)&fsin,sizeof(fsin));
-				fgets(buff,80,fd);
-				/* usleep(2);  if needed (for flow-control) */
-
-			} while (feof(fd)==0);
-
-			fclose(fd);
-			unlink(tempname);
-			close(i);
-			ok=1;
-		}
-
-		if (strncmp("flyby",buf,7)==0) {
-			/* Parse "buf" for satellite name and arguments */
-			for (i=0; buf[i]!=32 && buf[i]!=0 && i<39; i++);
-
-			for (j=++i; buf[j]!='\n' && buf[j]!=0 && (j-i)<49; j++)
-				satname[j-i]=buf[j];
-
-			satname[j-i]=0;
-
-			/* Send request to predict with output
-			   directed to a temporary file under /tmp */
-
-			strcpy(tempname,"/tmp/XXXXXX\0");
-			i=mkstemp(tempname);
-
-			sprintf(buff,"%s -p %s -t %s -q %s -o %s\n",predict_name, satname,tlefile,qthfile,tempname);
-			system(buff);
-
-			/* Append an EOF marker (CNTRL-Z) to the end of file */
-
-			fd=fopen(tempname,"a");
-			fprintf(fd,"%c\n",26);  /* Control-Z */
-			fclose(fd);
-
-			buff[0]=0;
-
-			/* Send the file to the client */
-
-			fd=fopen(tempname,"rb");
-
-			fgets(buff,80,fd);
-
-			do {
-				sendto(sock,buff,strlen(buff),0,(struct sockaddr *)&fsin,sizeof(fsin));
-				fgets(buff,80,fd);
-				/* usleep(2);  if needed (for flow-control) */
-
-			} while (feof(fd)==0);
-
-			fclose(fd);
-			unlink(tempname);
-			close(i);
-			ok=1;
-		}
-
-		if (ok==0)
-			sendto(sock,"Huh?\n",5,0,(struct sockaddr *)&fsin,sizeof(fsin));
-	}
-}
 
 void Banner()
 {
@@ -3813,165 +3505,6 @@ double daynum;
 	sun_dec=Degrees(solar_rad.y);
 }
 
-void PreCalc(x)
-int x;
-{
-	/* This function copies TLE data from flyby's sat structure
-	   to the SGP4/SDP4's single dimensioned tle structure, and
-	   prepares the tracking code for the update. */
-
-	strcpy(tle.sat_name,sat[x].name);
-	strcpy(tle.idesg,sat[x].designator);
-	tle.catnr=sat[x].catnum;
-	tle.epoch=(1000.0*(double)sat[x].year)+sat[x].refepoch;
-	tle.xndt2o=sat[x].drag;
-	tle.xndd6o=sat[x].nddot6;
-	tle.bstar=sat[x].bstar;
-	tle.xincl=sat[x].incl;
-	tle.xnodeo=sat[x].raan;
-	tle.eo=sat[x].eccn;
-	tle.omegao=sat[x].argper;
-	tle.xmo=sat[x].meanan;
-	tle.xno=sat[x].meanmo;
-	tle.revnum=sat[x].orbitnum;
-
-	if (sat_db[x].squintflag) {
-		calc_squint=1;
-		alat=deg2rad*sat_db[x].alat;
-		alon=deg2rad*sat_db[x].alon;
-	} else
-		calc_squint=0;
-
-	/* Clear all flags */
-
-	ClearFlag(ALL_FLAGS);
-
-	/* Select ephemeris type.  This function will set or clear the
-	   DEEP_SPACE_EPHEM_FLAG depending on the TLE parameters of the
-	   satellite.  It will also pre-process tle members for the
-	   ephemeris functions SGP4 or SDP4, so this function must
-	   be called each time a new tle set is used. */
-
-	select_ephemeris(&tle);
-}
-
-void Calc()
-{
-	/* This is the stuff we need to do repetitively... */
-
-	/* Zero vector for initializations */
-	vector_t zero_vector={0,0,0,0};
-
-	/* Satellite position and velocity vectors */
-	vector_t vel=zero_vector;
-	vector_t pos=zero_vector;
-
-	/* Satellite Az, El, Range, Range rate */
-	vector_t obs_set;
-
-	/* Solar ECI position vector  */
-	vector_t solar_vector=zero_vector;
-
-	/* Solar observed azi and ele vector  */
-	vector_t solar_set;
-
-	/* Satellite's predicted geodetic position */
-	geodetic_t sat_geodetic;
-
-	jul_utc=daynum+2444238.5;
-
-	/* Convert satellite's epoch time to Julian  */
-	/* and calculate time since epoch in minutes */
-
-	jul_epoch=Julian_Date_of_Epoch(tle.epoch);
-	tsince=(jul_utc-jul_epoch)*xmnpda;
-	age=jul_utc-jul_epoch;
-
-	/* Copy the ephemeris type in use to ephem string. */
-
-		if (isFlagSet(DEEP_SPACE_EPHEM_FLAG))
-			strcpy(ephem,"SDP4");
-		else
-			strcpy(ephem,"SGP4");
-
-	/* Call NORAD routines according to deep-space flag. */
-
-	if (isFlagSet(DEEP_SPACE_EPHEM_FLAG))
-		SDP4(tsince, &tle, &pos, &vel);
-	else
-		SGP4(tsince, &tle, &pos, &vel);
-
-	/* Scale position and velocity vectors to km and km/sec */
-
-	Convert_Sat_State(&pos, &vel);
-
-	/* Calculate velocity of satellite */
-
-	Magnitude(&vel);
-	sat_vel=vel.w;
-
-	/** All angles in rads. Distance in km. Velocity in km/s **/
-	/* Calculate satellite Azi, Ele, Range and Range-rate */
-
-	Calculate_Obs(jul_utc, &pos, &vel, &obs_geodetic, &obs_set);
-
-	/* Calculate satellite Lat North, Lon East and Alt. */
-
-	Calculate_LatLonAlt(jul_utc, &pos, &sat_geodetic);
-
-	/* Calculate squint angle */
-
-	if (calc_squint)
-		squint=(acos(-(ax*rx+ay*ry+az*rz)/obs_set.z))/deg2rad;
-
-	/* Calculate solar position and satellite eclipse depth. */
-	/* Also set or clear the satellite eclipsed flag accordingly. */
-
-	Calculate_Solar_Position(jul_utc, &solar_vector);
-	Calculate_Obs(jul_utc, &solar_vector, &zero_vector, &obs_geodetic, &solar_set);
-
-	if (Sat_Eclipsed(&pos, &solar_vector, &eclipse_depth))
-		SetFlag(SAT_ECLIPSED_FLAG);
-	else
-		ClearFlag(SAT_ECLIPSED_FLAG);
-
-	if (isFlagSet(SAT_ECLIPSED_FLAG))
-		sat_sun_status=0;  /* Eclipse */
-	else
-		sat_sun_status=1; /* In sunlight */
-
-	/* Convert satellite and solar data */
-	sat_azi=Degrees(obs_set.x);
-	sat_ele=Degrees(obs_set.y);
-	sat_range=obs_set.z;
-	sat_range_rate=obs_set.w;
-	sat_lat=Degrees(sat_geodetic.lat);
-	sat_lon=Degrees(sat_geodetic.lon);
-	sat_alt=sat_geodetic.alt;
-
-	fk=12756.33*acos(xkmper/(xkmper+sat_alt));
-	fm=fk/1.609344;
-
-	rv=(long)floor((tle.xno*xmnpda/twopi+age*tle.bstar*ae)*age+tle.xmo/twopi)+tle.revnum;
-
-	sun_azi=Degrees(solar_set.x);
-	sun_ele=Degrees(solar_set.y);
-
-	irk=(long)rint(sat_range);
-	isplat=(int)rint(sat_lat);
-	isplong=(int)rint(360.0-sat_lon);
-	iaz=(int)rint(sat_azi);
-	iel=(int)rint(sat_ele);
-	ma256=(int)rint(256.0*(phase/twopi));
-
-	if (sat_sun_status) {
-		if (sun_ele<=-12.0 && rint(sat_ele)>=0.0)
-			findsun='+';
-		else
-			findsun='*';
-	} else
-		findsun=' ';
-}
 
 char AosHappens(x)
 int x;
@@ -4034,83 +3567,8 @@ int x;
 		return 0;
 }
 
-double FindAOS()
-{
-	/* This function finds and returns the time of AOS (aostime). */
+#include "removed_functions.c"
 
-	aostime=0.0;
-
-	if (AosHappens(indx) && Geostationary(indx)==0 && Decayed(indx,daynum)==0) {
-		Calc();
-
-		/* Get the satellite in range */
-
-		while (sat_ele<-1.0) {
-			daynum-=0.00035*(sat_ele*((sat_alt/8400.0)+0.46)-2.0);
-			Calc();
-		}
-
-		/* Find AOS */
-
-		while (aostime==0.0) {
-			if (fabs(sat_ele)<0.03)
-				aostime=daynum;
-			else {
-				daynum-=sat_ele*sqrt(sat_alt)/530000.0;
-				Calc();
-			}
-		}
-	}
-
-	return aostime;
-}
-
-double FindLOS()
-{
-	lostime=0.0;
-
-	if (Geostationary(indx)==0 && AosHappens(indx)==1 && Decayed(indx,daynum)==0) {
-		Calc();
-
-		do {
-			daynum+=sat_ele*sqrt(sat_alt)/502500.0;
-			Calc();
-
-			if (fabs(sat_ele) < 0.03)
-				lostime=daynum;
-
-		} while (lostime==0.0);
-	}
-
-	return lostime;
-}
-
-double FindLOS2()
-{
-	/* This function steps through the pass to find LOS.
-	   FindLOS() is called to "fine tune" and return the result. */
-
-	do {
-		daynum+=cos((sat_ele-1.0)*deg2rad)*sqrt(sat_alt)/25000.0;
-		Calc();
-
-	} while (sat_ele>=0.0);
-
-	return(FindLOS());
-}
-
-double NextAOS()
-{
-	/* This function finds and returns the time of the next
-	   AOS for a satellite that is currently in range. */
-
-	aostime=0.0;
-
-	if (AosHappens(indx) && Geostationary(indx)==0 && Decayed(indx,daynum)==0)
-		daynum=FindLOS2()+0.014;  /* Move to LOS + 20 minutes */
-
-	return (FindAOS());
-}
 
 int Print(string,mode)
 char *string, mode;
@@ -4187,10 +3645,10 @@ char *string, mode;
 				mvprintw(1,60, "%s (%d)", sat[indx].name, sat[indx].catnum);
 			}
 			mvprintw(2,0,"                                                                                ");
-			attrset(COLOR_PAIR(2)|A_REVERSE);
+			attrset(COLOR_PAIR(2)|A_REVERSE|A_BOLD);
 			mvprintw(3,0,head2);
 
-			attrset(COLOR_PAIR(2));
+			attrset(COLOR_PAIR(2)|A_BOLD);
 	                mvprintw(4,0,"\n");
 
 			addstr(buffer);
@@ -4329,49 +3787,60 @@ char *string;
 	return quit;
 }
 
-void Predict(mode)
-char mode;
+#define MAX_NUM_CHARS 80
+void Predict(predict_orbit_t *orbit, predict_observer_t *qth, char mode)
 {
 	/* This function predicts satellite passes.  It displays
 	   output through the Print() function if mode=='p' (show
 	   all passes), or through the PrintVisible() function if
 	   mode=='v' (show only visible passes). */
 
-	int quit=0, lastel=0, breakout=0;
-	char string[80], type[10];
+	bool should_quit = false;
+	bool should_break = false;
+	char data_string[MAX_NUM_CHARS];
+	char time_string[MAX_NUM_CHARS];
 
-	PreCalc(indx);
-	daynum=GetStartTime(0);
+	predict_julian_date_t curr_time = GetStartTime(mode);
+	predict_orbit(orbit, curr_time);
 	clear();
 
-	/* Trap geostationary orbits and passes that cannot occur. */
-
-	if (AosHappens(indx) && Geostationary(indx)==0 && Decayed(indx,daynum)==0) {
-		if (xterm) {
-			strcpy(type,"Orbit");  /* Default */
-
-			if (mode=='v')
-				strcpy(type,"Visual");
-
-			fprintf(stderr,"\033]0;flyby: %s's %s Calendar For %s\007",qth.callsign, type, sat[indx].name);
-		}
-
+	if (predict_aos_happens(orbit, qth->latitude) && !predict_is_geostationary(orbit) && !predict_decayed(orbit)) {
 		do {
-			daynum=FindAOS();
+			predict_julian_date_t next_aos = predict_next_aos(qth, orbit, curr_time);
+			predict_julian_date_t next_los = predict_next_los(qth, orbit, next_aos);
+			curr_time = next_aos;
 
-			/* Display the pass */
+			struct predict_observation obs;
+			predict_orbit(orbit, curr_time);
+			predict_observe_orbit(qth, orbit, &obs);
+			bool has_printed_last_entry = false;
+			do {
+				//get formatted time
+				time_t epoch = predict_from_julian(curr_time);
+				strftime(time_string, MAX_NUM_CHARS, "%a %d%b%y %H:%M:%S", gmtime(&epoch));
 
-			while (iel>=0 && quit==0) {
-				if (calc_squint)
-					sprintf(string,"      %s%4d %4d  %4d  %4d   %4d   %6ld  %4.0f %c\n",Daynum2String(daynum,20,"%a %d%b%y %H:%M:%S"),iel,iaz,ma256,(io_lat=='N'?+1:-1)*isplat,(io_lon=='W'?isplong:360-isplong),irk,squint,findsun);
-				else
-					sprintf(string,"      %s%4d %4d  %4d  %4d   %4d   %6ld  %6ld %c\n",Daynum2String(daynum,20,"%a %d%b%y %H:%M:%S"),iel,iaz,ma256,(io_lat=='N'?+1:-1)*isplat,(io_lon=='W'?isplong:360-isplong),irk,rv,findsun);
+				//modulo 256 phase
+				int ma256 = (int)rint(256.0*(orbit->phase/(2*M_PI)));
 
-				lastel=iel;
+				//satellite visibility status
+				char visibility;
+				if (obs.visible) {
+					visibility = '+';
+				} else if (!(orbit->eclipsed)) {
+					visibility = '*';
+				} else {
+					visibility = ' ';
+				}
 
-				if (mode=='p')
-					quit=Print(string,'p');
+				//format line of data
+				sprintf(data_string,"      %s%4d %4d  %4d  %4d   %4d   %6ld  %6ld %c\n", time_string, (int)(obs.elevation*180.0/M_PI), (int)(obs.azimuth*180.0/M_PI), ma256, (int)(orbit->latitude*180.0/M_PI), (int)(orbit->longitude*180.0/M_PI), (long)(obs.range), orbit->revolutions, visibility);
 
+				//print data to screen
+				if (mode=='p') {
+					should_quit=Print(data_string,'p');
+				}
+
+				//print only visible passes to screen
 				if (mode=='v') {
 					nodelay(stdscr,TRUE);
 					attrset(COLOR_PAIR(4));
@@ -4380,53 +3849,55 @@ char mode;
 					/* Allow a way out if this
 					   should continue forever... */
 
-					if (getch()==27)
-						breakout=1;
+					if (getch()==27) {
+						//will continue through the pass, and then break the outer whileloop
+						should_break = true;
+					}
 
 					nodelay(stdscr,FALSE);
 
-					quit=PrintVisible(string);
+					should_quit=PrintVisible(data_string);
 				}
 
-				daynum+=cos((sat_ele-1.0)*deg2rad)*sqrt(sat_alt)/25000.0;
-				Calc();
+				//calculate results for next timestep
+				curr_time += cos((obs.elevation*180/M_PI-1.0)*deg2rad)*sqrt(orbit->altitude)/25000.0; //predict's magic time increment formula
+				predict_orbit(orbit, curr_time);
+				predict_observe_orbit(qth, orbit, &obs);
+
+				//make sure that the last printed line is at elevation 0 (since that looks nicer)
+				if ((obs.elevation < 0) && !has_printed_last_entry) {
+					has_printed_last_entry = true;
+					curr_time = next_los;
+
+					predict_orbit(orbit, curr_time);
+					predict_observe_orbit(qth, orbit, &obs);
+				}
+			} while (((obs.elevation >= 0) || (curr_time <= next_los)) && !should_quit);
+
+			if (mode=='p') {
+				should_quit=Print("\n",'p');
 			}
 
-			if (lastel!=0) {
-				daynum=FindLOS();
-				Calc();
-
-				if (calc_squint)
-					sprintf(string,"      %s%4d %4d  %4d  %4d   %4d   %6ld  %4.0f %c\n",Daynum2String(daynum,20,"%a %d%b%y %H:%M:%S"),iel,iaz,ma256,(io_lat=='N'?+1:-1)*isplat,(io_lon=='W'?isplong:360-isplong),irk,squint,findsun);
-				else
-					sprintf(string,"      %s%4d %4d  %4d  %4d   %4d   %6ld  %6ld %c\n",Daynum2String(daynum,20,"%a %d%b%y %H:%M:%S"),iel,iaz,ma256,(io_lat=='N'?+1:-1)*isplat,(io_lon=='W'?isplong:360-isplong),irk,rv,findsun);
-
-				if (mode=='p')
-					quit=Print(string,'p');
-
-				if (mode=='v')
-					quit=PrintVisible(string);
+			if (mode=='v') {
+				should_quit=PrintVisible("\n");
 			}
 
-			if (mode=='p')
-				quit=Print("\n",'p');
+			//move to the next orbit
+			daynum = predict_next_aos(qth, orbit, daynum);
 
-			if (mode=='v')
-				quit=PrintVisible("\n");
-
-			/* Move to next orbit */
-			daynum=NextAOS();
-
-		}  while (quit==0 && breakout==0 && AosHappens(indx) && Decayed(indx,daynum)==0);
+		} while (!should_quit && !should_break && !predict_decayed(orbit));
 	} else {
+		//display warning that passes are impossible
 		bkgdset(COLOR_PAIR(5)|A_BOLD);
 		clear();
 
-		if (AosHappens(indx)==0 || Decayed(indx,daynum)==1)
+		if (!predict_aos_happens(orbit, qth->latitude) || predict_decayed(orbit)) {
 			mvprintw(12,5,"*** Passes for %s cannot occur for your ground station! ***\n",sat[indx].name);
+		}
 
-		if (Geostationary(indx)==1)
+		if (predict_is_geostationary(orbit)) {
 			mvprintw(12,3,"*** Orbital predictions cannot be made for a geostationary satellite! ***\n");
+		}
 
 		beep();
 		bkgdset(COLOR_PAIR(7)|A_BOLD);
@@ -4435,152 +3906,106 @@ char mode;
 	}
 }
 
-void PredictMoon()
-{
-	/* This function predicts "passes" of the Moon */
+enum celestial_object{PREDICT_SUN, PREDICT_MOON};
 
-	int iaz, iel, lastel=0;
-	char string[80], quit=0;
-	double lastdaynum, moonrise=0.0;
-
-	daynum=GetStartTime('m');
-	clear();
-
-	if (xterm)
-		fprintf(stderr,"\033]0;flyby: %s's Orbit Calendar for the Moon\007",qth.callsign);
-
-	do {
-		/* Determine moonrise */
-
-		FindMoon(daynum);
-
-		while (moonrise==0.0) {
-			if (fabs(moon_el)<0.03)
-				moonrise=daynum;
-			else {
-				daynum-=(0.004*moon_el);
-				FindMoon(daynum);
-			}
-		}
-
-		FindMoon(moonrise);
-		daynum=moonrise;
-		iaz=(int)rint(moon_az);
-		iel=(int)rint(moon_el);
-
-		do {
-			/* Display pass of the moon */
-
-			sprintf(string,"      %s%4d %4d  %5.1f  %5.1f  %5.1f  %6.1f%7.3f\n",Daynum2String(daynum,20,"%a %d%b%y %H:%M:%S"), iel, iaz, moon_ra, moon_dec, moon_gha, moon_dv, moon_dx);
-			quit=Print(string,'m');
-			lastel=iel;
-			lastdaynum=daynum;
-			daynum+=0.04*(cos(deg2rad*(moon_el+0.5)));
-			FindMoon(daynum);
-			iaz=(int)rint(moon_az);
-			iel=(int)rint(moon_el);
-
-		} while (iel>3 && quit==0);
-
-		while (lastel!=0 && quit==0) {
-			daynum=lastdaynum;
-
-			do {
-				/* Determine setting time */
-
-				daynum+=0.004*(sin(deg2rad*(moon_el+0.5)));
-				FindMoon(daynum);
-				iaz=(int)rint(moon_az);
-				iel=(int)rint(moon_el);
-
-			} while (iel>0);
-
-			/* Print moonset */
-
-			sprintf(string,"      %s%4d %4d  %5.1f  %5.1f  %5.1f  %6.1f%7.3f\n",Daynum2String(daynum,20,"%a %d%b%y %H:%M:%S"), iel, iaz, moon_ra, moon_dec, moon_gha, moon_dv, moon_dx);
-			quit=Print(string,'m');
-			lastel=iel;
-		}
-
-		quit=Print("\n",'m');
-		daynum+=0.4;
-		moonrise=0.0;
-
-	} while (quit==0);
+void celestial_predict(enum celestial_object object, predict_observer_t *qth, predict_julian_date_t time, struct predict_observation *obs) {
+	switch (object) {
+		case PREDICT_SUN:
+			predict_observe_sun(qth, time, obs);
+		break;
+		case PREDICT_MOON:
+			predict_observe_moon(qth, time, obs);
+		break;
+	}
 }
 
-void PredictSun()
+void PredictSunMoon(enum celestial_object object, predict_observer_t *qth)
 {
-	/* This function predicts "passes" of the Sun. */
+	char print_mode;
+	switch (object){
+		case PREDICT_SUN:
+			print_mode='o';
+		break;
+		case PREDICT_MOON:
+			print_mode='m';
+		break;
+	}
 
 	int iaz, iel, lastel=0;
-	char string[80], quit=0;
-	double lastdaynum, sunrise=0.0;
+	char string[MAX_NUM_CHARS], quit=0;
+	double lastdaynum, rise=0.0;
+	char time_string[MAX_NUM_CHARS];
 
-	daynum=GetStartTime('o');
+	daynum=GetStartTime(print_mode);
 	clear();
+	struct predict_observation obs;
 
-	if (xterm)
-		fprintf(stderr,"\033]0;flyby: %s's Orbit Calendar for the Sun\007",qth.callsign);
+	const double HORIZON_THRESHOLD = 0.03;
+	const double REDUCTION_FACTOR = 0.004;
+
+	double right_ascension = 0;
+	double declination = 0;
+	double longitude = 0;
 
 	do {
-		/* Determine sunrise */
+		//determine sun- or moonrise
+		celestial_predict(object, qth, daynum, &obs);
 
-		FindSun(daynum);
-
-		while (sunrise==0.0) {
-			if (fabs(sun_ele)<0.03)
-				sunrise=daynum;
-			else {
-				daynum-=(0.004*sun_ele);
-				FindSun(daynum);
+		while (rise==0.0) {
+			if (fabs(obs.elevation*180.0/M_PI)<HORIZON_THRESHOLD) {
+				rise=daynum;
+			} else {
+				daynum-=(REDUCTION_FACTOR*obs.elevation*180.0/M_PI);
+				celestial_predict(object, qth, daynum, &obs);
 			}
 		}
 
-		FindSun(sunrise);
-		daynum=sunrise;
-		iaz=(int)rint(sun_azi);
-		iel=(int)rint(sun_ele);
+		celestial_predict(object, qth, rise, &obs);
+		daynum=rise;
 
-		/* Print time of sunrise */
+		iaz=(int)rint(obs.azimuth*180.0/M_PI);
+		iel=(int)rint(obs.elevation*180.0/M_PI);
 
+		//display pass of sun or moon from rise
 		do {
-			/* Display pass of the sun */
-
-			sprintf(string,"      %s%4d %4d  %5.1f  %5.1f  %5.1f  %6.1f%7.3f\n",Daynum2String(daynum,20,"%a %d%b%y %H:%M:%S"), iel, iaz, sun_ra, sun_dec, sun_lon, sun_range_rate, sun_range);
-			quit=Print(string,'o');
+			//display data
+			time_t epoch = predict_from_julian(daynum);
+			strftime(time_string, MAX_NUM_CHARS, "%a %d%b%y %H:%M:%S", gmtime(&epoch));
+			sprintf(string,"      %s%4d %4d  %5.1f  %5.1f  %5.1f  %6.1f%7.3f\n",time_string, iel, iaz, right_ascension, declination, longitude, obs.range_rate, obs.range);
+			quit=Print(string,print_mode);
 			lastel=iel;
 			lastdaynum=daynum;
-			daynum+=0.04*(cos(deg2rad*(sun_ele+0.5)));
-			FindSun(daynum);
-			iaz=(int)rint(sun_azi);
-			iel=(int)rint(sun_ele);
 
+			//calculate data
+			daynum+=0.04*(cos(deg2rad*(obs.elevation*180.0/M_PI+0.5)));
+			celestial_predict(object, qth, daynum, &obs);
+			iaz=(int)rint(obs.azimuth*180.0/M_PI);
+			iel=(int)rint(obs.elevation*180.0/M_PI);
 		} while (iel>3 && quit==0);
 
+		//end the pass
 		while (lastel!=0 && quit==0) {
 			daynum=lastdaynum;
 
+			//find sun/moon set
 			do {
-				/* Find sun set */
-
-				daynum+=0.004*(sin(deg2rad*(sun_ele+0.5)));
-				FindSun(daynum);
-				iaz=(int)rint(sun_azi);
-				iel=(int)rint(sun_ele);
-
+				daynum+=0.004*(sin(deg2rad*(obs.elevation*180.0/M_PI+0.5)));
+				celestial_predict(object, qth, daynum, &obs);
+				iaz=(int)rint(obs.azimuth*180.0/M_PI);
+				iel=(int)rint(obs.elevation*180.0/M_PI);
 			} while (iel>0);
 
-			/* Print time of sunset */
+			time_t epoch = predict_from_julian(daynum);
+			strftime(time_string, MAX_NUM_CHARS, "%a %d%b%y %H:%M:%S", gmtime(&epoch));
 
-			sprintf(string,"      %s%4d %4d  %5.1f  %5.1f  %5.1f  %6.1f%7.3f\n",Daynum2String(daynum,20,"%a %d%b%y %H:%M:%S"), iel, iaz, sun_ra, sun_dec, sun_lon, sun_range_rate, sun_range);
-			quit=Print(string,'o');
+			sprintf(string,"      %s%4d %4d  %5.1f  %5.1f  %5.1f  %6.1f%7.3f\n",time_string, iel, iaz, right_ascension, declination, longitude, obs.range_rate, obs.range);
+			quit=Print(string,print_mode);
 			lastel=iel;
-		}
+		} //will continue until we have elevation 0 at the end of the pass
 
 		quit=Print("\n",'o');
 		daynum+=0.4;
-		sunrise=0.0;
+		rise=0.0;
 
 	} while (quit==0);
 }
@@ -5001,9 +4426,6 @@ int x;
 		geostationary=Geostationary(indx);
 		decayed=Decayed(indx,0.0);
 
-		if (xterm)
-			fprintf(stderr,"\033]0;flyby: Tracking %-10s\007",sat[x].name);
-
 		halfdelay(halfdelaytime);
 		curs_set(0);
 		bkgdset(COLOR_PAIR(3));
@@ -5262,33 +4684,6 @@ int x;
 				aoslos=nextaos;
 			}
 
-			/* This is where the variables for the socket server are updated. */
-
-			if (socket_flag) {
-				az_array[indx]=sat_azi;
-				el_array[indx]=sat_ele;
-				lat_array[indx]=sat_lat;
-				long_array[indx]=360.0-sat_lon;
-				footprint_array[indx]=fk;
-				range_array[indx]=sat_range;
-				altitude_array[indx]=sat_alt;
-				velocity_array[indx]=sat_vel;
-				orbitnum_array[indx]=rv;
-				doppler[indx]=doppler100;
-				nextevent[indx]=aoslos;
-				eclipse_depth_array[indx]=eclipse_depth/deg2rad;
-				phase_array[indx]=360.0*(phase/twopi);
-
-				if (calc_squint)
-					squint_array[indx]=squint;
-				else
-					squint_array[indx]=360.0;
-
-				FindSun(daynum);
-
-				sprintf(tracking_mode, "%s\n%c",sat[indx].name,0);
-			}
-
 			/* Get input from keyboard */
 
 			ans=getch();
@@ -5462,10 +4857,7 @@ char multitype, disttype;
 			ok2predict[maxsats];
 
 	double		aos[maxsats],
-			los[maxsats], aoslos[maxsats];
-
-	if (xterm)
-		fprintf(stderr,"\033]0;flyby: Multi-Satellite Tracking Mode\007");
+			los[maxsats];
 
 	curs_set(0);
 	attrset(COLOR_PAIR(6)|A_REVERSE|A_BOLD);
@@ -5492,7 +4884,6 @@ char multitype, disttype;
 		else
 			ok2predict[x]=0;
 
-		aoslos[x]=0.0;
 		los[x]=0.0;
 		aos[x]=0.0;
 		satindex[x]=x;
@@ -5504,7 +4895,6 @@ char multitype, disttype;
 		attrset(COLOR_PAIR(2));
 		mvprintw(12,70,(disttype=='i') ? "  (miles)" : "     (km)");
 		mvprintw(13,70,(qth.tzoffset==0)  ? "    (GMT)" : "  (Local)");
-    mvprintw(14,70,(socket_flag) ? " (Server)" : "         ");
 
 		attrset(COLOR_PAIR(4)|A_REVERSE|A_BOLD);
 		mvprintw( 9,70," Control ");
@@ -5582,32 +4972,6 @@ char multitype, disttype;
 					siv++;
 				}
 
-				if (socket_flag) {
-					az_array[indx]=sat_azi;
-					el_array[indx]=sat_ele;
-					lat_array[indx]=sat_lat;
-					long_array[indx]=360.0-sat_lon;
-					footprint_array[indx]=fk;
-					range_array[indx]=sat_range;
-					altitude_array[indx]=sat_alt;
-					velocity_array[indx]=sat_vel;
-					orbitnum_array[indx]=rv;
-					visibility_array[indx]=sunstat;
-					eclipse_depth_array[indx]=eclipse_depth/deg2rad;
-					phase_array[indx]=360.0*(phase/twopi);
-
-					doppler[indx]=-100e06*((sat_range_rate*1000.0)/299792458.0);
-
-					if (calc_squint)
-						squint_array[indx]=squint;
-					else
-						squint_array[indx]=360.0;
-
-					FindSun(daynum);
-					sprintf(tracking_mode,"MULTI\n%c",0);
-
-				}
-
 				attrset(COLOR_PAIR(4)|A_REVERSE|A_BOLD);
 				mvprintw(16,70,"   Sun   ");
 				if (sun_ele > 0.0)
@@ -5631,41 +4995,11 @@ char multitype, disttype;
 						aos[indx]=FindAOS();
 				}
 
-				if (inrange[indx])
-					aoslos[indx]=los[indx];
-				else
-					aoslos[indx]=aos[indx];
-
-				if (socket_flag) {
-					if (ok2predict[indx])
-						nextevent[indx]=aoslos[indx];
-					else
-						nextevent[indx]=-3651.0;
-				}
-
 			}
 
 			if (Decayed(indx,0.0)) {
 				attrset(COLOR_PAIR(2));
 				mvprintw(y+5,1,"%-10s---------- Decayed ---------", Abbreviate(sat[indx].name,9));
-
-				if (socket_flag) {
-					az_array[indx]=0.0;
-					el_array[indx]=0.0;
-					lat_array[indx]=0.0;
-					long_array[indx]=0.0;
-					footprint_array[indx]=0.0;
-					range_array[indx]=0.0;
-					altitude_array[indx]=0.0;
-					velocity_array[indx]=0.0;
-					orbitnum_array[indx]=0L;
-					visibility_array[indx]='N';
-					eclipse_depth_array[indx]=0.0;
-					phase_array[indx]=0.0;
-					doppler[indx]=0.0;
-					squint_array[indx]=0.0;
-					nextevent[indx]=-3651.0;
-				}
 			}
 		} while (y<=(LINES-6) && z++<totalsats);
 
@@ -5844,15 +5178,14 @@ char multitype, disttype;
 	sprintf(tracking_mode, "NONE\n%c",0);
 }
 
-void Illumination()
+void Illumination(predict_orbit_t *orbit)
 {
 	double startday, oneminute, sunpercent;
-	int eclipses, minutes, quit, breakout=0;
-	char string1[40], string[80], datestring[25], count;
+	int eclipses, minutes, quit, breakout=0, count;
+	char string1[MAX_NUM_CHARS], string[MAX_NUM_CHARS], datestring[MAX_NUM_CHARS];
 
 	oneminute=1.0/(24.0*60.0);
 
-	PreCalc(indx);
 	daynum=floor(GetStartTime(0));
 	startday=daynum;
 	count=0;
@@ -5860,8 +5193,7 @@ void Illumination()
 	curs_set(0);
 	clear();
 
-	if (xterm)
-		fprintf(stderr,"\033]0;flyby: %s's Solar Illumination Calendar For %s\007",qth.callsign, sat[indx].name);
+	const int NUM_MINUTES = 1440;
 
 
 	do {
@@ -5872,11 +5204,12 @@ void Illumination()
 		count++;
 		daynum=startday;
 
-		for (minutes=0, eclipses=0; minutes<1440; minutes++) {
-			Calc();
+		for (minutes=0, eclipses=0; minutes<NUM_MINUTES; minutes++) {
+			predict_orbit(orbit, daynum);
 
-			if (sat_sun_status==0)
+			if (orbit->eclipsed) {
 				eclipses++;
+			}
 
 			daynum=startday+(oneminute*(double)minutes);
 		}
@@ -5884,9 +5217,11 @@ void Illumination()
 		sunpercent=((double)eclipses)/((double)minutes);
 		sunpercent=100.0-(sunpercent*100.0);
 
-		strcpy(datestring,Daynum2String(startday,20,"%a %d%b%y %H:%M:%S"));
+		time_t epoch = predict_from_julian(startday);
+		strftime(datestring, MAX_NUM_CHARS, "%a %d%b%y %H:%M:%S", gmtime(&epoch));
 		datestring[11]=0;
-		sprintf(string1,"      %s    %4d    %6.2f%c",datestring,1440-eclipses,sunpercent,37);
+
+		sprintf(string1,"      %s    %4d    %6.2f%c",datestring,NUM_MINUTES-eclipses,sunpercent,37);
 
 		/* Allow a quick way out */
 
@@ -5901,11 +5236,12 @@ void Illumination()
 
 		daynum=startday;
 
-		for (minutes=0, eclipses=0; minutes<1440; minutes++) {
-			Calc();
+		for (minutes=0, eclipses=0; minutes<NUM_MINUTES; minutes++) {
+			predict_orbit(orbit, daynum);
 
-			if (sat_sun_status==0)
+			if (orbit->eclipsed) {
 				eclipses++;
+			}
 
 			daynum=startday+(oneminute*(double)minutes);
 		}
@@ -5913,7 +5249,9 @@ void Illumination()
 		sunpercent=((double)eclipses)/((double)minutes);
 		sunpercent=100.0-(sunpercent*100.0);
 
-		strcpy(datestring,Daynum2String(startday,20,"%a %d%b%y %H:%M:%S"));
+		epoch = predict_from_julian(startday);
+		strftime(datestring, MAX_NUM_CHARS, "%a %d%b%y %H:%M:%S", gmtime(&epoch));
+		
 		datestring[11]=0;
 		sprintf(string,"%s\t %s    %4d    %6.2f%c\n",string1,datestring,1440-eclipses,sunpercent,37);
 		quit=Print(string,'s');
@@ -6009,15 +5347,8 @@ void MainMenu()
 	attrset(COLOR_PAIR(3)|A_BOLD);
 	mvprintw(21,45," Exit flyby");
 
-	if (socket_flag) {
-		attrset(COLOR_PAIR(4)|A_BOLD);
-		mvprintw( 1, 1,"Server Mode");
-	}
-
 	refresh();
 
-	if (xterm)
-		fprintf(stderr,"\033]0;flyby: Version %s\007",FLYBY_VERSION);
 }
 
 void ProgramInfo()
@@ -6050,10 +5381,7 @@ void ProgramInfo()
 
 	printw("\t\tRunning Mode    : ");
 
-	if (socket_flag)
-		printw("Network server on port \"%s\"\n",netport);
-	else
-		printw("Standalone\n");
+	printw("Standalone\n");
 
 	refresh();
 	attrset(COLOR_PAIR(4)|A_BOLD);
@@ -6294,115 +5622,6 @@ double GetDayNum ( struct timeval *tv )
   return ( ( ( (double) (tv->tv_sec) - 0.000001 * ( (double) (tv->tv_usec) ) ) / 86400.0) - 3651.0 );
 }
 
-/*
- void PredictAt ( int iSatID, time_t ttDayNum, double dLat, double dLong )
-
-    Computes the satellites possition at the given time...
-    ... so that we can report it via a socket.
-
-    Returns:
-       TRUE if successful.
-
-    Author/Editor:
-       February 2003
-       Glenn Richardson
-       glenn@spacequest.com
-*/
-
-int PredictAt ( int iSatID, time_t ttDayNum, double dLat, double dLong )
-{
-  double dDayNum;               /* time of prediction */
-  double dOldRange, dOldClock;  /* range / time of pre-prediction position */
-  double dDoppler = 0.0;        /* doppler calculation */
-  double dDeltaTime, dDeltaPos; /* used in doppler calc */
-  double dQLat, dQLong;         /* remember the groundstation lat/long */
-  int iInRange;                 /* is the satellite in view? */
-  struct timeval tv;            /* time structure... */
-
-  /* remember... */
-  dQLat = qth.stnlat;
-  dQLong = qth.stnlong;
-  qth.stnlat = dLat;
-  qth.stnlong = dLong;
-
-  /* are the keps ok? */
-  if ( ( sat[iSatID].meanmo == 0.0) || ( Decayed ( iSatID, 0.0 ) == 1 ) || ( Geostationary ( iSatID ) ) || !( AosHappens ( iSatID ) ) )
-    {
-      qth.stnlat = dQLat;
-      qth.stnlong = dQLong;
-
-      /* !!!! NOTE: we only compute LEOs !!!! */
-      /* syslog ( LOG_INFO, "PredictAT() can't do this one..."); */
-      return FALSE;
-    }
-
-  /* syslog ( LOG_INFO, "PredictAT: ttDayNum... %ld, %s", (unsigned long) ttDayNum, ctime ( &ttDayNum ) ); */
-  /* first, prepare for doppler by computing pos 5 sec ago */
-  indx = iSatID;
-  tv.tv_sec = ttDayNum - 5;
-  tv.tv_usec = 0;
-  daynum = GetDayNum ( &tv );
-  PreCalc ( iSatID );
-  Calc ();
-
-  dOldClock = 86400.0 * daynum;
-  dOldRange = sat_range * 1000.0;
-
-  /* now, recompute at current position */
-  tv.tv_sec = ttDayNum;
-  daynum = GetDayNum ( &tv );
-  PreCalc ( iSatID );
-  Calc ();
-
-  dDayNum = daynum;
-
-  /* setup for doppler... */
-  dDeltaTime = dDayNum * 86400.0 - dOldClock;
-  dDeltaPos = (sat_range * 1000.0) - dOldRange;
-
-  if ( sat_azi >= 0.0 )
-    {
-      iInRange = 1;
-
-      /* compute the doppler */
-      dDoppler = - ( ( dDeltaPos / dDeltaTime ) / 299792458.0 );
-      dDoppler = dDoppler * 100.0e6;
-    }
-  else
-    {
-      /* compute the doppler */
-      iInRange = 0;
-    }
-
-  /* printf ("InRange? %d, doppler: %f, Az: %f, El: %f, %s",
-              iInRange, dDoppler, azimuth, elevation, ctime ( &ttDayNum ) ); */
-  /* remember values for socket connection... */
-  az_array[iSatID] = sat_azi;
-  el_array[iSatID] = sat_ele;
-  lat_array[iSatID] = sat_lat;
-  long_array[iSatID] = 360.0 - sat_lon;
-  footprint_array[iSatID] = fk;
-  range_array[iSatID] = sat_range;
-  altitude_array[iSatID] = sat_alt;
-  velocity_array[iSatID] = sat_vel;
-  orbitnum_array[iSatID] = rv;
-  doppler[iSatID] = dDoppler;
-
-
-  /* Calculate Next Event (AOS/LOS) Times */
-  if ( iInRange )
-    nextevent[iSatID] = FindLOS2();
-  else
-    nextevent[iSatID] = FindAOS();
-
-
-  /* restore... */
-  qth.stnlat = dQLat;
-  qth.stnlong = dQLong;
-
-  return TRUE;
-}
-
 int main(argc,argv)
 char argc, *argv[];
 {
@@ -6410,7 +5629,6 @@ char argc, *argv[];
 	char updatefile[80], quickfind=0, quickpredict=0,
 	     quickstring[40], outputfile[42],
 	     tle_cli[50], qth_cli[50], interactive=0;
-	pthread_t thread;
 	char *env=NULL;
 	FILE *db;
 	struct addrinfo hints, *servinfo, *servinfop;
@@ -6584,9 +5802,6 @@ char argc, *argv[];
 				strncpy(netport,argv[z],5);
 		}
 
-		if (strcmp(argv[x],"-s")==0)
-			socket_flag=1;
-
 		if (strcmp(argv[x],"-north")==0) /* Default */
 			io_lat='N';
 
@@ -6698,15 +5913,6 @@ char argc, *argv[];
 
 	if (interactive) {
 		/* We're in interactive mode.  Prepare the screen */
-
-		/* Are we running under an xterm or equivalent? */
-
-		env=getenv("TERM");
-
-		if (env!=NULL && strncmp(env,"xterm",5)==0)
-			xterm=1;
-		else
-			xterm=0;
 
 		/* Start ncurses */
 
@@ -6846,12 +6052,6 @@ char argc, *argv[];
 		the socket data is updated only when
 		running in the real-time tracking modes. */
 
-		if (socket_flag) {
-			pthread_create(&thread,NULL,(void *)socket_server,(void *)argv[0]);
-			bkgdset(COLOR_PAIR(3));
-			MultiTrack('m','k');
-		}
-
 		MainMenu();
 
 		do {
@@ -6867,23 +6067,33 @@ char argc, *argv[];
 					PrintVisible("");
 					indx=Select();
 
-					if (indx!=-1 && sat[indx].meanmo!=0.0 && Decayed(indx,0.0)==0)
-						Predict(key);
+					if (indx!=-1 && sat[indx].meanmo!=0.0 && Decayed(indx,0.0)==0) {
+						const char *tle[2] = {sat[indx].line1, sat[indx].line2};
+						predict_orbit_t *orbit = predict_create_orbit(predict_parse_tle(tle));
+						predict_observer_t *observer = predict_create_observer("test_qth", qth.stnlat*M_PI/180.0, qth.stnlong*M_PI/180.0, qth.stnalt);
+						Predict(orbit, observer, key);
+					}
 
 					MainMenu();
 					break;
 
-				case 'n':
+				case 'n': {
 					Print("",0);
-					PredictMoon();
+					predict_observer_t *observer = predict_create_observer("test_qth", qth.stnlat*M_PI/180.0, -qth.stnlong*M_PI/180.0, qth.stnalt);
+					PredictSunMoon(PREDICT_MOON, observer);
+					predict_destroy_observer(observer);
 					MainMenu();
 					break;
+					  }
 
-				case 'o':
+				case 'o': {
 					Print("",0);
-					PredictSun();
+					predict_observer_t *observer = predict_create_observer("test_qth", qth.stnlat*M_PI/180.0, -qth.stnlong*M_PI/180.0, qth.stnalt);
+					PredictSunMoon(PREDICT_SUN, observer);
+					predict_destroy_observer(observer);
 					MainMenu();
 					break;
+					  }
 
 				case 'u':
 					AutoUpdate("");
@@ -6930,8 +6140,14 @@ char argc, *argv[];
 					indx=Select();
 					if (indx!=-1 && sat[indx].meanmo!=0.0 && Decayed(indx,0.0)==0) {
 						Print("",0);
-						Illumination();
+						const char *tle[2] = {sat[indx].line1, sat[indx].line2};
+						predict_orbit_t *orbit = predict_create_orbit(predict_parse_tle(tle));
+						
+						Illumination(orbit);
+
+						predict_destroy_orbit(orbit);
 					}
+
 					MainMenu();
 					break;
 			}
