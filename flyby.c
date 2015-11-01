@@ -274,29 +274,6 @@ geodetic_t obs_geodetic;
 
 tle_t tle;
 
-/* Functions for testing and setting/clearing flags used in SGP4/SDP4 code */
-
-int isFlagSet(int flag)
-{
-	return (Flags&flag);
-}
-
-int isFlagClear(int flag)
-{
-	return (~Flags&flag);
-}
-
-void SetFlag(int flag)
-{
-	Flags|=flag;
-}
-
-void ClearFlag(int flag)
-{
-	Flags&=~flag;
-}
-
-
 double reduce(value,rangeMin,rangeMax)
 double value, rangeMin, rangeMax;
 {
