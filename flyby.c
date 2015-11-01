@@ -537,27 +537,6 @@ void AnyKey()
 	getch();
 }
 
-double FixAngle(x)
-double x;
-{
-	/* This function reduces angles greater than
-	   two pi by subtracting two pi from the angle */
-
-	while (x>twopi)
-		x-=twopi;
-
-	return x;
-}
-
-double PrimeAngle(x)
-double x;
-{
-	/* This function is used in the FindMoon() function. */
-
-	x=x-360.0*floor(x/360.0);
-	return x;
-}
-
 char *SubString(string,start,end)
 char *string, start, end;
 {
