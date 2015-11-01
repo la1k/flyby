@@ -87,10 +87,6 @@ struct sat_db_entry {
 	   int phase_end[10];
 	};
 
-struct tle_db_entry sats[maxsats];
-struct sat_db_entry sat_db[maxsats];
-
-
 /* Global variables for sharing data among functions... */
 
 
@@ -2295,34 +2291,7 @@ void SingleTrack(double horizon, predict_orbit_t *orbit, predict_observer_t *qth
 	sprintf(tracking_mode, "NONE\n%c",0);
 }
 
-void MultiColours(scrk, scel)
-double scrk, scel;
-{
-	if (scrk < 8000)
-		if (scrk < 4000)
-			if (scrk < 2000)
-				if (scrk < 1000)
-					if (scel > 10)
-						attrset(COLOR_PAIR(6)|A_REVERSE); /* red */
-					else
-						attrset(COLOR_PAIR(3)|A_REVERSE); /* yellow */
-				else
-					if (scel > 20)
-						attrset(COLOR_PAIR(3)|A_REVERSE); /* yellow */
-					else
-						attrset(COLOR_PAIR(4)|A_REVERSE); /* cyan */
-			else
-				if (scel > 40)
-					attrset(COLOR_PAIR(4)|A_REVERSE); /* cyan */
-				else
-					attrset(COLOR_PAIR(1)|A_REVERSE); /* white */
-		else
-			attrset(COLOR_PAIR(1)|A_REVERSE); /* white */
-	else
-		attrset(COLOR_PAIR(2)|A_REVERSE); /* reverse */
-}
-
-NCURSES_ATTR_T MultiColours_retattr(scrk, scel)
+NCURSES_ATTR_T MultiColours(scrk, scel)
 double scrk, scel;
 {
 	if (scrk < 8000)
@@ -2450,7 +2419,7 @@ void MultiTrack(predict_observer_t *qth, int num_orbits, predict_orbit_t **orbit
 			char aos_los[MAX_NUM_CHARS] = {0};
 			if (obs.elevation >= 0) {
 				//different colours according to range and elevation
-				attributes[i] = MultiColours_retattr(obs.range, obs.elevation*180/M_PI);
+				attributes[i] = MultiColours(obs.range, obs.elevation*180/M_PI);
 
 				if (predict_is_geostationary(orbit)){
 					sprintf(aos_los, "*GeoS*");
@@ -2893,6 +2862,11 @@ char argc, *argv[];
 	char *env=NULL;
 	FILE *db;
 	struct addrinfo hints, *servinfo, *servinfop;
+
+	struct tle_db_entry sats[maxsats];
+	struct sat_db_entry sat_db[maxsats];
+
+
 
 	/* Set up translation table for computing TLE checksums */
 
