@@ -3786,7 +3786,7 @@ char *string;
 
 	return quit;
 }
-
+#define MAX_NUM_CHARS 80
 void Predict(predict_orbit_t *orbit, predict_observer_t *qth, char mode)
 {
 	/* This function predicts satellite passes.  It displays
@@ -3796,7 +3796,6 @@ void Predict(predict_orbit_t *orbit, predict_observer_t *qth, char mode)
 
 	bool should_quit = false;
 	bool should_break = false;
-	const int MAX_NUM_CHARS = 80;
 	char data_string[MAX_NUM_CHARS];
 	char time_string[MAX_NUM_CHARS];
 
@@ -4046,6 +4045,105 @@ void PredictSun()
 		quit=Print("\n",'o');
 		daynum+=0.4;
 		sunrise=0.0;
+
+	} while (quit==0);
+}
+
+enum celestial_object{PREDICT_SUN, PREDICT_MOON};
+
+void celestial_predict(enum celestial_object object, predict_observer_t *qth, predict_julian_date_t time, struct predict_observation *obs) {
+	switch (object) {
+		case PREDICT_SUN:
+			predict_observe_sun(qth, time, obs);
+		break;
+		case PREDICT_MOON:
+			predict_observe_moon(qth, time, obs);
+		break;
+	}
+}
+
+void PredictSunMoon(enum celestial_object object, predict_observer_t *qth)
+{
+	int iaz, iel, lastel=0;
+	char string[MAX_NUM_CHARS], quit=0;
+	double lastdaynum, rise=0.0;
+	char time_string[MAX_NUM_CHARS];
+
+	daynum=GetStartTime('o');
+	clear();
+	struct predict_observation obs;
+
+	const double HORIZON_THRESHOLD = 0.03;
+	const double REDUCTION_FACTOR = 0.004;
+
+	char print_mode;
+	switch (object){
+		case PREDICT_SUN:
+			print_mode='o';
+		break;
+		case PREDICT_MOON:
+			print_mode='m';
+		break;
+	}
+
+	do {
+		//determine sun- or moonrise
+		celestial_predict(object, qth, daynum, &obs);
+
+		while (rise==0.0) {
+			if (fabs(obs.elevation*180.0/M_PI)<HORIZON_THRESHOLD) {
+				rise=daynum;
+			} else {
+				daynum-=(REDUCTION_FACTOR*obs.elevation*180.0/M_PI);
+				celestial_predict(object, qth, daynum, &obs);
+			}
+		}
+
+		celestial_predict(object, qth, rise, &obs);
+		daynum=rise;
+
+		iaz=(int)rint(obs.azimuth*180.0/M_PI);
+		iel=(int)rint(obs.elevation*180.0/M_PI);
+
+		//display pass of sun or moon from rise
+		do {
+			//display data
+			time_t epoch = predict_from_julian(daynum);
+			strftime(time_string, MAX_NUM_CHARS, "%a %d%b%y %H:%M:%S", gmtime(&epoch));
+			sprintf(string,"      %s%4d %4d  %5.1f  %5.1f  %5.1f  %6.1f%7.3f\n",time_string, iel, iaz, sun_ra, sun_dec, sun_lon, sun_range_rate, sun_range);
+			quit=Print(string,print_mode);
+			lastel=iel;
+			lastdaynum=daynum;
+
+			//calculate data
+			daynum+=0.04*(cos(deg2rad*(obs.elevation*180.0/M_PI+0.5)));
+			celestial_predict(object, qth, daynum, &obs);
+			iaz=(int)rint(obs.azimuth*180.0/M_PI);
+			iel=(int)rint(obs.elevation*180.0/M_PI);
+		} while (iel>3 && quit==0);
+
+		//end the pass
+		while (lastel!=0 && quit==0) {
+			daynum=lastdaynum;
+
+			//find sun/moon set
+			do {
+				daynum+=0.004*(sin(deg2rad*(obs.elevation*180.0/M_PI+0.5)));
+				celestial_predict(object, qth, daynum, &obs);
+				iaz=(int)rint(obs.azimuth*180.0/M_PI);
+				iel=(int)rint(obs.elevation*180.0/M_PI);
+			} while (iel>0);
+
+			time_t epoch = predict_from_julian(daynum);
+			strftime(time_string, MAX_NUM_CHARS, "%a %d%b%y %H:%M:%S", gmtime(&epoch));
+			sprintf(string,"      %s%4d %4d  %5.1f  %5.1f  %5.1f  %6.1f%7.3f\n",time_string, iel, iaz, sun_ra, sun_dec, sun_lon, sun_range_rate, sun_range);
+			quit=Print(string,print_mode);
+			lastel=iel;
+		} //will continue until we have elevation 0 at the end of the pass
+
+		quit=Print("\n",'o');
+		daynum+=0.4;
+		rise=0.0;
 
 	} while (quit==0);
 }
@@ -6118,7 +6216,8 @@ char argc, *argv[];
 
 				case 'o':
 					Print("",0);
-					PredictSun();
+					predict_observer_t *observer = predict_create_observer("test_qth", qth.stnlat*M_PI/180.0, -qth.stnlong*M_PI/180.0, qth.stnalt);
+					PredictSunMoon(PREDICT_SUN, observer);
 					MainMenu();
 					break;
 
