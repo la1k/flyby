@@ -3570,9 +3570,6 @@ int x;
 		return 0;
 }
 
-#include "removed_functions.c"
-
-
 int Print(string,mode)
 char *string, mode;
 {
