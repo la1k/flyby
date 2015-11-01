@@ -3468,46 +3468,6 @@ double daynum;
 		moon_gha+=360.0;
 }
 
-void FindSun(daynum)
-double daynum;
-{
-	/* This function finds the position of the Sun */
-
-	/* Zero vector for initializations */
-	vector_t zero_vector={0,0,0,0};
-
-	/* Solar ECI position vector  */
-	vector_t solar_vector=zero_vector;
-
-	/* Solar observed azi and ele vector  */
-	vector_t solar_set=zero_vector;
-
-	/* Solar right ascension and declination vector */
-	vector_t solar_rad=zero_vector;
-
-	/* Solar lat, long, alt vector */
-	geodetic_t solar_latlonalt;
-
-	jul_utc=daynum+2444238.5;
-
-	Calculate_Solar_Position(jul_utc, &solar_vector);
-	Calculate_Obs(jul_utc, &solar_vector, &zero_vector, &obs_geodetic, &solar_set);
-	sun_azi=Degrees(solar_set.x);
-	sun_ele=Degrees(solar_set.y);
-	sun_range=1.0+((solar_set.z-AU)/AU);
-	sun_range_rate=1000.0*solar_set.w;
-
-	Calculate_LatLonAlt(jul_utc, &solar_vector, &solar_latlonalt);
-
-	sun_lat=Degrees(solar_latlonalt.lat);
-	sun_lon=360.0-Degrees(solar_latlonalt.lon);
-
-	Calculate_RADec(jul_utc, &solar_vector, &zero_vector, &obs_geodetic, &solar_rad);
-
-	sun_ra=Degrees(solar_rad.x);
-	sun_dec=Degrees(solar_rad.y);
-}
-
 int Print(string,mode)
 char *string, mode;
 {
