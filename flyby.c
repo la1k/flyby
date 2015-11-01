@@ -58,10 +58,6 @@
 
 /* Constants used by SGP4/SDP4 code */
 
-#define deg2rad		1.745329251994330E-2	/* Degrees to radians */
-#define pi		3.14159265358979323846	/* Pi */
-#define pio2		1.57079632679489656	/* Pi/2 */
-#define x3pio2		4.71238898038468967	/* 3*Pi/2 */
 #define twopi		6.28318530717958623	/* 2*Pi  */
 #define e6a		1.0E-6
 #define tothrd		6.6666666666666666E-1	/* 2/3 */
@@ -92,50 +88,6 @@
 #define zsings		-9.8088458E-1
 #define zcosgs		1.945905E-1
 #define zcoshs		1
-#define zsinhs		0
-#define q22		1.7891679E-6
-#define q31		2.1460748E-6
-#define q33		2.2123015E-7
-#define g22		5.7686396
-#define g32		9.5240898E-1
-#define g44		1.8014998
-#define g52		1.0508330
-#define g54		4.4108898
-#define root22		1.7891679E-6
-#define root32		3.7393792E-7
-#define root44		7.3636953E-9
-#define root52		1.1428639E-7
-#define root54		2.1765803E-9
-#define thdt		4.3752691E-3
-#define rho		1.5696615E-1
-#define mfactor		7.292115E-5
-#define sr		6.96000E5	/* Solar radius - km (IAU 76) */
-#define AU		1.49597870691E8	/* Astronomical unit - km (IAU 76) */
-
-/* Entry points of Deep() */
-
-#define dpinit   1 /* Deep-space initialization code */
-#define dpsec    2 /* Deep-space secular code        */
-#define dpper    3 /* Deep-space periodic code       */
-
-/* Flow control flag definitions */
-
-#define ALL_FLAGS              -1
-#define SGP_INITIALIZED_FLAG   0x000001	/* not used */
-#define SGP4_INITIALIZED_FLAG  0x000002
-#define SDP4_INITIALIZED_FLAG  0x000004
-#define SGP8_INITIALIZED_FLAG  0x000008	/* not used */
-#define SDP8_INITIALIZED_FLAG  0x000010	/* not used */
-#define SIMPLE_FLAG            0x000020
-#define DEEP_SPACE_EPHEM_FLAG  0x000040
-#define LUNAR_TERMS_DONE_FLAG  0x000080
-#define NEW_EPHEMERIS_FLAG     0x000100	/* not used */
-#define DO_LOOP_FLAG           0x000200
-#define RESONANCE_FLAG         0x000400
-#define SYNCHRONOUS_FLAG       0x000800
-#define EPOCH_RESTART_FLAG     0x001000
-#define VISIBLE_FLAG           0x002000
-#define SAT_ECLIPSED_FLAG      0x004000
 
 char *flybypath={"/etc/flyby"}, soundcard=0;
 
@@ -1834,7 +1786,7 @@ void Predict(predict_orbit_t *orbit, predict_observer_t *qth, char mode)
 				}
 
 				//calculate results for next timestep
-				curr_time += cos((obs.elevation*180/M_PI-1.0)*deg2rad)*sqrt(orbit->altitude)/25000.0; //predict's magic time increment formula
+				curr_time += cos((obs.elevation*180/M_PI-1.0)*M_PI/180.0)*sqrt(orbit->altitude)/25000.0; //predict's magic time increment formula
 				predict_orbit(orbit, curr_time);
 				predict_observe_orbit(qth, orbit, &obs);
 
@@ -1947,7 +1899,7 @@ void PredictSunMoon(enum celestial_object object, predict_observer_t *qth)
 			lastdaynum=daynum;
 
 			//calculate data
-			daynum+=0.04*(cos(deg2rad*(obs.elevation*180.0/M_PI+0.5)));
+			daynum+=0.04*(cos(M_PI/180.0*(obs.elevation*180.0/M_PI+0.5)));
 			celestial_predict(object, qth, daynum, &obs);
 			iaz=(int)rint(obs.azimuth*180.0/M_PI);
 			iel=(int)rint(obs.elevation*180.0/M_PI);
@@ -1959,7 +1911,7 @@ void PredictSunMoon(enum celestial_object object, predict_observer_t *qth)
 
 			//find sun/moon set
 			do {
-				daynum+=0.004*(sin(deg2rad*(obs.elevation*180.0/M_PI+0.5)));
+				daynum+=0.004*(sin(M_PI/180.0*(obs.elevation*180.0/M_PI+0.5)));
 				celestial_predict(object, qth, daynum, &obs);
 				iaz=(int)rint(obs.azimuth*180.0/M_PI);
 				iel=(int)rint(obs.elevation*180.0/M_PI);
@@ -2023,7 +1975,7 @@ void ShowOrbitData()
 			clear();
 			sma=331.25*exp(log(1440.0/sat[x].meanmo)*(2.0/3.0));
 			an_period=1440.0/sat[x].meanmo;
-			c1=cos(sat[x].incl*deg2rad);
+			c1=cos(sat[x].incl*M_PI/180.0);
 			e2=1.0-(sat[x].eccn*sat[x].eccn);
 			no_period=(an_period*360.0)/(360.0+(4.97*pow((xkmper/sma),3.5)*((5.0*c1*c1)-1.0)/(e2*e2))/sat[x].meanmo);
 			satepoch=DayNum(1,0,sat[x].year)+sat[x].refepoch;
