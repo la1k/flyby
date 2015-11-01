@@ -3652,7 +3652,14 @@ char argc, *argv[];
 		MainMenu();
 		int num_sats;
 		predict_observer_t *observer = predict_create_observer("test_qth", qth.stnlat*M_PI/180.0, qth.stnlong*M_PI/180.0, qth.stnalt);
-		predict_orbit_t *orbit;
+		num_sats = totalsats;
+		predict_orbit_t **orbits = (predict_orbit_t**)malloc(sizeof(predict_orbit_t*)*num_sats);
+		for (int i=0; i < num_sats; i++){
+			const char *tle[2] = {sat[i].line1, sat[i].line2};
+			orbits[i] = predict_create_orbit(predict_parse_tle(tle));
+			memcpy(orbits[i]->name, sat[i].name, 25);
+		}
+
 		int indx = 0;
 
 		do {
@@ -3663,23 +3670,19 @@ char argc, *argv[];
 
 			switch (key) {
 				case 'p':
-				case 'v': {
+				case 'v':
 					Print("",0);
 					PrintVisible("");
 					indx=Select();
 
-					const char *tle[2] = {sat[indx].line1, sat[indx].line2};
-					orbit = predict_create_orbit(predict_parse_tle(tle));
-					predict_orbit(orbit, predict_to_julian(time(NULL)));
+					predict_orbit(orbits[indx], predict_to_julian(time(NULL)));
 
-					if (indx!=-1 && sat[indx].meanmo!=0.0 && !predict_decayed(orbit)) {
-						Predict(orbit, observer, key);
+					if (indx!=-1 && sat[indx].meanmo!=0.0 && !predict_decayed(orbits[indx])) {
+						Predict(orbits[indx], observer, key);
 					}
-					predict_destroy_orbit(orbit);
 
 					MainMenu();
 					break;
-					  }
 
 				case 'n':
 					Print("",0);
@@ -3716,34 +3719,19 @@ char argc, *argv[];
 				case 't':
 				case 'T':
 					indx=Select();
-					const char *tle[2] = {sat[indx].line1, sat[indx].line2};
-					orbit = predict_create_orbit(predict_parse_tle(tle));
-					predict_orbit(orbit, predict_to_julian(time(NULL)));
+					predict_orbit(orbits[indx], predict_to_julian(time(NULL)));
 
-					if (indx!=-1 && sat[indx].meanmo!=0.0 && !predict_decayed(orbit)) {
-						SingleTrack(horizon, orbit, observer, sat_db[indx]);
+					if (indx!=-1 && sat[indx].meanmo!=0.0 && !predict_decayed(orbits[indx])) {
+						SingleTrack(horizon, orbits[indx], observer, sat_db[indx]);
 					}
-					predict_destroy_orbit(orbit);
 
 					MainMenu();
 					break;
 
 				case 'm':
 				case 'l':
-					num_sats = totalsats;
-					predict_orbit_t **orbits = (predict_orbit_t**)malloc(sizeof(predict_orbit_t*)*num_sats);
-					for (int i=0; i < num_sats; i++){
-						const char *tle[2] = {sat[i].line1, sat[i].line2};
-						orbits[i] = predict_create_orbit(predict_parse_tle(tle));
-						memcpy(orbits[i]->name, sat[i].name, 25);
-					}
 
 					MultiTrack(observer, num_sats, orbits, key, 'k');
-					for (int i=0; i < num_sats; i++){
-						predict_destroy_orbit(orbits[i]);
-					}
-					free(orbits);
-
 					MainMenu();
 					break;
 
@@ -3752,21 +3740,18 @@ char argc, *argv[];
 					MainMenu();
 					break;
 
-				case 's': {
+				case 's':
 					indx=Select();
-					const char *tle[2] = {sat[indx].line1, sat[indx].line2};
-					orbit = predict_create_orbit(predict_parse_tle(tle));
-					predict_orbit(orbit, predict_to_julian(time(NULL)));
-					if (indx!=-1 && sat[indx].meanmo!=0.0 && !predict_decayed(orbit) ) {
+
+					predict_orbit(orbits[indx], predict_to_julian(time(NULL)));
+					if (indx!=-1 && sat[indx].meanmo!=0.0 && !predict_decayed(orbits[indx]) ) {
 						Print("",0);
-						
-						Illumination(orbit);
+
+						Illumination(orbits[indx]);
 					}
-					predict_destroy_orbit(orbit);
 
 					MainMenu();
 					break;
-					}
 			}
 
 		} while (key!='q' && key!=27);
@@ -3792,6 +3777,13 @@ char argc, *argv[];
 		clear();
 		refresh();
 		endwin();
+
+		for (int i=0; i < num_sats; i++){
+			predict_destroy_orbit(orbits[i]);
+		}
+		free(orbits);
+		predict_destroy_observer(observer);
+
 	}
 
 	exit(0);
