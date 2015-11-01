@@ -3789,9 +3789,7 @@ char *string;
 
 	return quit;
 }
-#define MAX_NUM_CHARS 80
 
-#define MAX_NUM_CHARS 80
 void Predict(predict_orbit_t *orbit, predict_observer_t *qth, char mode)
 {
 	/* This function predicts satellite passes.  It displays
@@ -5528,85 +5526,6 @@ char *string, *outputfile;
 	return 0;
 }
 
-int QuickPredict(string, outputfile)
-char *string, *outputfile;
-{
-	int x, y, z, lastel=0;
-	long start, now;
-	char satname[50], startstr[20];
-	time_t t;
-	FILE *fd;
-
-	if (outputfile[0])
-		fd=fopen(outputfile,"w");
-	else
-		fd=stdout;
-
-	startstr[0]=0;
-
-	ReadDataFiles();
-
-	for (x=0; x<48 && string[x]!=0 && string[x]!='\n'; x++)
-		satname[x]=string[x];
-
-	satname[x]=0;
-	x++;
-
-	for (y=0; string[x+y]!=0 && string[x+y]!='\n'; y++)
-		startstr[y]=string[x+y];
-
-	startstr[y]=0;
-	y++;
-
-	/* Do a simple search for the matching satellite name */
-
-	for (z=0; z<maxsats; z++) {
-		if ((strcmp(sat[z].name,satname)==0) || (atol(satname)==sat[z].catnum)) {
-			start=atol(startstr);
-			indx=z;
-
-			t=time(NULL);
-			now=(long)t;
-
-			if (start==0)
-				start=now;
-
-			if ((start>=now-31557600) && (start<=now+31557600)) {
-				/* Start must within one year of now */
-				daynum=((start/86400.0)-3651.0);
-				PreCalc(indx);
-				Calc();
-
-				if (AosHappens(indx) && Geostationary(indx)==0 && Decayed(indx,daynum)==0) {
-					/* Make Predictions */
-					daynum=FindAOS();
-
-					/* Display the pass */
-
-					while (iel>=0) {
-						fprintf(fd,"%.0f %s %4d %4d %4d %4d %4d %6ld %6ld %c\n",floor(86400.0*(3651.0+daynum)),Daynum2String(daynum,20,"%a %d%b%y %H:%M:%S"),iel,iaz,ma256,isplat,isplong,irk,rv,findsun);
-						lastel=iel;
-						daynum+=cos((sat_ele-1.0)*deg2rad)*sqrt(sat_alt)/25000.0;
-						Calc();
-					}
-
-					if (lastel!=0) {
-						daynum=FindLOS();
-						Calc();
-						fprintf(fd,"%.0f %s %4d %4d %4d %4d %4d %6ld %6ld %c\n",floor(86400.0*(3651.0+daynum)),Daynum2String(daynum,20,"%a %d%b%y %H:%M:%S"),iel,iaz,ma256,isplat,isplong,irk,rv,findsun);
-					}
-				}
-				break;
-			}
-		}
-	}
-
-	if (outputfile[0])
-		fclose(fd);
-
-	return 0;
-}
-
 double GetDayNum ( struct timeval *tv )
 {
   /* used by PredictAt */
@@ -5881,9 +5800,6 @@ char argc, *argv[];
 	if (x==3)  /* Both TLE and QTH files were loaded successfully */ {
 		if (quickfind)
 			exit(QuickFind(quickstring,outputfile));
-
-		if (quickpredict)
-			exit(QuickPredict(quickstring,outputfile));
 	} else {
 		if (tle_cli[0] || qth_cli[0]) {
 			/* "Houston, we have a problem..." */
