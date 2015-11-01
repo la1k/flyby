@@ -1167,7 +1167,7 @@ char *string;
 	return (saveflag ? 0 : -1);
 }
 
-int Select()
+int Select(int num_orbits, predict_orbit_t **orbits)
 {
 	ITEM **my_items;
 	int c;
@@ -1188,16 +1188,16 @@ int Select()
 	mvprintw( 7,46,"the 'Enter' key.");
 	mvprintw( 9,46,"Press 'q' to return to menu.");
 
-	if (totalsats >= maxsats)
+	if (num_orbits >= maxsats)
 		mvprintw(LINES-3,46,"Truncated to %d satellites",maxsats);
 	else
 		mvprintw(LINES-3,46,"%d satellites",totalsats);
 
 	/* Create items */
-	n_choices = ARRAY_SIZE(sat);
+	n_choices = num_orbits;
 	my_items = (ITEM **)calloc(n_choices, sizeof(ITEM *));
 	for(i = 0; i < n_choices; ++i)
-		my_items[i] = new_item(sat[i].name, sat[i].designator);
+		my_items[i] = new_item(orbits[i]->name, orbits[i]->orbital_elements.designator);
 
 	/* Create menu */
 	my_menu = new_menu((ITEM **)my_items);
@@ -1256,8 +1256,8 @@ int Select()
 		wrefresh(my_menu_win);
 	}
 
-	for (i=0, j=0; i<totalsats; i++)
-		if (strcmp(item_name(current_item(my_menu)),sat[i].name)==0)
+	for (i=0, j=0; i<num_orbits; i++)
+		if (strcmp(item_name(current_item(my_menu)),orbits[i]->name)==0)
 			j = i;
 
 	/* Unpost and free all the memory taken up */
@@ -1643,7 +1643,7 @@ void Predict(predict_orbit_t *orbit, predict_observer_t *qth, char mode)
 			predict_observe_orbit(qth, orbit, &obs);
 			bool has_printed_last_entry = false;
 			do {
-				mvprintw(1,60, "%s (%d)", orbit->name, orbit->orbital_elements.element_number);
+				mvprintw(1,60, "%s (%d)", orbit->name, orbit->orbital_elements.satellite_number);
 
 				//get formatted time
 				time_t epoch = predict_from_julian(curr_time);
@@ -1865,7 +1865,7 @@ int x,y;
 	return need2save;
 }
 
-void ShowOrbitData()
+void ShowOrbitData(int num_orbits, predict_orbit_t **orbits)
 {
 	/* This function permits displays a satellite's orbital
 	   data.  The age of the satellite data is also provided. */
@@ -1874,18 +1874,19 @@ void ShowOrbitData()
 	double an_period, no_period, sma, c1, e2, satepoch;
 	char days[5];
 
-	x=Select();
+	x=Select(num_orbits, orbits);
 
 	while (x!=-1) {
-		if (sat[x].meanmo!=0.0) {
+		predict_orbital_elements_t orbital_elements = orbits[x]->orbital_elements;
+		if (orbital_elements.mean_motion!=0.0) {
 			bkgdset(COLOR_PAIR(2)|A_BOLD);
 			clear();
-			sma=331.25*exp(log(1440.0/sat[x].meanmo)*(2.0/3.0));
-			an_period=1440.0/sat[x].meanmo;
-			c1=cos(sat[x].incl*M_PI/180.0);
-			e2=1.0-(sat[x].eccn*sat[x].eccn);
-			no_period=(an_period*360.0)/(360.0+(4.97*pow((xkmper/sma),3.5)*((5.0*c1*c1)-1.0)/(e2*e2))/sat[x].meanmo);
-			satepoch=DayNum(1,0,sat[x].year)+sat[x].refepoch;
+			sma=331.25*exp(log(1440.0/orbital_elements.mean_motion)*(2.0/3.0));
+			an_period=1440.0/orbital_elements.mean_motion;
+			c1=cos(orbital_elements.inclination*M_PI/180.0);
+			e2=1.0-(orbital_elements.eccentricity*orbital_elements.eccentricity);
+			no_period=(an_period*360.0)/(360.0+(4.97*pow((xkmper/sma),3.5)*((5.0*c1*c1)-1.0)/(e2*e2))/orbital_elements.mean_motion);
+			satepoch=DayNum(1,0,orbital_elements.epoch_year)+orbital_elements.epoch_day;
 			age=(int)rint(predict_to_julian(time(NULL))-satepoch);
 
 			if (age==1)
@@ -1893,7 +1894,7 @@ void ShowOrbitData()
 			else
 				strcpy(days,"days");
 
-			namelength=strlen(sat[x].name);
+			namelength=strlen(orbits[x]->name);
 
 			printw("\n");
 
@@ -1908,7 +1909,7 @@ void ShowOrbitData()
 			mvprintw(1,0,"  flyby Orbital Data                                                            ");
 			mvprintw(2,0,"                                                                                ");
 
-			mvprintw(1,25,"(%ld) %s", sat[x].catnum, sat[x].name);
+			mvprintw(1,25,"(%ld) %s", orbital_elements.satellite_number, orbits[x]->name);
 
 			attrset(COLOR_PAIR(4)|A_BOLD);
 			mvprintw( 4, 4,"Data Issued        : ");
@@ -1932,29 +1933,29 @@ void ShowOrbitData()
 
 			attrset(COLOR_PAIR(2)|A_BOLD);
 			mvprintw( 4,25,"%d %s ago",age,days);
-			mvprintw( 5,25,"%02d %.8f",sat[x].year,sat[x].refepoch);
-			mvprintw( 6,25,"%.4f deg",sat[x].incl);
-			mvprintw( 7,25,"%.4f deg",sat[x].raan);
-			mvprintw( 8,25,"%g",sat[x].eccn);
-			mvprintw( 9,25,"%.4f deg",sat[x].argper);
-			mvprintw(10,25,"%.4f deg",sat[x].meanan);
-			mvprintw(11,25,"%.8f rev/day",sat[x].meanmo);
-			mvprintw(12,25,"%g rev/day/day",sat[x].drag);
-			mvprintw(13,25,"%g rev/day/day/day",sat[x].nddot6);
-			mvprintw(14,25,"%g 1/earth radii",sat[x].bstar);
+			mvprintw( 5,25,"%02d %.8f",orbital_elements.epoch_year,orbital_elements.epoch_day);
+			mvprintw( 6,25,"%.4f deg",orbital_elements.inclination);
+			mvprintw( 7,25,"%.4f deg",orbital_elements.right_ascension);
+			mvprintw( 8,25,"%g",orbital_elements.eccentricity);
+			mvprintw( 9,25,"%.4f deg",orbital_elements.argument_of_perigee);
+			mvprintw(10,25,"%.4f deg",orbital_elements.mean_anomaly);
+			mvprintw(11,25,"%.8f rev/day",orbital_elements.mean_motion);
+			mvprintw(12,25,"%g rev/day/day",orbital_elements.derivative_mean_motion);
+			mvprintw(13,25,"%g rev/day/day/day",orbital_elements.second_derivative_mean_motion);
+			mvprintw(14,25,"%g 1/earth radii",orbital_elements.bstar_drag_term);
 			mvprintw(15,25,"%.4f km",sma);
-			mvprintw(16,25,"%.4f km",sma*(1.0+sat[x].eccn)-xkmper);
-			mvprintw(17,25,"%.4f km",sma*(1.0-sat[x].eccn)-xkmper);
+			mvprintw(16,25,"%.4f km",sma*(1.0+orbital_elements.eccentricity)-xkmper);
+			mvprintw(17,25,"%.4f km",sma*(1.0-orbital_elements.eccentricity)-xkmper);
 			mvprintw(18,25,"%.4f mins",an_period);
 			mvprintw(19,25,"%.4f mins",no_period);
-			mvprintw(20,25,"%ld",sat[x].orbitnum);
-			mvprintw(21,25,"%ld",sat[x].setnum);
+			mvprintw(20,25,"%ld",orbital_elements.revolutions_at_epoch);
+			mvprintw(21,25,"%ld",orbital_elements.element_number);
 
 			attrset(COLOR_PAIR(3)|A_BOLD);
 			refresh();
 			AnyKey();
 		}
-		x=Select();
+		x=Select(num_orbits, orbits);
 	 };
 }
 
@@ -2140,7 +2141,7 @@ void SingleTrack(double horizon, predict_orbit_t *orbit, predict_observer_t *qth
 		mvprintw(0,0,"                                                                                ");
 		mvprintw(1,0,"  flyby Tracking:                                                               ");
 		mvprintw(2,0,"                                                                                ");
-		mvprintw(1,21,"%-24s (%d)", sat_db.name, orbit->orbital_elements.element_number);
+		mvprintw(1,21,"%-24s (%d)", sat_db.name, orbit->orbital_elements.satellite_number);
 
 		attrset(COLOR_PAIR(4)|A_BOLD);
 
@@ -2876,7 +2877,7 @@ void Illumination(predict_orbit_t *orbit)
 		count++;
 		daynum=startday;
 
-		mvprintw(1,60, "%s (%d)", orbit->name, orbit->orbital_elements.element_number);
+		mvprintw(1,60, "%s (%d)", orbit->name, orbit->orbital_elements.satellite_number);
 
 		for (minutes=0, eclipses=0; minutes<NUM_MINUTES; minutes++) {
 			predict_orbit(orbit, daynum);
@@ -3524,7 +3525,7 @@ char argc, *argv[];
 				case 'v':
 					Print("",0);
 					PrintVisible("");
-					indx=Select();
+					indx=Select(num_sats, orbits);
 
 					predict_orbit(orbits[indx], predict_to_julian(time(NULL)));
 
@@ -3553,7 +3554,7 @@ char argc, *argv[];
 					break;
 
 				case 'd':
-					ShowOrbitData();
+					ShowOrbitData(num_sats, orbits);
 					MainMenu();
 					break;
 
@@ -3564,7 +3565,7 @@ char argc, *argv[];
 
 				case 't':
 				case 'T':
-					indx=Select();
+					indx=Select(num_sats, orbits);
 					predict_orbit(orbits[indx], predict_to_julian(time(NULL)));
 
 					if (indx!=-1 && sat[indx].meanmo!=0.0 && !predict_decayed(orbits[indx])) {
@@ -3587,7 +3588,7 @@ char argc, *argv[];
 					break;
 
 				case 's':
-					indx=Select();
+					indx=Select(num_sats, orbits);
 
 					predict_orbit(orbits[indx], predict_to_julian(time(NULL)));
 					if (indx!=-1 && sat[indx].meanmo!=0.0 && !predict_decayed(orbits[indx]) ) {
