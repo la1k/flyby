@@ -3800,7 +3800,7 @@ void Predict(predict_orbit_t *orbit, predict_observer_t *qth, char mode)
 	char data_string[MAX_NUM_CHARS];
 	char time_string[MAX_NUM_CHARS];
 
-	predict_julian_date_t curr_time = predict_to_julian(time(NULL));
+	predict_julian_date_t curr_time = GetStartTime(mode);
 	predict_orbit(orbit, curr_time);
 	clear();
 
