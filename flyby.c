@@ -66,21 +66,7 @@ char *flybypath={"/etc/flyby"}, soundcard=0;
 struct	{  char line1[70];
 	   char line2[70];
 	   char name[25];
-	   long catnum;
-	   long setnum;
-	   char designator[10];
-	   int year;
-	   double refepoch;
-	   double incl;
-	   double raan;
-	   double eccn;
-	   double argper;
-	   double meanan;
-	   double meanmo;
-	   double drag;
-	   double nddot6;
-	   double bstar;
-	   long orbitnum;
+	   int catnum;
 	}  sat[maxsats];
 
 struct	{  char callsign[17];
@@ -436,34 +422,6 @@ char *line1, *line2;
 	return (x ? 0 : 1);
 }
 
-void InternalUpdate(x)
-int x;
-{
-	/* Updates data in TLE structure based on
-	   line1 and line2 stored in structure. */
-
-	double tempnum;
-
-	strncpy(sat[x].designator,SubString(sat[x].line1,9,16),8);
-	sat[x].designator[9]=0;
-	sat[x].catnum=atol(SubString(sat[x].line1,2,6));
-	sat[x].year=atoi(SubString(sat[x].line1,18,19));
-	sat[x].refepoch=atof(SubString(sat[x].line1,20,31));
-	tempnum=1.0e-5*atof(SubString(sat[x].line1,44,49));
-	sat[x].nddot6=tempnum/pow(10.0,(sat[x].line1[51]-'0'));
-	tempnum=1.0e-5*atof(SubString(sat[x].line1,53,58));
-	sat[x].bstar=tempnum/pow(10.0,(sat[x].line1[60]-'0'));
-	sat[x].setnum=atol(SubString(sat[x].line1,64,67));
-	sat[x].incl=atof(SubString(sat[x].line2,8,15));
-	sat[x].raan=atof(SubString(sat[x].line2,17,24));
-	sat[x].eccn=1.0e-07*atof(SubString(sat[x].line2,26,32));
-	sat[x].argper=atof(SubString(sat[x].line2,34,41));
-	sat[x].meanan=atof(SubString(sat[x].line2,43,50));
-	sat[x].meanmo=atof(SubString(sat[x].line2,52,62));
-	sat[x].drag=atof(SubString(sat[x].line1,33,42));
-	sat[x].orbitnum=atof(SubString(sat[x].line2,63,67));
-}
-
 char *noradEvalue(value)
 double value;
 {
@@ -484,104 +442,6 @@ double value;
 	output[8]=0;
 
 	return output;
-}
-
-void Data2TLE(x)
-int x;
-{
-	/* This function converts orbital data held in the numeric
-	   portion of the sat tle structure to ASCII TLE format,
-	   and places the result in ASCII portion of the structure. */
-
-	int i;
-	char string[15], line1[70], line2[70];
-	unsigned sum;
-
-	/* Fill lines with blanks */
-
-	for (i=0; i<70; line1[i]=32, line2[i]=32, i++);
-
-	line1[69]=0;
-	line2[69]=0;
-
-	/* Insert static characters */
-
-	line1[0]='1';
-	line1[7]='U'; /* Unclassified */
-	line2[0]='2';
-
-	line1[62]='0'; /* For publically released TLEs */
-
-	/* Insert orbital data */
-
-	sprintf(string,"%05ld",sat[x].catnum);
-	CopyString(string,line1,2,6);
-	CopyString(string,line2,2,6);
-
-	CopyString(sat[x].designator,line1,9,16);
-
-	sprintf(string,"%02d",sat[x].year);
-	CopyString(string,line1,18,19);
-
-	sprintf(string,"%12.8f",sat[x].refepoch);
-	CopyString(string,line1,20,32);
-
-	sprintf(string,"%.9f",fabs(sat[x].drag));
-
-	CopyString(string,line1,33,42);
-
-	if (sat[x].drag<0.0)
-		line1[33]='-';
-	else
-		line1[33]=32;
-
-	CopyString(noradEvalue(sat[x].nddot6),line1,44,51);
-	CopyString(noradEvalue(sat[x].bstar),line1,53,60);
-
-	sprintf(string,"%4lu",sat[x].setnum);
-	CopyString(string,line1,64,67);
-
-	sprintf(string,"%9.4f",sat[x].incl);
-	CopyString(string,line2,7,15);
-
-	sprintf(string,"%9.4f",sat[x].raan);
-	CopyString(string,line2,16,24);
-
-	sprintf(string,"%13.12f",sat[x].eccn);
-
-	/* Erase eccentricity's decimal point */
-
-	for (i=2; i<=9; string[i-2]=string[i], i++);
-
-	CopyString(string,line2,26,32);
-
-	sprintf(string,"%9.4f",sat[x].argper);
-	CopyString(string,line2,33,41);
-
-	sprintf(string,"%9.5f",sat[x].meanan);
-	CopyString(string,line2,43,50);
-
-	sprintf(string,"%12.9f",sat[x].meanmo);
-	CopyString(string,line2,52,62);
-
-	sprintf(string,"%5lu",sat[x].orbitnum);
-	CopyString(string,line2,63,67);
-
-	/* Compute and insert checksum for line 1 and line 2 */
-
-	for (i=0, sum=0; i<=67; sum+=val[(int)line1[i]], i++);
-
-	line1[68]=(sum%10)+'0';
-
-	for (i=0, sum=0; i<=67; sum+=val[(int)line2[i]], i++);
-
-	line2[68]=(sum%10)+'0';
-
-	line1[69]=0;
-	line2[69]=0;
-
-	strcpy(sat[x].line1,line1);
-	strcpy(sat[x].line2,line2);
 }
 
 double ReadBearing(input)
@@ -713,10 +573,6 @@ char ReadDataFiles()
 				strncpy(sat[x].name,name,24);
 				strncpy(sat[x].line1,line1,69);
 				strncpy(sat[x].line2,line2,69);
-
-				/* Update individual parameters */
-
-				InternalUpdate(x);
 
 				x++;
 
@@ -909,10 +765,6 @@ void SaveTLE()
 	fd=fopen(tlefile,"w");
 
 	for (x=0; x<totalsats; x++) {
-		/* Convert numeric orbital data to ASCII TLE format */
-
-		Data2TLE(x);
-
 		/* Write name, line1, line2 to flyby.tle */
 
 		fprintf(fd,"%s\n", sat[x].name);
@@ -926,6 +778,7 @@ void SaveTLE()
 int AutoUpdate(string)
 char *string;
 {
+#if 0
 	/* This function updates PREDICT's orbital datafile from a NASA
 	   2-line element file either through a menu (interactive mode)
 	   or via the command line.  string==filename of 2-line element
@@ -1113,6 +966,7 @@ char *string;
 	} while (success==0 && interactive);
 
 	return (saveflag ? 0 : -1);
+#endif
 }
 
 int Select(int num_orbits, predict_orbit_t **orbits)
@@ -3460,7 +3314,7 @@ char argc, *argv[];
 
 					predict_orbit(orbits[indx], predict_to_julian(time(NULL)));
 
-					if (indx!=-1 && sat[indx].meanmo!=0.0 && !predict_decayed(orbits[indx])) {
+					if (indx!=-1 && orbits[indx]->orbital_elements.mean_motion!=0.0 && !predict_decayed(orbits[indx])) {
 						Predict(orbits[indx], observer, key);
 					}
 
@@ -3499,7 +3353,7 @@ char argc, *argv[];
 					indx=Select(num_sats, orbits);
 					predict_orbit(orbits[indx], predict_to_julian(time(NULL)));
 
-					if (indx!=-1 && sat[indx].meanmo!=0.0 && !predict_decayed(orbits[indx])) {
+					if (indx!=-1 && orbits[indx]->orbital_elements.mean_motion!=0.0 && !predict_decayed(orbits[indx])) {
 						SingleTrack(horizon, orbits[indx], observer, sat_db[indx]);
 					}
 
@@ -3522,7 +3376,7 @@ char argc, *argv[];
 					indx=Select(num_sats, orbits);
 
 					predict_orbit(orbits[indx], predict_to_julian(time(NULL)));
-					if (indx!=-1 && sat[indx].meanmo!=0.0 && !predict_decayed(orbits[indx]) ) {
+					if (indx!=-1 && orbits[indx]->orbital_elements.mean_motion!=0.0 && !predict_decayed(orbits[indx]) ) {
 						Print("",0);
 
 						Illumination(orbits[indx]);
