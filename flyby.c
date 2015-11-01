@@ -188,14 +188,6 @@ struct sat_db_entry sat_db[maxsats];
 
 /* Global variables for sharing data among functions... */
 
-double	tsince, jul_epoch, jul_utc, eclipse_depth=0,
-	sat_azi, sat_ele, sat_range, sat_range_rate,
-	sat_lat, sat_lon, sat_alt, sat_vel, phase,
-	sun_azi, sun_ele, daynum, fm, fk, age, aostime,
-	lostime, ax, ay, az, rx, ry, rz, squint, alat, alon,
-	sun_ra, sun_dec, sun_lat, sun_lon, sun_range, sun_range_rate,
-	moon_az, moon_el, moon_dx, moon_ra, moon_dec, moon_gha, moon_dv,
-	horizon=0.0;
 
 char	qthfile[50], tlefile[50], dbfile[50], temp[80], output[25],
 	rotctld_host[256], rotctld_port[6]="4533\0\0",
@@ -1863,10 +1855,6 @@ void Predict(predict_orbit_t *orbit, predict_observer_t *qth, char mode)
 			if (mode=='v') {
 				should_quit=PrintVisible("\n");
 			}
-
-			//move to the next orbit
-			daynum = predict_next_aos(qth, orbit, daynum);
-
 		} while (!should_quit && !should_break && !predict_decayed(orbit));
 	} else {
 		//display warning that passes are impossible
@@ -1918,7 +1906,7 @@ void PredictSunMoon(enum celestial_object object, predict_observer_t *qth)
 	double lastdaynum, rise=0.0;
 	char time_string[MAX_NUM_CHARS];
 
-	daynum=GetStartTime(print_mode);
+	predict_julian_date_t daynum = GetStartTime(print_mode);
 	clear();
 	struct predict_observation obs;
 
@@ -2682,7 +2670,7 @@ void SingleTrack(double horizon, predict_orbit_t *orbit, predict_observer_t *qth
 				int azimuth = (int)round(obs.azimuth*180.0/M_PI);
 
 				if ((elevation != prev_elevation) || (azimuth != prev_azimuth) || (once_per_second && (curr_time > prev_time))) {
-					if (rotctld_socket!=-1) TrackDataNet(rotctld_socket,sat_ele,sat_azi);
+					if (rotctld_socket!=-1) TrackDataNet(rotctld_socket, obs.elevation*180.0/M_PI, obs.azimuth*180.0/M_PI);
 					prev_elevation = elevation;
 					prev_azimuth = azimuth;
 					prev_time = curr_time;
@@ -3154,7 +3142,7 @@ void Illumination(predict_orbit_t *orbit)
 
 	oneminute=1.0/(24.0*60.0);
 
-	daynum=floor(GetStartTime(0));
+	predict_julian_date_t daynum = floor(GetStartTime(0));
 	startday=daynum;
 	count=0;
 
@@ -3319,7 +3307,7 @@ void MainMenu()
 
 }
 
-void ProgramInfo()
+void ProgramInfo(double horizon)
 {
 	Banner();
 	attrset(COLOR_PAIR(3)|A_BOLD);
@@ -3436,6 +3424,8 @@ char argc, *argv[];
 	memset(&hints, 0, sizeof hints);
 	hints.ai_family = AF_UNSPEC;
 	hints.ai_socktype = SOCK_STREAM;
+
+	double horizon = 0;
 
 	for (x=1; x<=y; x++) {
 		if (strcmp(argv[x],"-u")==0) {
@@ -3896,7 +3886,7 @@ char argc, *argv[];
 					break;
 
 				case 'i':
-					ProgramInfo();
+					ProgramInfo(horizon);
 					MainMenu();
 					break;
 
