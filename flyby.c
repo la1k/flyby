@@ -58,36 +58,8 @@
 
 /* Constants used by SGP4/SDP4 code */
 
-#define twopi		6.28318530717958623	/* 2*Pi  */
-#define e6a		1.0E-6
-#define tothrd		6.6666666666666666E-1	/* 2/3 */
-#define xj2		1.0826158E-3		/* J2 Harmonic (WGS '72) */
-#define xj3		-2.53881E-6		/* J3 Harmonic (WGS '72) */
-#define xj4		-1.65597E-6		/* J4 Harmonic (WGS '72) */
-#define xke		7.43669161E-2
 #define xkmper		6.378137E3		/* WGS 84 Earth radius km */
-#define xmnpda		1.44E3			/* Minutes per day */
-#define ae		1.0
-#define ck2		5.413079E-4
-#define ck4		6.209887E-7
-#define f		3.35281066474748E-3	/* Flattening factor */
-#define ge		3.986008E5 	/* Earth gravitational constant (WGS '72) */
 #define s		1.012229
-#define qoms2t		1.880279E-09
-#define secday		8.6400E4	/* Seconds per day */
-#define omega_E		1.00273790934	/* Earth rotations/siderial day */
-#define omega_ER	6.3003879	/* Earth rotations, rads/siderial day */
-#define zns		1.19459E-5
-#define c1ss		2.9864797E-6
-#define zes		1.675E-2
-#define znl		1.5835218E-4
-#define c1l		4.7968065E-7
-#define zel		5.490E-2
-#define zcosis		9.1744867E-1
-#define zsinis		3.9785416E-1
-#define zsings		-9.8088458E-1
-#define zcosgs		1.945905E-1
-#define zcoshs		1
 
 char *flybypath={"/etc/flyby"}, soundcard=0;
 
