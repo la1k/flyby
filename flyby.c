@@ -5416,116 +5416,6 @@ void NewUser()
 	AnyKey();
 }
 
-int QuickFind(string, outputfile)
-char *string, *outputfile;
-{
-	int x, y, z, step=1;
-	long start, now, end, count;
-	char satname[50], startstr[20], endstr[20];
-	time_t t;
-	FILE *fd;
-
-	if (outputfile[0])
-		fd=fopen(outputfile,"w");
-	else
-		fd=stdout;
-
-	startstr[0]=0;
-	endstr[0]=0;
-
-	ReadDataFiles();
-
-	for (x=0; x<48 && string[x]!=0 && string[x]!='\n'; x++)
-		satname[x]=string[x];
-
-	satname[x]=0;
-	x++;
-
-	for (y=0; string[x+y]!=0 && string[x+y]!='\n'; y++)
-		startstr[y]=string[x+y];
-
-	startstr[y]=0;
-	y++;
-
-	for (z=0; string[x+y+z]!=0 && string[x+y+z]!='\n'; z++)
-		endstr[z]=string[x+y+z];
-
-	endstr[z]=0;
-
-	/* Do a simple search for the matching satellite name */
-
-	for (z=0; z<maxsats; z++) {
-		if ((strcmp(sat[z].name,satname)==0) || (atol(satname)==sat[z].catnum)) {
-			start=atol(startstr);
-
-			if (endstr[strlen(endstr)-1]=='m') {
-				step=60;
-				endstr[strlen(endstr)-1]=0;
-			}
-
-			if (endstr[0]=='+')
-				end=start+((long)step)*atol(endstr);
-			else
-				end=atol(endstr);
-
-			indx=z;
-
-			t=time(NULL);
-			now=(long)t;
-
-			if (start==0)
-				start=now;
-
-			if (startstr[0]=='+') {
-				start=now;
-
-				if (startstr[strlen(startstr)-1]=='m') {
-					step=60;
-					startstr[strlen(startstr)-1]=0;
-				}
-
-				end=start+((long)step)*atol(startstr);
-
-				/* Prevent a list greater than
-				   24 hours from being produced */
-
-				if ((end-start)>86400) {
-					start=now;
-					end=now-1;
-				}
-			}
-
-			if ((start>=now-31557600) && (start<=now+31557600) && end==0) {
-				/* Start must be one year from now */
-				/* Display a single position */
-				daynum=((start/86400.0)-3651.0);
-				PreCalc(indx);
-				Calc();
-
-				if (Decayed(indx,daynum)==0)
-					fprintf(fd,"%ld %s %4d %4d %4d %4d %4d %6ld %6ld %c\n",start,Daynum2String(daynum,20,"%a %d%b%y %H:%M:%S"),iel,iaz,ma256,isplat,isplong,irk,rv,findsun);
-				break;
-			} else {
-				/* Display a whole list */
-				for (count=start; count<=end; count+=step) {
-					daynum=((count/86400.0)-3651.0);
-					PreCalc(indx);
-					Calc();
-
-					if (Decayed(indx,daynum)==0)
-						fprintf(fd,"%ld %s %4d %4d %4d %4d %4d %6ld %6ld %c\n",count,Daynum2String(daynum,20,"%a %d%b%y %H:%M:%S"),iel,iaz,ma256,isplat,isplong,irk,rv,findsun);
-				}
-				break;
-			}
-		}
-	}
-
-	if (outputfile[0])
-		fclose(fd);
-
-	return 0;
-}
-
 double GetDayNum ( struct timeval *tv )
 {
   /* used by PredictAt */
@@ -5536,7 +5426,7 @@ int main(argc,argv)
 char argc, *argv[];
 {
 	int x, y, z, key=0;
-	char updatefile[80], quickfind=0, quickpredict=0,
+	char updatefile[80],
 	     quickstring[40], outputfile[42],
 	     tle_cli[50], qth_cli[50], interactive=0;
 	char *env=NULL;
@@ -5570,32 +5460,6 @@ char argc, *argv[];
 	hints.ai_socktype = SOCK_STREAM;
 
 	for (x=1; x<=y; x++) {
-		if (strcmp(argv[x],"-f")==0) {
-			quickfind=1;
-			z=x+1;
-			while (z<=y && argv[z][0] && argv[z][0]!='-') {
-				if ((strlen(quickstring)+strlen(argv[z]))<37) {
-					strncat(quickstring,argv[z],15);
-					strcat(quickstring,"\n");
-					z++;
-				}
-			}
-			z--;
-		}
-
-		if (strcmp(argv[x],"-p")==0) {
-			quickpredict=1;
-			z=x+1;
-			while (z<=y && argv[z][0] && argv[z][0]!='-') {
-				if ((strlen(quickstring)+strlen(argv[z]))<37) {
-					strncat(quickstring,argv[z],15);
-					strcat(quickstring,"\n");
-					z++;
-				}
-			}
-			z--;
-		}
-
 		if (strcmp(argv[x],"-u")==0) {
 			z=x+1;
 			while (z<=y && argv[z][0] && argv[z][0]!='-') {
@@ -5746,7 +5610,7 @@ char argc, *argv[];
 	/* Test for interactive/non-interactive mode of operation
 	   based on command-line arguments given to PREDICT. */
 
-	if (updatefile[0] || quickfind || quickpredict)
+	if (updatefile[0])
 		interactive=0;
 	else
 		interactive=1;
@@ -5797,10 +5661,7 @@ char argc, *argv[];
 		}
 	}
 
-	if (x==3)  /* Both TLE and QTH files were loaded successfully */ {
-		if (quickfind)
-			exit(QuickFind(quickstring,outputfile));
-	} else {
+	if (x != 3) {
 		if (tle_cli[0] || qth_cli[0]) {
 			/* "Houston, we have a problem..." */
 
