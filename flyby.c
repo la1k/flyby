@@ -3093,18 +3093,6 @@ int  m, d, y;
 	return dn;
 }
 
-double CurrentDaynum()
-{
-        /* Read the system clock and return the number
-	 *            of days since 31Dec79 00:00:00 UTC (daynum 0) */
-
-        struct timeb tptr;
-
-        ftime(&tptr);
-
-        return ((((double)tptr.time+0.001*(double)tptr.millitm)/86400.0)-3651.0);
-}
-
 char *Daynum2String(daynum, stlen, stfmt)
 double daynum;
 int stlen;
@@ -3157,7 +3145,7 @@ char mode;
 
 		bozo_count++;
 
-		strcpy(string,Daynum2String(CurrentDaynum(),20,"%a %d%b%y %H:%M:%S"));
+		strcpy(string,Daynum2String(predict_to_julian(time(NULL)),20,"%a %d%b%y %H:%M:%S"));
 
 		for (x=4; x<24; x++)
 			string[x-4]=string[x];
@@ -3183,7 +3171,7 @@ char mode;
 			strcpy(line,string);
 		else
 			/* Select `NOW' */
-			return(CurrentDaynum());
+			return(predict_to_julian(time(NULL)));
 
 		if (strlen(line)==7) {
 			line[7]=' ';
@@ -3753,7 +3741,7 @@ void ShowOrbitData()
 			e2=1.0-(sat[x].eccn*sat[x].eccn);
 			no_period=(an_period*360.0)/(360.0+(4.97*pow((xkmper/sma),3.5)*((5.0*c1*c1)-1.0)/(e2*e2))/sat[x].meanmo);
 			satepoch=DayNum(1,0,sat[x].year)+sat[x].refepoch;
-			age=(int)rint(CurrentDaynum()-satepoch);
+			age=(int)rint(predict_to_julian(time(NULL))-satepoch);
 
 			if (age==1)
 				strcpy(days,"day");
@@ -4804,7 +4792,7 @@ void MultiTrack(predict_observer_t *qth, int num_orbits, predict_orbit_t **orbit
 		}
 
 		attrset(COLOR_PAIR(6)|A_REVERSE|A_BOLD);
-		daynum=CurrentDaynum();
+		daynum=predict_to_julian(time(NULL));
 		mvprintw(1,54,"%s",Daynum2String(daynum,24,"%a %d%b%y %j.%H:%M:%S"));
 		mvprintw(1,35,"(%d/%d in view)  ", above_horizon_counter, num_orbits);
 
