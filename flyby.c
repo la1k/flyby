@@ -4350,11 +4350,10 @@ void SingleTrack(double horizon, predict_orbit_t *orbit, predict_observer_t *qth
 
 	int	ans, length, xponder=0,
 		polarity=0;
-	bool	comsat, aos_alarm=0;
+	bool	aos_alarm=0;
 	double	nextaos=0.0, lostime=0.0, aoslos=0.0,
 		downlink=0.0, uplink=0.0, downlink_start=0.0,
-		downlink_end=0.0, uplink_start=0.0, uplink_end=0.0,
-		shift;
+		downlink_end=0.0, uplink_start=0.0, uplink_end=0.0;
 	bool	downlink_update=true, uplink_update=true, readfreq=false;
 	bool once_per_second = true;
 
@@ -5402,7 +5401,7 @@ char argc, *argv[];
 {
 	int x, y, z, key=0;
 	char updatefile[80],
-	     quickstring[40], outputfile[42],
+	     outputfile[42],
 	     tle_cli[50], qth_cli[50], interactive=0;
 	char *env=NULL;
 	FILE *db;
@@ -5416,7 +5415,6 @@ char argc, *argv[];
 	val['-']=1;
 
 	updatefile[0]=0;
-	quickstring[0]=0;
 	outputfile[0]=0;
 	temp[0]=0;
 	tle_cli[0]=0;
