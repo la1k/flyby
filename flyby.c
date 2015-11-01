@@ -1240,28 +1240,6 @@ int  m, d, y;
 	return dn;
 }
 
-char *Daynum2String(daynum, stlen, stfmt)
-double daynum;
-int stlen;
-char *stfmt;
-{
-	/* This function takes the given epoch as a fractional number of
-	   days since 31Dec79 00:00:00 GMT and returns the corresponding
-	   date as a string. */
-
-	char timestr[26];
-	time_t t;
-	int x;
-
-	/* Convert daynum to Unix time (seconds since 01-Jan-70) */
-	t=(time_t)rint(86400.0*(daynum+3651.0))+((stlen == 8) ? 0 : (qth.tzoffset*3600));
-
-	strftime(timestr, stlen+1, stfmt, gmtime(&t));
-	for (x=0; x<=stlen; output[x]=timestr[x], x++);
-
-	return output;
-}
-
 double GetStartTime(const char* info_str)
 {
 	/* This function prompts the user for the time and date
@@ -1270,7 +1248,7 @@ double GetStartTime(const char* info_str)
 	   31Dec79 00:00:00 returns 0.  Default is NOW. */
 
 	int	x, hr, min, sec ,mm=0, dd=0, yy;
-	char	good, mon[5], line[30], string[30], bozo_count=0,
+	char	good, mon[MAX_NUM_CHARS], line[MAX_NUM_CHARS], string[MAX_NUM_CHARS], bozo_count=0,
 		*month[12]= {"Jan", "Feb", "Mar", "Apr", "May",
 		"Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
 
@@ -1284,7 +1262,8 @@ double GetStartTime(const char* info_str)
 
 		bozo_count++;
 
-		strcpy(string,Daynum2String(predict_to_julian(time(NULL)),20,"%a %d%b%y %H:%M:%S"));
+		time_t epoch = time(NULL);
+		strftime(string, MAX_NUM_CHARS, "%a %d%b%y %H:%M%S", gmtime(&epoch));
 
 		for (x=4; x<24; x++)
 			string[x-4]=string[x];
@@ -2552,6 +2531,7 @@ void MultiTrack(predict_observer_t *qth, int num_orbits, predict_orbit_t **orbit
 	mvprintw(7,70,"%9s",maidenstr);
 
 	predict_julian_date_t daynum = predict_to_julian(time(NULL));
+	char time_string[MAX_NUM_CHARS];
 
 	for (int x=0; x < num_orbits; x++) {
 		predict_orbit(orbits[x], daynum);
@@ -2743,8 +2723,11 @@ void MultiTrack(predict_observer_t *qth, int num_orbits, predict_orbit_t **orbit
 		}
 
 		attrset(COLOR_PAIR(6)|A_REVERSE|A_BOLD);
-		daynum=predict_to_julian(time(NULL));
-		mvprintw(1,54,"%s",Daynum2String(daynum,24,"%a %d%b%y %j.%H:%M:%S"));
+
+		time_t epoch = time(NULL);
+		daynum=predict_to_julian(epoch);
+		strftime(time_string, MAX_NUM_CHARS, "%a %d%b%y %j.%H%M%S", gmtime(&epoch));
+		mvprintw(1,54,"%s",time_string);
 		mvprintw(1,35,"(%d/%d in view)  ", above_horizon_counter, num_orbits);
 
 		//display satellites
