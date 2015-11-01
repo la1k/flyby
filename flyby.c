@@ -3535,28 +3535,6 @@ int x;
 	}
 }
 
-char Decayed(x,time)
-int x;
-double time;
-{
-	/* This function returns a 1 if it appears that the
-	   satellite pointed to by 'x' has decayed at the
-	   time of 'time'.  If 'time' is 0.0, then the
-	   current date/time is used. */
-
-	double satepoch;
-
-	if (time==0.0)
-		time=CurrentDaynum();
-
-	satepoch=DayNum(1,0,sat[x].year)+sat[x].refepoch;
-
-	if (satepoch+((16.666666-sat[x].meanmo)/(10.0*fabs(sat[x].drag))) < time)
-		return 1;
-	else
-		return 0;
-}
-
 char Geostationary(x)
 int x;
 {
@@ -5258,7 +5236,7 @@ void Illumination(predict_orbit_t *orbit)
 			startday+=1.0;
 		}
 	}
-	while (quit!=1 && breakout!=1 && Decayed(indx,daynum)==0);
+	while (quit!=1 && breakout!=1 && !predict_decayed(orbit));
 }
 
 void MainMenu()
@@ -5819,6 +5797,8 @@ char argc, *argv[];
 
 		MainMenu();
 		int num_sats;
+		predict_observer_t *observer = predict_create_observer("test_qth", qth.stnlat*M_PI/180.0, qth.stnlong*M_PI/180.0, qth.stnalt);
+		predict_orbit_t *orbit;
 
 		do {
 			key=getch();
@@ -5828,38 +5808,35 @@ char argc, *argv[];
 
 			switch (key) {
 				case 'p':
-				case 'v':
+				case 'v': {
 					Print("",0);
 					PrintVisible("");
 					indx=Select();
 
-					if (indx!=-1 && sat[indx].meanmo!=0.0 && Decayed(indx,0.0)==0) {
-						const char *tle[2] = {sat[indx].line1, sat[indx].line2};
-						predict_orbit_t *orbit = predict_create_orbit(predict_parse_tle(tle));
-						predict_observer_t *observer = predict_create_observer("test_qth", qth.stnlat*M_PI/180.0, qth.stnlong*M_PI/180.0, qth.stnalt);
+					const char *tle[2] = {sat[indx].line1, sat[indx].line2};
+					orbit = predict_create_orbit(predict_parse_tle(tle));
+					predict_orbit(orbit, predict_to_julian(time(NULL)));
+
+					if (indx!=-1 && sat[indx].meanmo!=0.0 && !predict_decayed(orbit)) {
 						Predict(orbit, observer, key);
 					}
+					predict_destroy_orbit(orbit);
 
 					MainMenu();
 					break;
+					  }
 
-				case 'n': {
+				case 'n':
 					Print("",0);
-					predict_observer_t *observer = predict_create_observer("test_qth", qth.stnlat*M_PI/180.0, -qth.stnlong*M_PI/180.0, qth.stnalt);
 					PredictSunMoon(PREDICT_MOON, observer);
-					predict_destroy_observer(observer);
 					MainMenu();
 					break;
-					  }
 
-				case 'o': {
+				case 'o':
 					Print("",0);
-					predict_observer_t *observer = predict_create_observer("test_qth", qth.stnlat*M_PI/180.0, -qth.stnlong*M_PI/180.0, qth.stnalt);
 					PredictSunMoon(PREDICT_SUN, observer);
-					predict_destroy_observer(observer);
 					MainMenu();
 					break;
-					  }
 
 				case 'u':
 					AutoUpdate("");
@@ -5884,13 +5861,14 @@ char argc, *argv[];
 				case 't':
 				case 'T':
 					indx=Select();
+					const char *tle[2] = {sat[indx].line1, sat[indx].line2};
+					orbit = predict_create_orbit(predict_parse_tle(tle));
+					predict_orbit(orbit, predict_to_julian(time(NULL)));
 
-					if (indx!=-1 && sat[indx].meanmo!=0.0 && Decayed(indx,0.0)==0) {
-						const char *tle[2] = {sat[indx].line1, sat[indx].line2};
-						predict_orbit_t *orbit = predict_create_orbit(predict_parse_tle(tle));
-						predict_observer_t *observer = predict_create_observer("test_qth", qth.stnlat*M_PI/180.0, -qth.stnlong*M_PI/180.0, qth.stnalt);
+					if (indx!=-1 && sat[indx].meanmo!=0.0 && !predict_decayed(orbit)) {
 						SingleTrack(horizon, orbit, observer, sat_db[indx]);
 					}
+					predict_destroy_orbit(orbit);
 
 					MainMenu();
 					break;
@@ -5898,14 +5876,12 @@ char argc, *argv[];
 				case 'm':
 				case 'l':
 					num_sats = totalsats;
-					printf("%d, %d\n", ARRAY_SIZE(sat), num_sats);
 					predict_orbit_t **orbits = (predict_orbit_t**)malloc(sizeof(predict_orbit_t*)*num_sats);
 					for (int i=0; i < num_sats; i++){
 						const char *tle[2] = {sat[i].line1, sat[i].line2};
 						orbits[i] = predict_create_orbit(predict_parse_tle(tle));
 						memcpy(orbits[i]->name, sat[i].name, 25);
 					}
-					predict_observer_t *observer = predict_create_observer("test_qth", qth.stnlat*M_PI/180.0, -qth.stnlong*M_PI/180.0, qth.stnalt);
 
 					MultiTrack(observer, num_sats, orbits, key, 'k');
 					for (int i=0; i < num_sats; i++){
@@ -5921,20 +5897,21 @@ char argc, *argv[];
 					MainMenu();
 					break;
 
-				case 's':
+				case 's': {
 					indx=Select();
-					if (indx!=-1 && sat[indx].meanmo!=0.0 && Decayed(indx,0.0)==0) {
+					const char *tle[2] = {sat[indx].line1, sat[indx].line2};
+					orbit = predict_create_orbit(predict_parse_tle(tle));
+					predict_orbit(orbit, predict_to_julian(time(NULL)));
+					if (indx!=-1 && sat[indx].meanmo!=0.0 && !predict_decayed(orbit) ) {
 						Print("",0);
-						const char *tle[2] = {sat[indx].line1, sat[indx].line2};
-						predict_orbit_t *orbit = predict_create_orbit(predict_parse_tle(tle));
 						
 						Illumination(orbit);
-
-						predict_destroy_orbit(orbit);
 					}
+					predict_destroy_orbit(orbit);
 
 					MainMenu();
 					break;
+					}
 			}
 
 		} while (key!='q' && key!=27);
