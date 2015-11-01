@@ -55,11 +55,11 @@
 
 #define maxsats		250
 #define ARRAY_SIZE(a) (sizeof(a) / sizeof(a[0]))
-
-/* Constants used by SGP4/SDP4 code */
-
 #define xkmper		6.378137E3		/* WGS 84 Earth radius km */
 #define s		1.012229
+#define MAX_NUM_CHARS 80
+#define halfdelaytime	5
+#define	km2mi		0.621371		/* km to miles */
 
 char *flybypath={"/etc/flyby"}, soundcard=0;
 
