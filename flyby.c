@@ -317,58 +317,6 @@ double ReadFreqDataNet(int sockd, char *vfo)
 	return freq;
 }
 
-int passivesock(char *service, char *protocol, int qlen)
-{
-	/* This function opens the socket port */
-
-	struct servent *pse;
-	struct protoent *ppe;
-	struct sockaddr_in sin;
-	int sd, type;
-
-	memset((char *)&sin, 0, sizeof(struct sockaddr_in));
-	sin.sin_family=AF_INET;
-	sin.sin_addr.s_addr=INADDR_ANY;
-
-	if ((pse=getservbyname(service,protocol)))
-		sin.sin_port=htons(ntohs((unsigned short)pse->s_port)+portbase);
-
-	else if ((sin.sin_port=htons((unsigned short)atoi(service)))==0) {
-		bailout("Can't get service");
-		exit(-1);
-	}
-
-	if ((ppe=getprotobyname(protocol))==0) {
-		bailout("Can't get protocol");
-		exit(-1);
-	}
-
-	if (strcmp(protocol,"udp")==0)
-		type=SOCK_DGRAM;
-	else
-		type=SOCK_STREAM;
-
-	sd=socket(PF_INET,type, ppe->p_proto);
-
-	if (sd<0) {
-		bailout("Can't open socket");
-		exit(-1);
-	}
-
-	if (bind(sd,(struct sockaddr *)&sin,sizeof(sin))<0) {
-		bailout("Can't bind");
-		exit(-1);
-	}
-
-	if ((type=SOCK_STREAM && listen(s,qlen))<0) {
-		bailout("Listen fail");
-		exit(-1);
-	}
-
-	return sd;
-}
-
-
 void Banner()
 {
 	curs_set(0);
