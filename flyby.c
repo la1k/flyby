@@ -1618,30 +1618,29 @@ void PredictSunMoon(enum celestial_object object, predict_observer_t *qth)
 	} while (quit==0);
 }
 
-char KbEdit(x,y)
-int x,y;
+bool KbEdit(int x, int y, int num_characters, char *output_string)
 {
-	/* This function is used when editing QTH
-	   and orbital data via the keyboard. */
-
-	char need2save=0, input[25];
+	char *input_string = (char*)malloc(sizeof(char)*num_characters);
+	bool filled = false;
 
 	echo();
 	move(y-1,x-1);
-	wgetnstr(stdscr,input,24);
+	wgetnstr(stdscr,input_string,num_characters);
 
-	if (strlen(input)!=0) {
-		need2save=1;  /* Save new data to variables */
-		resave=1;     /* Save new data to disk files */
-		strncpy(temp,input,24);
+	if (strlen(input_string)!=0) {
+		filled = true;
+		strncpy(output_string,input_string,num_characters);
 	}
 
-	mvprintw(y-1,x-1,"%-25s",temp);
+	mvprintw(y-1,x-1,"%-25s",output_string);
 
 	refresh();
 	noecho();
 
-	return need2save;
+
+	free(input_string);
+
+	return filled;
 }
 
 void ShowOrbitData(int num_orbits, predict_orbit_t **orbits)
@@ -1738,12 +1737,9 @@ void ShowOrbitData(int num_orbits, predict_orbit_t **orbits)
 	 };
 }
 
-void QthEdit()
+void QthEdit(predict_observer_t *qth)
 {
-#if 0
-	/* This function permits keyboard editing of
-	   the ground station's location information. */
-
+	//display current QTH information
 	bkgdset(COLOR_PAIR(3)|A_BOLD);
 	clear();
 
@@ -1759,78 +1755,57 @@ void QthEdit()
 	mvprintw(12,20,"Station Latitude  : ");
 	mvprintw(13,20,"Station Longitude : ");
 	mvprintw(14,20,"Station Altitude  : ");
-	mvprintw(15,20,"Timezone Offset   : ");
 
 	attrset(COLOR_PAIR(2)|A_BOLD);
-	mvprintw(11,43,"%s",qth.callsign);
-	if (io_lat=='N')
-		mvprintw(12,43,"%g [DegN]",+qth.stnlat);
-	else
-		mvprintw(12,43,"%g [DegS]",-qth.stnlat);
-	if (io_lon=='W')
-		mvprintw(13,43,"%g [DegW]",+qth.stnlong);
-	else
-		mvprintw(13,43,"%g [DegE]",-qth.stnlong);
-	mvprintw(14,43,"%d",qth.stnalt);
-	mvprintw(15,43,"%d",qth.tzoffset);
+	mvprintw(11,43,"%s",qth->name);
+	mvprintw(12,43,"%g [DegN]",qth->latitude*180.0/M_PI);
+	mvprintw(13,43,"%g [DegE]",qth->longitude*180.0/M_PI);
+	mvprintw(14,43,"%d",qth->altitude);
 
 	refresh();
 
-	sprintf(temp,"%s",qth.callsign);
-	mvprintw(18,15, " Enter the callsign of your ground station");
-	if (KbEdit(44,12))
-		strncpy(qth.callsign,temp,16);
+	#define INPUT_NUM_CHARS 128
+	char input_string[INPUT_NUM_CHARS] = {0};
+	bool should_save = false;
 
-	if (io_lat=='N')
-		sprintf(temp,"%g [DegN]",+qth.stnlat);
-	else
-		sprintf(temp,"%g [DegS]",-qth.stnlat);
-	if (io_lat=='N')
-		mvprintw(18,15," Enter your latitude in degrees NORTH      ");
-	else
-		mvprintw(18,15," Enter your latitude in degrees SOUTH      ");
-	mvprintw(19,15," Decimal (74.2467) or DMS (74 14 48) format allowed");
-	if (KbEdit(44,13)) {
-		if (io_lat=='N')
-			qth.stnlat=+ReadBearing(temp);
-		else
-			qth.stnlat=-ReadBearing(temp);
+	//edit QTH name
+	mvprintw(18,15, " Enter the callsign of your ground station");
+	strncpy(input_string, qth->name, INPUT_NUM_CHARS);
+	if (KbEdit(44, 12, INPUT_NUM_CHARS, input_string)) {
+		strncpy(qth->name, input_string, INPUT_NUM_CHARS);
+		should_save = true;
 	}
 
-	if (io_lon=='W')
-		sprintf(temp,"%g [DegW]",+qth.stnlong);
-	else
-		sprintf(temp,"%g [DegE]",-qth.stnlong);
+	//edit latitude
+	mvprintw(18,15," Enter your latitude in degrees NORTH      ");
+	mvprintw(19,15," Decimal (74.2467) or DMS (74 14 48) format allowed");
+	sprintf(input_string,"%g [DegN]",qth->latitude*180.0/M_PI);
+	if (KbEdit(44,13, INPUT_NUM_CHARS, input_string)) {
+		qth->latitude = ReadBearing(input_string)*M_PI/180.0;
+		should_save = true;
+	}
 
-	if (io_lon=='W')
-		mvprintw(18,15," Enter your longitude in degrees WEST      ");
-	else
-		mvprintw(18,15," Enter your longitude in degrees EAST      ");
-
-	if (KbEdit(44,14)) {
-		if (io_lon=='W')
-			qth.stnlong=+ReadBearing(temp);
-		else
-			qth.stnlong=-ReadBearing(temp);
+	//edit longitude
+	mvprintw(18,15," Enter your longitude in degrees EAST      ");
+	sprintf(input_string, "%g [DegE]", qth->longitude*180.0/M_PI);
+	if (KbEdit(44, 14, INPUT_NUM_CHARS, input_string)) {
+		qth->longitude = ReadBearing(input_string)*M_PI/180.0;
+		should_save = true;
 	}
 	move(19,15);
 	clrtoeol();
 
+	//edit altitude
 	mvprintw(18,15," Enter your altitude above sea level (in meters)      ");
-	sprintf(temp,"%d",qth.stnalt);
-	if (KbEdit(44,15))
-		sscanf(temp,"%d",&qth.stnalt);
-
-	sprintf(temp,"%d",qth.tzoffset);
-	mvprintw(18,15," Enter your timezone offset from GMT (hours)          ");
-	if (KbEdit(44,16))
-		sscanf(temp,"%d",&qth.tzoffset);
-
-	if (resave) {
-		SaveQTH();
-		resave=0;
+	sprintf(input_string, "%d", floor(qth->altitude));
+	if (KbEdit(44,15, INPUT_NUM_CHARS, input_string)) {
+		qth->altitude = strtod(input_string, NULL);
+		should_save = true;
 	}
-#endif
+
+	if (should_save) {
+		SaveQTH(qth);
+	}
 }
 
 void SingleTrack(double horizon, predict_orbit_t *orbit, predict_observer_t *qth, struct sat_db_entry sat_db)
@@ -3140,7 +3115,7 @@ char argc, *argv[];
 		if (x<3) {
 			NewUser();
 			x=ReadDataFiles(maxsats, sat_db, sats, &observer);
-			QthEdit();
+			QthEdit(observer);
 		}
 	}
 
@@ -3314,7 +3289,7 @@ char argc, *argv[];
 					break;
 
 				case 'g':
-					QthEdit();
+					QthEdit(observer);
 					MainMenu();
 					break;
 
