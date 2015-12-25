@@ -317,28 +317,6 @@ void AnyKey()
 	getch();
 }
 
-char *SubString(string,start,end)
-char *string, start, end;
-{
-	/* This function returns a substring based on the starting
-	   and ending positions provided.  It is used heavily in
-	   the AutoUpdate function when parsing 2-line element data. */
-
-	unsigned x, y;
-
-	if (end>=start) {
-		for (x=start, y=0; x<=end && string[x]!=0; x++)
-			if (string[x]!=' ') {
-				temp[y]=string[x];
-				y++;
-			}
-
-		temp[y]=0;
-		return temp;
-	} else
-		return NULL;
-}
-
 char *Abbreviate(string,n)
 char *string;
 int n;
