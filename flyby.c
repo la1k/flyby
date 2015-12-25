@@ -98,7 +98,7 @@ char	qthfile[50], tlefile[50], dbfile[50], temp[80], output[25],
 	once_per_second=0, ephem[5], sat_sun_status, findsun,
 	calc_squint, database=0, io_lat='N', io_lon='E', maidenstr[9];
 
-int	rotctld_socket, uplink_socket, downlink_socket, totalsats=0;
+int	rotctld_socket, uplink_socket, downlink_socket;
 
 unsigned char val[256];
 
@@ -460,7 +460,7 @@ char *input;
 	return bearing;
 }
 
-char ReadDataFiles(int max_num_sats, struct sat_db_entry *sat_db, struct tle_db_entry *sats, predict_observer_t **observer)
+char ReadDataFiles(int *num_sats, struct sat_db_entry *sat_db, struct tle_db_entry *sats, predict_observer_t **observer)
 {
 	/* This function reads "flyby.qth" and "flyby.tle"
 	   files into memory.  Return values are as follows:
@@ -501,7 +501,7 @@ char ReadDataFiles(int max_num_sats, struct sat_db_entry *sat_db, struct tle_db_
 	fd=fopen(tlefile,"r");
 
 	if (fd!=NULL) {
-		while (x<max_num_sats && feof(fd)==0) {
+		while (x<maxsats && feof(fd)==0) {
 			/* Initialize variables */
 
 			name[0]=0;
@@ -544,7 +544,7 @@ char ReadDataFiles(int max_num_sats, struct sat_db_entry *sat_db, struct tle_db_
 		flag+=2;
 		resave=0;
 		fclose(fd);
-		totalsats=x;
+		*num_sats=x;
 
 	}
 
@@ -567,7 +567,7 @@ char ReadDataFiles(int max_num_sats, struct sat_db_entry *sat_db, struct tle_db_
 
 			/* Search for match */
 
-				for (y=0, match=0; y<max_num_sats && match==0; y++) {
+				for (y=0, match=0; y<maxsats && match==0; y++) {
 					if (catnum==sats[y].catnum)
 						match=1;
 				}
@@ -899,10 +899,10 @@ int AutoUpdate(char *string, int num_sats, struct tle_db_entry *tle_db, predict_
 					if (savecount==1)
 						mvprintw(LINES-2,2,"Only 1 satellite was updated.");
 					else {
-						if (savecount==totalsats)
+						if (savecount==num_sats)
 							mvprintw(LINES-2,2,"All satellites were updated!");
 						else
-							mvprintw(LINES-2,2,"%3u out of %3u satellites were updated.",savecount,totalsats);
+							mvprintw(LINES-2,2,"%3u out of %3u satellites were updated.",savecount,num_sats);
 					}
 				}
 
@@ -950,7 +950,7 @@ int Select(int num_orbits, predict_orbit_t **orbits)
 	if (num_orbits >= maxsats)
 		mvprintw(LINES-3,46,"Truncated to %d satellites",maxsats);
 	else
-		mvprintw(LINES-3,46,"%d satellites",totalsats);
+		mvprintw(LINES-3,46,"%d satellites",num_orbits);
 
 	/* Create items */
 	n_choices = num_orbits;
@@ -3003,12 +3003,11 @@ char argc, *argv[];
 	}
 
 	predict_observer_t *observer = NULL;
-	x=ReadDataFiles(maxsats, sat_db, sats, &observer);
-	int num_sats;
+	int num_sats = 0;
+	x=ReadDataFiles(&num_sats, sat_db, sats, &observer);
 	predict_orbit_t **orbits;
 
 	if (x>1)  /* TLE file was loaded successfully */ {
-		num_sats = totalsats;
 		orbits = (predict_orbit_t**)malloc(sizeof(predict_orbit_t*)*num_sats);
 		for (int i=0; i < num_sats; i++){
 			const char *tle[2] = {sats[i].line1, sats[i].line2};
@@ -3083,7 +3082,7 @@ char argc, *argv[];
 
 		if (x<3) {
 			NewUser();
-			x=ReadDataFiles(maxsats, sat_db, sats, &observer);
+			x=ReadDataFiles(&num_sats, sat_db, sats, &observer);
 			QthEdit(observer);
 		}
 	}
