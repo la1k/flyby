@@ -53,7 +53,6 @@
 #include <predict/predict.h>
 
 #define maxsats		250
-#define ARRAY_SIZE(a) (sizeof(a) / sizeof(a[0]))
 #define xkmper		6.378137E3		/* WGS 84 Earth radius km */
 #define s		1.012229
 #define MAX_NUM_CHARS 80
