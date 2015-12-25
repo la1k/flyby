@@ -748,7 +748,7 @@ void SaveQTH(predict_observer_t *qth)
 	fprintf(fd,"%s\n",qth->name);
 	fprintf(fd," %g\n",qth->latitude*180.0/M_PI);
 	fprintf(fd," %g\n",qth->longitude*180.0/M_PI);
-	fprintf(fd," %d\n",qth->altitude);
+	fprintf(fd," %d\n",(int)floor(qth->altitude));
 
 	fclose(fd);
 }
@@ -773,10 +773,8 @@ void SaveTLE(int num_sats, struct tle_db_entry *sats)
 	fclose(fd);
 }
 
-int AutoUpdate(string)
-char *string;
+int AutoUpdate(char *string, int num_sats, struct tle_db_entry *tle_db, predict_orbit_t **orbits)
 {
-#if 0
 	/* This function updates PREDICT's orbital datafile from a NASA
 	   2-line element file either through a menu (interactive mode)
 	   or via the command line.  string==filename of 2-line element
@@ -785,7 +783,7 @@ char *string;
 	char line1[80], line2[80], str0[80], str1[80], str2[80],
 	     filename[50], saveflag=0, interactive=0;
 
-	float database_epoch=0.0, tle_epoch=0.0, database_year, tle_year;
+	float database_epoch=0.0, tle_epoch=0.0;
 	int i, success=0, kepcount=0, savecount=0;
 	FILE *fd;
 
@@ -853,28 +851,20 @@ char *string;
 					strncpy(line2,str2,75);
 					kepcount++;
 
+					const char *tle[2] = {line1, line2};
+					predict_orbital_elements_t orbital_elements = predict_parse_tle(tle);
+
 					/* Scan for object number in datafile to see
 					   if this is something we're interested in */
 
-					for (i=0; (i<maxsats && sat[i].catnum!=atol(SubString(line1,2,6))); i++);
+					for (i=0; (i<num_sats && orbits[i]->orbital_elements.satellite_number!=orbital_elements.satellite_number); i++);
 
 					if (i!=maxsats) {
 						/* We found it!  Check to see if it's more
 						   recent than the data we already have. */
 
-						if (sat[i].year<57)
-							database_year=365.25*(100.0+(float)sat[i].year);
-						else
-							database_year=365.25*(float)sat[i].year;
-
-						database_epoch=(float)sat[i].refepoch+database_year;
-
-						tle_year=(float)atof(SubString(line1,18,19));
-
-						if (tle_year<57.0)
-							tle_year+=100.0;
-
-						tle_epoch=(float)atof(SubString(line1,20,31))+(tle_year*365.25);
+						database_epoch = orbits[i]->orbital_elements.epoch_year*1000.0 + orbits[i]->orbital_elements.epoch_day;
+						tle_epoch = orbital_elements.epoch_year*1000.0 + orbital_elements.epoch_day;
 
 						/* Update only if TLE epoch >= epoch in data file
 						   so we don't overwrite current data with older
@@ -901,16 +891,23 @@ char *string;
 
 							if (interactive) {
 								bkgdset(COLOR_PAIR(3));
-								printw(" %-8s ",sat[i].name);
+								printw(" %-8s ",orbits[i]->name);
 							}
 
 							savecount++;
 
 							/* Copy TLE data into the sat data structure */
 
-							strncpy(sat[i].line1,line1,69);
-							strncpy(sat[i].line2,line2,69);
-							InternalUpdate(i);
+							strncpy(tle_db[i].line1,line1,69);
+							strncpy(tle_db[i].line2,line2,69);
+
+							/* Update orbit struct */
+
+							char name[255];
+							strncpy(name, orbits[i]->name, 255);
+							predict_destroy_orbit(orbits[i]);
+							orbits[i] = predict_create_orbit(orbital_elements);
+							strncpy(orbits[i]->name, name, 255);
 						}
 					}
 
@@ -960,11 +957,10 @@ char *string;
 		}
 
 		if (saveflag)
-			SaveTLE();
+			SaveTLE(num_sats, tle_db);
 	} while (success==0 && interactive);
 
 	return (saveflag ? 0 : -1);
-#endif
 }
 
 int Select(int num_orbits, predict_orbit_t **orbits)
@@ -1797,7 +1793,7 @@ void QthEdit(predict_observer_t *qth)
 
 	//edit altitude
 	mvprintw(18,15," Enter your altitude above sea level (in meters)      ");
-	sprintf(input_string, "%d", floor(qth->altitude));
+	sprintf(input_string, "%d", (int)floor(qth->altitude));
 	if (KbEdit(44,15, INPUT_NUM_CHARS, input_string)) {
 		qth->altitude = strtod(input_string, NULL);
 		should_save = true;
@@ -3045,10 +3041,20 @@ char argc, *argv[];
 
 	predict_observer_t *observer = NULL;
 	x=ReadDataFiles(maxsats, sat_db, sats, &observer);
+	int num_sats;
+	predict_orbit_t **orbits;
 
 	if (x>1)  /* TLE file was loaded successfully */ {
+		num_sats = totalsats;
+		orbits = (predict_orbit_t**)malloc(sizeof(predict_orbit_t*)*num_sats);
+		for (int i=0; i < num_sats; i++){
+			const char *tle[2] = {sats[i].line1, sats[i].line2};
+			orbits[i] = predict_create_orbit(predict_parse_tle(tle));
+			memcpy(orbits[i]->name, sats[i].name, 25);
+		}
+
 		if (updatefile[0]) {
-	    printf("*** flyby: Updating TLE data using file(s) %s", updatefile);
+			printf("*** flyby: Updating TLE data using file(s) %s", updatefile);
 			y=0;
 			z=0;
 			temp[0]=0;
@@ -3063,7 +3069,7 @@ char argc, *argv[];
 				temp[z]=0;
 
 				if (temp[0]) {
-					AutoUpdate(temp);
+					AutoUpdate(temp, num_sats, sats, orbits);
 					temp[0]=0;
 					z=0;
 					y++;
@@ -3233,14 +3239,6 @@ char argc, *argv[];
 		running in the real-time tracking modes. */
 
 		MainMenu();
-		int num_sats;
-		num_sats = totalsats;
-		predict_orbit_t **orbits = (predict_orbit_t**)malloc(sizeof(predict_orbit_t*)*num_sats);
-		for (int i=0; i < num_sats; i++){
-			const char *tle[2] = {sats[i].line1, sats[i].line2};
-			orbits[i] = predict_create_orbit(predict_parse_tle(tle));
-			memcpy(orbits[i]->name, sats[i].name, 25);
-		}
 
 		int indx = 0;
 
@@ -3279,7 +3277,7 @@ char argc, *argv[];
 					break;
 
 				case 'u':
-					AutoUpdate("");
+					AutoUpdate("", num_sats, sats, orbits);
 					MainMenu();
 					break;
 
