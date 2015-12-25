@@ -95,7 +95,7 @@ char	qthfile[50], tlefile[50], dbfile[50], temp[80], output[25],
 	uplink_host[256], uplink_port[6]="4532\0\0", uplink_vfo[30],
 	downlink_host[256], downlink_port[6]="4532\0\0", downlink_vfo[30],
 	resave=0, reload_tle=0, netport[8],
-	once_per_second=0, ephem[5], sat_sun_status, findsun,
+	once_per_second=0, ephem[5],
 	calc_squint, database=0, io_lat='N', io_lon='E', maidenstr[9];
 
 int	rotctld_socket, uplink_socket, downlink_socket;
