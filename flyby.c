@@ -52,12 +52,11 @@
 #include <fcntl.h>
 #include <predict/predict.h>
 
-#define maxsats		250
-#define xkmper		6.378137E3		/* WGS 84 Earth radius km */
-#define s		1.012229
+#define MAX_NUM_SATS		250
+#define EARTH_RADIUS_KM		6.378137E3		/* WGS 84 Earth radius km */
 #define MAX_NUM_CHARS 80
-#define halfdelaytime	5
-#define	km2mi		0.621371		/* km to miles */
+#define HALF_DELAY_TIME	5
+#define	KM_TO_MI		0.621371		/* km to miles */
 
 char *flybypath={"/etc/flyby"}, soundcard=0;
 
@@ -499,7 +498,7 @@ char ReadDataFiles(int *num_sats, struct sat_db_entry *sat_db, struct tle_db_ent
 	fd=fopen(tlefile,"r");
 
 	if (fd!=NULL) {
-		while (x<maxsats && feof(fd)==0) {
+		while (x<MAX_NUM_SATS && feof(fd)==0) {
 			/* Initialize variables */
 
 			name[0]=0;
@@ -565,7 +564,7 @@ char ReadDataFiles(int *num_sats, struct sat_db_entry *sat_db, struct tle_db_ent
 
 			/* Search for match */
 
-				for (y=0, match=0; y<maxsats && match==0; y++) {
+				for (y=0, match=0; y<MAX_NUM_SATS && match==0; y++) {
 					if (catnum==sats[y].catnum)
 						match=1;
 				}
@@ -820,7 +819,7 @@ int AutoUpdate(char *string, int num_sats, struct tle_db_entry *tle_db, predict_
 
 					for (i=0; (i<num_sats && orbits[i]->orbital_elements.satellite_number!=orbital_elements.satellite_number); i++);
 
-					if (i!=maxsats) {
+					if (i!=MAX_NUM_SATS) {
 						/* We found it!  Check to see if it's more
 						   recent than the data we already have. */
 
@@ -945,8 +944,8 @@ int Select(int num_orbits, predict_orbit_t **orbits)
 	mvprintw( 7,46,"the 'Enter' key.");
 	mvprintw( 9,46,"Press 'q' to return to menu.");
 
-	if (num_orbits >= maxsats)
-		mvprintw(LINES-3,46,"Truncated to %d satellites",maxsats);
+	if (num_orbits >= MAX_NUM_SATS)
+		mvprintw(LINES-3,46,"Truncated to %d satellites",MAX_NUM_SATS);
 	else
 		mvprintw(LINES-3,46,"%d satellites",num_orbits);
 
@@ -1620,7 +1619,7 @@ void ShowOrbitData(int num_orbits, predict_orbit_t **orbits)
 			an_period=1440.0/orbital_elements.mean_motion;
 			c1=cos(orbital_elements.inclination*M_PI/180.0);
 			e2=1.0-(orbital_elements.eccentricity*orbital_elements.eccentricity);
-			no_period=(an_period*360.0)/(360.0+(4.97*pow((xkmper/sma),3.5)*((5.0*c1*c1)-1.0)/(e2*e2))/orbital_elements.mean_motion);
+			no_period=(an_period*360.0)/(360.0+(4.97*pow((EARTH_RADIUS_KM/sma),3.5)*((5.0*c1*c1)-1.0)/(e2*e2))/orbital_elements.mean_motion);
 			satepoch=DayNum(1,0,orbital_elements.epoch_year)+orbital_elements.epoch_day;
 			age=(int)rint(predict_to_julian(time(NULL))-satepoch);
 
@@ -1679,8 +1678,8 @@ void ShowOrbitData(int num_orbits, predict_orbit_t **orbits)
 			mvprintw(13,25,"%g rev/day/day/day",orbital_elements.second_derivative_mean_motion);
 			mvprintw(14,25,"%g 1/earth radii",orbital_elements.bstar_drag_term);
 			mvprintw(15,25,"%.4f km",sma);
-			mvprintw(16,25,"%.4f km",sma*(1.0+orbital_elements.eccentricity)-xkmper);
-			mvprintw(17,25,"%.4f km",sma*(1.0-orbital_elements.eccentricity)-xkmper);
+			mvprintw(16,25,"%.4f km",sma*(1.0+orbital_elements.eccentricity)-EARTH_RADIUS_KM);
+			mvprintw(17,25,"%.4f km",sma*(1.0-orbital_elements.eccentricity)-EARTH_RADIUS_KM);
 			mvprintw(18,25,"%.4f mins",an_period);
 			mvprintw(19,25,"%.4f mins",no_period);
 			mvprintw(20,25,"%ld",orbital_elements.revolutions_at_epoch);
@@ -1845,7 +1844,7 @@ void SingleTrack(double horizon, predict_orbit_t *orbit, predict_observer_t *qth
 		predict_orbit(orbit, daynum);
 		bool decayed = predict_decayed(orbit);
 
-		halfdelay(halfdelaytime);
+		halfdelay(HALF_DELAY_TIME);
 		curs_set(0);
 		bkgdset(COLOR_PAIR(3));
 		clear();
@@ -1907,20 +1906,20 @@ void SingleTrack(double horizon, predict_orbit_t *orbit, predict_observer_t *qth
 			mvprintw(5,1,"%-6.2f",orbit->latitude*180.0/M_PI);
 
 			attrset(COLOR_PAIR(2)|A_BOLD);
-			mvprintw(5,55,"%0.f ",orbit->altitude*km2mi);
+			mvprintw(5,55,"%0.f ",orbit->altitude*KM_TO_MI);
 			mvprintw(6,55,"%0.f ",orbit->altitude);
-			mvprintw(5,68,"%-5.0f",obs.range*km2mi);
+			mvprintw(5,68,"%-5.0f",obs.range*KM_TO_MI);
 			mvprintw(6,68,"%-5.0f",obs.range);
 			mvprintw(6,1,"%-7.2f",orbit->longitude*180.0/M_PI);
 			mvprintw(5,15,"%-7.2f",obs.azimuth*180.0/M_PI);
 			mvprintw(6,14,"%+-6.2f",obs.elevation*180.0/M_PI);
-			mvprintw(5,29,"%0.f ",(3600.0*sat_vel)*km2mi);
+			mvprintw(5,29,"%0.f ",(3600.0*sat_vel)*KM_TO_MI);
 			mvprintw(6,29,"%0.f ",3600.0*sat_vel);
 			mvprintw(18,3,"%+6.2f deg",orbit->eclipse_depth*180.0/M_PI);
 			mvprintw(18,20,"%5.1f",256.0*(orbit->phase/(2*M_PI)));
 			mvprintw(18,37,"%s",ephemeris_string);
 			mvprintw(18,52,"%+6.2f",squint);
-			mvprintw(5,42,"%0.f ",orbit->footprint*km2mi);
+			mvprintw(5,42,"%0.f ",orbit->footprint*KM_TO_MI);
 			mvprintw(6,42,"%0.f ",orbit->footprint);
 
 			attrset(COLOR_PAIR(1)|A_BOLD);
@@ -2211,7 +2210,7 @@ void SingleTrack(double horizon, predict_orbit_t *orbit, predict_observer_t *qth
 
 			refresh();
 
-			halfdelay(halfdelaytime);
+			halfdelay(HALF_DELAY_TIME);
 
 		} while (ans!='q' && ans!='Q' && ans!=27 &&
 		 	ans!='+' && ans!='-' &&
@@ -2509,7 +2508,7 @@ void MultiTrack(predict_observer_t *qth, int num_orbits, predict_orbit_t **orbit
 		}
 
 		refresh();
-		halfdelay(halfdelaytime);  // Increase if CPU load is too high
+		halfdelay(HALF_DELAY_TIME);  // Increase if CPU load is too high
 		ans=tolower(getch());
 
 		if (ans=='m') multitype='m';
@@ -2795,8 +2794,8 @@ char argc, *argv[];
 	FILE *db;
 	struct addrinfo hints, *servinfo, *servinfop;
 
-	struct tle_db_entry sats[maxsats];
-	struct sat_db_entry sat_db[maxsats];
+	struct tle_db_entry sats[MAX_NUM_SATS];
+	struct sat_db_entry sat_db[MAX_NUM_SATS];
 
 
 
