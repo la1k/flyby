@@ -33,7 +33,6 @@
 * General Public License for more details.                                  *
 *                                                                           *
 \***************************************************************************/
-#include "flyby_defs.h"
 
 #include "config.h"
 #include <math.h>
