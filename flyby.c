@@ -87,7 +87,7 @@ struct sat_db_entry {
 /* Global variables for sharing data among functions... */
 
 
-char	qthfile[50], tlefile[50], dbfile[50], temp[80], output[25],
+char	qthfile[50], tlefile[50], dbfile[50], temp[80],
 	rotctld_host[256], rotctld_port[6]="4533\0\0",
 	uplink_host[256], uplink_port[6]="4532\0\0", uplink_vfo[30],
 	downlink_host[256], downlink_port[6]="4532\0\0", downlink_vfo[30],
