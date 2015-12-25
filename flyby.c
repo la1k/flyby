@@ -373,28 +373,6 @@ char *line1, *line2;
 	return (x ? 0 : 1);
 }
 
-char *noradEvalue(value)
-double value;
-{
-	/* Converts numeric values to E notation used in NORAD TLEs */
-
-	char string[15];
-
-	sprintf(string,"%11.4e",value*10.0);
-
-	output[0]=string[0];
-	output[1]=string[1];
-	output[2]=string[3];
-	output[3]=string[4];
-	output[4]=string[5];
-	output[5]=string[6];
-	output[6]='-';
-	output[7]=string[10];
-	output[8]=0;
-
-	return output;
-}
-
 double ReadBearing(input)
 char *input;
 {
