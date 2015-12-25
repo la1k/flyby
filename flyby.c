@@ -58,7 +58,7 @@
 #define HALF_DELAY_TIME	5
 #define	KM_TO_MI		0.621371		/* km to miles */
 
-char *flybypath={"/etc/flyby"}, soundcard=0;
+char *flybypath={"/etc/flyby"};
 
 struct	tle_db_entry {  char line1[70];
 	   char line2[70];
