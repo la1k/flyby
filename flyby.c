@@ -91,9 +91,9 @@ char	qthfile[50], tlefile[50], dbfile[50], temp[80], output[25],
 	rotctld_host[256], rotctld_port[6]="4533\0\0",
 	uplink_host[256], uplink_port[6]="4532\0\0", uplink_vfo[30],
 	downlink_host[256], downlink_port[6]="4532\0\0", downlink_vfo[30],
-	resave=0, reload_tle=0, netport[8],
-	once_per_second=0, ephem[5],
-	calc_squint, database=0, io_lat='N', io_lon='E', maidenstr[9];
+	netport[8],
+	ephem[5],
+	calc_squint, database=0, io_lat='N', io_lon='E';
 
 int	rotctld_socket, uplink_socket, downlink_socket;
 
@@ -539,7 +539,6 @@ char ReadDataFiles(int *num_sats, struct sat_db_entry *sat_db, struct tle_db_ent
 		}
 
 		flag+=2;
-		resave=0;
 		fclose(fd);
 		*num_sats=x;
 
@@ -1764,7 +1763,7 @@ void QthEdit(predict_observer_t *qth)
 	}
 }
 
-void SingleTrack(double horizon, predict_orbit_t *orbit, predict_observer_t *qth, struct sat_db_entry sat_db)
+void SingleTrack(bool once_per_second, double horizon, predict_orbit_t *orbit, predict_observer_t *qth, struct sat_db_entry sat_db)
 {
 	/* This function tracks a single satellite in real-time
 	   until 'Q' or ESC is pressed.  x represents the index
@@ -1777,7 +1776,6 @@ void SingleTrack(double horizon, predict_orbit_t *orbit, predict_observer_t *qth
 		downlink=0.0, uplink=0.0, downlink_start=0.0,
 		downlink_end=0.0, uplink_start=0.0, uplink_end=0.0;
 	bool	downlink_update=true, uplink_update=true, readfreq=false;
-	bool once_per_second = true;
 
 	double doppler100, delay;
 	double dopp;
@@ -2285,6 +2283,7 @@ void MultiTrack(predict_observer_t *qth, int num_orbits, predict_orbit_t **orbit
 	mvprintw(5,70,"   QTH   ");
 	attrset(COLOR_PAIR(2));
 	mvprintw(6,70,"%9s",Abbreviate(qth->name,9));
+	char maidenstr[9];
 	getMaidenHead(qth->latitude*180.0/M_PI, -qth->longitude*180.0/M_PI, maidenstr);
 	mvprintw(7,70,"%9s",maidenstr);
 
@@ -2701,7 +2700,7 @@ void MainMenu()
 
 }
 
-void ProgramInfo(double horizon)
+void ProgramInfo(bool once_per_second, double horizon)
 {
 	Banner();
 	attrset(COLOR_PAIR(3)|A_BOLD);
@@ -2813,7 +2812,7 @@ char argc, *argv[];
 	qth_cli[0]=0;
 	dbfile[0]=0;
 	netport[0]=0;
-	once_per_second=0;
+	bool once_per_second=false;
 
 	y=argc-1;
 	rotctld_socket=-1;
@@ -2865,7 +2864,7 @@ char argc, *argv[];
 			if (z<=y && argv[z][0] && argv[z][0]!='-')
 				strncpy(rotctld_host,argv[z],sizeof(rotctld_host)-1);
 			rotctld_host[sizeof(rotctld_host)-1] = 0;
-			once_per_second=1;
+			once_per_second=true;
 		}
 
 		if (strcmp(argv[x],"-ap")==0)
@@ -3256,7 +3255,7 @@ char argc, *argv[];
 					predict_orbit(orbits[indx], predict_to_julian(time(NULL)));
 
 					if (indx!=-1 && orbits[indx]->orbital_elements.mean_motion!=0.0 && !predict_decayed(orbits[indx])) {
-						SingleTrack(horizon, orbits[indx], observer, sat_db[indx]);
+						SingleTrack(once_per_second, horizon, orbits[indx], observer, sat_db[indx]);
 					}
 
 					MainMenu();
@@ -3270,7 +3269,7 @@ char argc, *argv[];
 					break;
 
 				case 'i':
-					ProgramInfo(horizon);
+					ProgramInfo(once_per_second, horizon);
 					MainMenu();
 					break;
 
