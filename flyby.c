@@ -339,21 +339,6 @@ char *string, start, end;
 		return NULL;
 }
 
-void CopyString(source, destination, start, end)
-char *source, *destination, start, end;
-{
-	/* This function copies elements of the string "source"
-	   bounded by "start" and "end" into the string "destination". */
-
-	unsigned j, k=0;
-
-	for (j=start; j<=end; j++)
-		if (source[k]!=0) {
-			destination[j]=source[k];
-			k++;
-		}
-}
-
 char *Abbreviate(string,n)
 char *string;
 int n;
