@@ -927,78 +927,81 @@ int Select(int num_orbits, predict_orbit_t **orbits)
 	else
 		mvprintw(LINES-3,46,"%d satellites",num_orbits);
 
-	/* Create items */
-	n_choices = num_orbits;
-	my_items = (ITEM **)calloc(n_choices, sizeof(ITEM *));
-	for(i = 0; i < n_choices; ++i)
-		my_items[i] = new_item(orbits[i]->name, orbits[i]->orbital_elements.designator);
-
-	/* Create menu */
-	my_menu = new_menu((ITEM **)my_items);
-
-	/* Set menu option not to show the description */
-//	menu_opts_off(my_menu, O_SHOWDESC);
-
 	/* Create the window to be associated with the menu */
 	my_menu_win = newwin(LINES-5, 40, 4, 4);
 	keypad(my_menu_win, TRUE);
-
-	set_menu_back(my_menu,COLOR_PAIR(1));
-	set_menu_fore(my_menu,COLOR_PAIR(5)|A_BOLD);
-
 	wattrset(my_menu_win, COLOR_PAIR(4));
-
-	/* Set main window and sub window */
-	set_menu_win(my_menu, my_menu_win);
-	set_menu_sub(my_menu, derwin(my_menu_win, LINES-7, 38, 2, 1));
-	set_menu_format(my_menu, LINES-9, 1);
-
-	/* Set menu mark to the string " * " */
-	set_menu_mark(my_menu, " * ");
 
 	/* Print a border around the main window and print a title */
 #if	!defined (__CYGWIN32__)
 	box(my_menu_win, 0, 0);
 #endif
 
-	/* Post the menu */
-	post_menu(my_menu);
+	/* Create items */
+	if (num_orbits > 0) {
+		n_choices = num_orbits;
+		my_items = (ITEM **)calloc(n_choices, sizeof(ITEM *));
+		for(i = 0; i < n_choices; ++i)
+			my_items[i] = new_item(orbits[i]->name, orbits[i]->orbital_elements.designator);
 
-	refresh();
-	wrefresh(my_menu_win);
+		/* Create menu */
+		my_menu = new_menu((ITEM **)my_items);
 
-	while((c = wgetch(my_menu_win)) != 10) {
-		switch(c) {
-			case 'q':
-				return -1;
-			case KEY_DOWN:
-				menu_driver(my_menu, REQ_DOWN_ITEM);
-				break;
-			case KEY_UP:
-				menu_driver(my_menu, REQ_UP_ITEM);
-				break;
-			case KEY_NPAGE:
-				menu_driver(my_menu, REQ_SCR_DPAGE);
-				break;
-			case KEY_PPAGE:
-				menu_driver(my_menu, REQ_SCR_UPAGE);
-				break;
-			case 10: /* Enter */
-				pos_menu_cursor(my_menu);
-				break;
-		}
+		set_menu_back(my_menu,COLOR_PAIR(1));
+		set_menu_fore(my_menu,COLOR_PAIR(5)|A_BOLD);
+
+		/* Set main window and sub window */
+		set_menu_win(my_menu, my_menu_win);
+		set_menu_sub(my_menu, derwin(my_menu_win, LINES-7, 38, 2, 1));
+		set_menu_format(my_menu, LINES-9, 1);
+
+		/* Set menu mark to the string " * " */
+		set_menu_mark(my_menu, " * ");
+
+		/* Post the menu */
+		post_menu(my_menu);
+
+		refresh();
 		wrefresh(my_menu_win);
+
+		while((c = wgetch(my_menu_win)) != 10) {
+			switch(c) {
+				case 'q':
+					return -1;
+				case KEY_DOWN:
+					menu_driver(my_menu, REQ_DOWN_ITEM);
+					break;
+				case KEY_UP:
+					menu_driver(my_menu, REQ_UP_ITEM);
+					break;
+				case KEY_NPAGE:
+					menu_driver(my_menu, REQ_SCR_DPAGE);
+					break;
+				case KEY_PPAGE:
+					menu_driver(my_menu, REQ_SCR_UPAGE);
+					break;
+				case 10: /* Enter */
+					pos_menu_cursor(my_menu);
+					break;
+			}
+			wrefresh(my_menu_win);
+		}
+
+		for (i=0, j=0; i<num_orbits; i++)
+			if (strcmp(item_name(current_item(my_menu)),orbits[i]->name)==0)
+				j = i;
+
+		/* Unpost and free all the memory taken up */
+		unpost_menu(my_menu);
+		free_menu(my_menu);
+		for(i = 0; i < n_choices; ++i)
+			free_item(my_items[i]);
+	} else {
+		refresh();
+		wrefresh(my_menu_win);
+		c = wgetch(my_menu_win);
+		j = -1;
 	}
-
-	for (i=0, j=0; i<num_orbits; i++)
-		if (strcmp(item_name(current_item(my_menu)),orbits[i]->name)==0)
-			j = i;
-
-	/* Unpost and free all the memory taken up */
-	unpost_menu(my_menu);
-	free_menu(my_menu);
-	for(i = 0; i < n_choices; ++i)
-		free_item(my_items[i]);
 
 	return j;
 }
@@ -3060,9 +3063,7 @@ char argc, *argv[];
 			x=ReadDataFiles(&num_sats, sat_db, sats, observer);
 			QthEdit(observer);
 		}
-	}
 
-	if (x==3) {
 		/* Create socket and connect to rotctld if present. */
 
 		if (rotctld_host[0]!=0)
@@ -3192,9 +3193,7 @@ char argc, *argv[];
 					PrintVisible("");
 					indx=Select(num_sats, orbits);
 
-					predict_orbit(orbits[indx], predict_to_julian(time(NULL)));
-
-					if (indx!=-1 && orbits[indx]->orbital_elements.mean_motion!=0.0 && !predict_decayed(orbits[indx])) {
+					if (indx!=-1) {
 						Predict(orbits[indx], observer, key);
 					}
 
@@ -3231,9 +3230,8 @@ char argc, *argv[];
 				case 't':
 				case 'T':
 					indx=Select(num_sats, orbits);
-					predict_orbit(orbits[indx], predict_to_julian(time(NULL)));
 
-					if (indx!=-1 && orbits[indx]->orbital_elements.mean_motion!=0.0 && !predict_decayed(orbits[indx])) {
+					if (indx!=-1) {
 						SingleTrack(once_per_second, horizon, orbits[indx], observer, sat_db[indx]);
 					}
 
@@ -3255,8 +3253,7 @@ char argc, *argv[];
 				case 's':
 					indx=Select(num_sats, orbits);
 
-					predict_orbit(orbits[indx], predict_to_julian(time(NULL)));
-					if (indx!=-1 && orbits[indx]->orbital_elements.mean_motion!=0.0 && !predict_decayed(orbits[indx]) ) {
+					if (indx!=-1) {
 						Print("",0);
 
 						Illumination(orbits[indx]);
