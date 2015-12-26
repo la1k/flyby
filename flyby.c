@@ -58,7 +58,7 @@
 #define HALF_DELAY_TIME	5
 #define	KM_TO_MI		0.621371		/* km to miles */
 
-char *flybypath={"/etc/flyby"};
+char *flybypath={"/etc/flyby/"};
 
 struct	tle_db_entry {  char line1[70];
 	   char line2[70];
@@ -2977,7 +2977,7 @@ char argc, *argv[];
 			fclose(db);
 	}
 
-	predict_observer_t *observer = predict_create_observer("dummy", 0, 0, 0);
+	predict_observer_t *observer = predict_create_observer("", 0, 0, 0);
 	int num_sats = 0;
 	x=ReadDataFiles(&num_sats, sat_db, sats, observer);
 	predict_orbit_t **orbits;
