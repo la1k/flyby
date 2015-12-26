@@ -435,7 +435,7 @@ char *input;
 	return bearing;
 }
 
-char ReadDataFiles(int *num_sats, struct sat_db_entry *sat_db, struct tle_db_entry *sats, predict_observer_t **observer)
+char ReadDataFiles(int *num_sats, struct sat_db_entry *sat_db, struct tle_db_entry *sats, predict_observer_t *observer)
 {
 	/* This function reads "flyby.qth" and "flyby.tle"
 	   files into memory.  Return values are as follows:
@@ -466,10 +466,11 @@ char ReadDataFiles(int *num_sats, struct sat_db_entry *sat_db, struct tle_db_ent
 		fscanf(fd,"%d", &altitude);
 		fclose(fd);
 
-		if (*observer != NULL) {
-			predict_destroy_observer(*observer);
-		}
-		*observer = predict_create_observer(callsign, latitude*M_PI/180.0, longitude*M_PI/180.0, altitude);
+		strncpy(observer->name, callsign, 16);
+		observer->latitude = latitude*M_PI/180.0;
+		observer->longitude = longitude*M_PI/180.0;
+		observer->altitude = altitude*M_PI/180.0;
+
 		flag=1;
 	}
 
@@ -2976,9 +2977,9 @@ char argc, *argv[];
 			fclose(db);
 	}
 
-	predict_observer_t *observer = NULL;
+	predict_observer_t *observer = predict_create_observer("dummy", 0, 0, 0);
 	int num_sats = 0;
-	x=ReadDataFiles(&num_sats, sat_db, sats, &observer);
+	x=ReadDataFiles(&num_sats, sat_db, sats, observer);
 	predict_orbit_t **orbits;
 
 	if (x>1)  /* TLE file was loaded successfully */ {
@@ -3056,7 +3057,7 @@ char argc, *argv[];
 
 		if (x<3) {
 			NewUser();
-			x=ReadDataFiles(&num_sats, sat_db, sats, &observer);
+			x=ReadDataFiles(&num_sats, sat_db, sats, observer);
 			QthEdit(observer);
 		}
 	}
