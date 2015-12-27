@@ -996,8 +996,10 @@ int Select(int num_orbits, predict_orbit_t **orbits)
 		/* Unpost and free all the memory taken up */
 		unpost_menu(my_menu);
 		free_menu(my_menu);
-		for(i = 0; i < n_choices; ++i)
+		for(i = 0; i < n_choices; ++i) {
 			free_item(my_items[i]);
+		}
+		free(my_items);
 	} else {
 		refresh();
 		wrefresh(my_menu_win);
