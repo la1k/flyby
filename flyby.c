@@ -940,9 +940,11 @@ int Select(int num_orbits, predict_orbit_t **orbits)
 	/* Create items */
 	if (num_orbits > 0) {
 		n_choices = num_orbits;
-		my_items = (ITEM **)calloc(n_choices, sizeof(ITEM *));
-		for(i = 0; i < n_choices; ++i)
+		my_items = (ITEM **)calloc(n_choices + 1, sizeof(ITEM *));
+		for(i = 0; i < n_choices; ++i) {
 			my_items[i] = new_item(orbits[i]->name, orbits[i]->orbital_elements.designator);
+		}
+		my_items[n_choices] = NULL; //terminate the menu list
 
 		/* Create menu */
 		my_menu = new_menu((ITEM **)my_items);
@@ -1045,7 +1047,7 @@ double GetStartTime(const char* info_str)
 		bkgdset(COLOR_PAIR(2)|A_BOLD);
 		clear();
 
-		printw("\n\n\n\t     Starting %s Date and Time for Predictions of");
+		printw("\n\n\n\t     Starting Date and Time for Predictions of");
 
 		printw("%-15s\n\n", info_str);
 
@@ -2775,8 +2777,8 @@ char argc, *argv[];
 	FILE *db;
 	struct addrinfo hints, *servinfo, *servinfop;
 
-	struct tle_db_entry sats[MAX_NUM_SATS];
-	struct sat_db_entry sat_db[MAX_NUM_SATS];
+	struct tle_db_entry sats[MAX_NUM_SATS] = {0};
+	struct sat_db_entry sat_db[MAX_NUM_SATS] = {0};
 
 
 
