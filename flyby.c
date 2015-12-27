@@ -1485,7 +1485,7 @@ void PredictSunMoon(enum celestial_object object, predict_observer_t *qth)
 
 	predict_julian_date_t daynum = GetStartTime(name_str);
 	clear();
-	struct predict_observation obs;
+	struct predict_observation obs = {0};
 
 	const double HORIZON_THRESHOLD = 0.03;
 	const double REDUCTION_FACTOR = 0.004;
