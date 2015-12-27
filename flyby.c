@@ -2022,7 +2022,7 @@ void FreqDataNet(int sockd, char *vfo, double freq)
 	   next. */
 	sock_readline(sockd, message, sizeof(message));
 
-	if (vfo)
+	if (strlen(vfo) > 0)
 	{
 		sprintf(message, "V %s\n", vfo);
 		len = strlen(message);
@@ -2032,9 +2032,8 @@ void FreqDataNet(int sockd, char *vfo, double freq)
 			bailout("Failed to send to rigctld");
 			exit(-1);
 		}
+		sock_readline(sockd, message, sizeof(message));
 	}
-
-	sock_readline(sockd, message, sizeof(message));
 
 	sprintf(message, "F %.0f\n", freq*1000000);
 	len = strlen(message);
@@ -2054,7 +2053,7 @@ double ReadFreqDataNet(int sockd, char *vfo)
 	/* Read pending return message */
 	sock_readline(sockd, message, sizeof(message));
 
-	if (vfo)
+	if (strlen(vfo) > 0)
 	{
 		sprintf(message, "V %s\n", vfo);
 		len = strlen(message);
@@ -2064,9 +2063,8 @@ double ReadFreqDataNet(int sockd, char *vfo)
 			bailout("Failed to send to rigctld");
 			exit(-1);
 		}
+		sock_readline(sockd, message, sizeof(message));
 	}
-
-	sock_readline(sockd, message, sizeof(message));
 
 	sprintf(message, "f\n");
 	len = strlen(message);
