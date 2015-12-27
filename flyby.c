@@ -512,6 +512,12 @@ char ReadDataFiles(int *num_sats, struct sat_db_entry *sat_db, struct tle_db_ent
 				strncpy(sats[x].line1,line1,69);
 				strncpy(sats[x].line2,line2,69);
 
+				/* Get satellite number, so that the satellite database can be parsed. */
+
+				const char *tle[2] = {sats[x].line1, sats[x].line2};
+				predict_orbital_elements_t temp_elements = predict_parse_tle(tle);
+				sats[x].catnum = temp_elements.satellite_number;
+
 				x++;
 
 			}
