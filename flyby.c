@@ -1363,6 +1363,7 @@ void Predict(predict_orbit_t *orbit, predict_observer_t *qth, char mode)
 			predict_orbit(orbit, curr_time);
 			predict_observe_orbit(qth, orbit, &obs);
 			bool has_printed_last_entry = false;
+			int last_printed_elevation = 1;
 			do {
 				mvprintw(1,60, "%s (%d)", orbit->name, orbit->orbital_elements.satellite_number);
 
@@ -1385,6 +1386,7 @@ void Predict(predict_orbit_t *orbit, predict_observer_t *qth, char mode)
 
 				//format line of data
 				sprintf(data_string,"      %s%4d %4d  %4d  %4d   %4d   %6ld  %6ld %c\n", time_string, (int)(obs.elevation*180.0/M_PI), (int)(obs.azimuth*180.0/M_PI), ma256, (int)(orbit->latitude*180.0/M_PI), (int)(orbit->longitude*180.0/M_PI), (long)(obs.range), orbit->revolutions, visibility);
+				last_printed_elevation = obs.elevation*180.0/M_PI;
 
 				//print data to screen
 				if (mode=='p') {
@@ -1416,7 +1418,7 @@ void Predict(predict_orbit_t *orbit, predict_observer_t *qth, char mode)
 				predict_observe_orbit(qth, orbit, &obs);
 
 				//make sure that the last printed line is at elevation 0 (since that looks nicer)
-				if ((obs.elevation < 0) && !has_printed_last_entry) {
+				if ((last_printed_elevation != 0) && (obs.elevation < 0) && !has_printed_last_entry) {
 					has_printed_last_entry = true;
 					curr_time = next_los;
 
