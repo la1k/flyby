@@ -465,7 +465,7 @@ char ReadDataFiles(int *num_sats, struct sat_db_entry *sat_db, struct tle_db_ent
 
 		strncpy(observer->name, callsign, 16);
 		observer->latitude = latitude*M_PI/180.0;
-		observer->longitude = longitude*M_PI/180.0;
+		observer->longitude = -longitude*M_PI/180.0; //convert from N/W to N/E
 		observer->altitude = altitude*M_PI/180.0;
 
 		flag=1;
@@ -688,7 +688,7 @@ void SaveQTH(predict_observer_t *qth)
 
 	fprintf(fd,"%s\n",qth->name);
 	fprintf(fd," %g\n",qth->latitude*180.0/M_PI);
-	fprintf(fd," %g\n",qth->longitude*180.0/M_PI);
+	fprintf(fd," %g\n",-qth->longitude*180.0/M_PI); //convert from N/E to N/W
 	fprintf(fd," %d\n",(int)floor(qth->altitude));
 
 	fclose(fd);
