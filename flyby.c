@@ -2210,12 +2210,15 @@ void SingleTrack(bool once_per_second, double horizon, int orbit_ind, int num_or
 			if ((ans == KEY_LEFT) || (ans == '-')) {
 				orbit_ind -= 1;
 				if (orbit_ind < 0) {
-					orbit_ind = num_orbits-1;
+					orbit_ind = 0;
 				}
 			}
 
 			if ((ans == KEY_RIGHT) || (ans == '+')) {
-				orbit_ind = (orbit_ind + 1) % num_orbits;
+				orbit_ind += 1;
+				if (orbit_ind >= num_orbits) {
+					orbit_ind = num_orbits - 1;
+				}
 			}
 
 			halfdelay(HALF_DELAY_TIME);
