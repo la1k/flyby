@@ -2405,9 +2405,17 @@ void MultiTrack(predict_observer_t *qth, int num_orbits, predict_orbit_t **orbit
 				}
 			}
 
+			//altitude and range in km/miles
+			double disp_altitude = orbit->altitude;
+			double disp_range = obs.range;
+			if (disttype == 'i') {
+				disp_altitude = disp_altitude*KM_TO_MI;
+				disp_range = disp_range*KM_TO_MI;
+			}
+
 			//set string to display
 			char disp_string[MAX_NUM_CHARS];
-			sprintf(disp_string, " %-13s%5.1f  %5.1f %8s  %6.0f %6.0f %c %c %12s ", Abbreviate(orbit->name, 12), obs.azimuth*180.0/M_PI, obs.elevation*180.0/M_PI, abs_pos_string, orbit->altitude, obs.range, sunstat, rangestat, aos_los);
+			sprintf(disp_string, " %-13s%5.1f  %5.1f %8s  %6.0f %6.0f %c %c %12s ", Abbreviate(orbit->name, 12), obs.azimuth*180.0/M_PI, obs.elevation*180.0/M_PI, abs_pos_string, disp_altitude, disp_range, sunstat, rangestat, aos_los);
 
 			//overwrite everything if orbit was decayed
 			if (predict_decayed(orbit)) {
