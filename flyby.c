@@ -2321,8 +2321,8 @@ void MultiTrack(predict_observer_t *qth, int num_orbits, predict_orbit_t **orbit
 		mvprintw(10,70," ik lm q ");
 		mvprintw(10,(disttype=='i') ? 71 : 72," ");
 		mvprintw(10,(multitype=='m') ? 75 : 74," ");
-		
-		
+
+
 		daynum = predict_to_julian(time(NULL));
 
 		//predict orbits
@@ -2344,7 +2344,7 @@ void MultiTrack(predict_observer_t *qth, int num_orbits, predict_orbit_t **orbit
 			} else {
 				sunstat='N';
 			}
-			
+
 			//satellite approaching status
 			char rangestat;
 			if (fabs(obs.range_rate) < 0.1) {
@@ -2384,7 +2384,7 @@ void MultiTrack(predict_observer_t *qth, int num_orbits, predict_orbit_t **orbit
 				attributes[i] = COLOR_PAIR(3);
 				sprintf(aos_los, "*GeoS-NoAOS*");
 			}
-			
+
 			char abs_pos_string[MAX_NUM_CHARS] = {0};
 			if (multitype == 'm') {
 				getMaidenHead(orbit->latitude*180.0/M_PI, orbit->longitude*180.0/M_PI, abs_pos_string);
@@ -2450,7 +2450,7 @@ void MultiTrack(predict_observer_t *qth, int num_orbits, predict_orbit_t **orbit
 			attrset(COLOR_PAIR(1));
 		mvprintw(21,70,"%-7.2fAz",moon.azimuth*180.0/M_PI);
 		mvprintw(22,70,"%+-6.2f El",moon.elevation*180.0/M_PI);
-	
+
 
 		//sort satellites before displaying them
 
@@ -2470,9 +2470,9 @@ void MultiTrack(predict_observer_t *qth, int num_orbits, predict_orbit_t **orbit
 			if ((observations[i].elevation <= 0) && will_be_visible) {
 				satindex[below_horizon_counter + above_horizon_counter] = i;
 				below_horizon_counter++;
-			} 
+			}
 		}
-		
+
 		//satellites that will never be visible, with decayed orbits last
 		int nevervisible_counter = 0;
 		int decayed_counter = 0;
@@ -2624,7 +2624,7 @@ void Illumination(predict_orbit_t *orbit)
 
 		epoch = predict_from_julian(startday);
 		strftime(datestring, MAX_NUM_CHARS, "%a %d%b%y %H:%M:%S", gmtime(&epoch));
-		
+
 		datestring[11]=0;
 		sprintf(string,"%s\t %s    %4d    %6.2f%c\n",string1,datestring,1440-eclipses,sunpercent,37);
 		quit=Print(string,'s');
