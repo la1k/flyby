@@ -91,16 +91,11 @@ char	qthfile[50], tlefile[50], dbfile[50], temp[80],
 	uplink_host[256], uplink_port[6]="4532\0\0", uplink_vfo[30],
 	downlink_host[256], downlink_port[6]="4532\0\0", downlink_vfo[30],
 	netport[8],
-	ephem[5],
 	database=0;
 
 int	rotctld_socket, uplink_socket, downlink_socket;
 
 unsigned char val[256];
-
-char	tracking_mode[30];
-
-unsigned short portbase=0;
 
 double reduce(value,rangeMin,rangeMax)
 double value, rangeMin, rangeMax;
@@ -1774,7 +1769,6 @@ void SingleTrack(bool once_per_second, double horizon, int orbit_ind, int num_or
 		int prev_azimuth = 0;
 		time_t prev_time = 0;
 
-		char tracking_mode[MAX_NUM_CHARS];
 		char ephemeris_string[MAX_NUM_CHARS];
 
 		char time_string[MAX_NUM_CHARS];
@@ -2227,7 +2221,6 @@ void SingleTrack(bool once_per_second, double horizon, int orbit_ind, int num_or
 	} while (ans!='q' && ans!=17);
 
 	cbreak();
-	sprintf(tracking_mode, "NONE\n%c",0);
 }
 
 NCURSES_ATTR_T MultiColours(scrk, scel)
@@ -2536,7 +2529,6 @@ void MultiTrack(predict_observer_t *qth, int num_orbits, predict_orbit_t **orbit
 	} while (ans!='q' && ans!=27);
 
 	cbreak();
-	sprintf(tracking_mode, "NONE\n%c",0);
 
 	free(satindex);
 	free(aos);
