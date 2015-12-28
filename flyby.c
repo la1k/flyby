@@ -68,7 +68,6 @@ struct	tle_db_entry {  char line1[70];
 
 
 struct sat_db_entry {
-	   char name[25];
 	   long catnum;
 	   char squintflag;
 	   double alat;
@@ -1846,7 +1845,7 @@ void SingleTrack(bool once_per_second, double horizon, int orbit_ind, int num_or
 		mvprintw(0,0,"                                                                                ");
 		mvprintw(1,0,"  flyby Tracking:                                                               ");
 		mvprintw(2,0,"                                                                                ");
-		mvprintw(1,21,"%-24s (%d)", sat_db.name, orbit->orbital_elements.satellite_number);
+		mvprintw(1,21,"%-24s (%d)", orbit->name, orbit->orbital_elements.satellite_number);
 
 		attrset(COLOR_PAIR(4)|A_BOLD);
 
