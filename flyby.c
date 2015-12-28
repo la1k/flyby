@@ -92,7 +92,7 @@ char	qthfile[50], tlefile[50], dbfile[50], temp[80],
 	downlink_host[256], downlink_port[6]="4532\0\0", downlink_vfo[30],
 	netport[8],
 	ephem[5],
-	calc_squint, database=0, io_lat='N', io_lon='E';
+	database=0;
 
 int	rotctld_socket, uplink_socket, downlink_socket;
 
@@ -1213,10 +1213,7 @@ char *string, mode;
 			if (mode=='s')
 				sprintf(head2,"           Date     Mins/Day    Sun           Date     Mins/Day    Sun          ");
 			else {
-				if (calc_squint)
-					sprintf(head2,"           Date     Time    El   Az  Phase  %s   %s    Range  Squint        ",(io_lat=='N'?"LatN":"LatS"),(io_lon=='W'?"LonW":"LonE"));
-				else
-					sprintf(head2,"           Date     Time    El   Az  Phase  %s   %s    Range   Orbit        ",(io_lat=='N'?"LatN":"LatS"),(io_lon=='W'?"LonW":"LonE"));
+				sprintf(head2,"           Date     Time    El   Az  Phase  %s   %s    Range   Orbit        ","LatN","LonE");
 			}
 		}
 
@@ -2962,18 +2959,6 @@ char argc, *argv[];
 			if (z<=y && argv[z][0] && argv[z][0]!='-')
 				strncpy(netport,argv[z],5);
 		}
-
-		if (strcmp(argv[x],"-north")==0) /* Default */
-			io_lat='N';
-
-		if (strcmp(argv[x],"-south")==0)
-			io_lat='S';
-
-		if (strcmp(argv[x],"-west")==0)  /* Default */
-			io_lon='W';
-
-		if (strcmp(argv[x],"-east")==0)
-			io_lon='E';
 	}
 
 	/* We're done scanning command-line arguments */
