@@ -90,7 +90,6 @@ char	qthfile[50], tlefile[50], dbfile[50], temp[80],
 	rotctld_host[256], rotctld_port[6]="4533\0\0",
 	uplink_host[256], uplink_port[6]="4532\0\0", uplink_vfo[30],
 	downlink_host[256], downlink_port[6]="4532\0\0", downlink_vfo[30],
-	netport[8],
 	database=0;
 
 int	rotctld_socket, uplink_socket, downlink_socket;
@@ -2821,7 +2820,6 @@ char argc, *argv[];
 	tle_cli[0]=0;
 	qth_cli[0]=0;
 	dbfile[0]=0;
-	netport[0]=0;
 	bool once_per_second=false;
 
 	y=argc-1;
@@ -2944,12 +2942,6 @@ char argc, *argv[];
 			z=x+1;
 			if (z<=y && argv[z][0] && argv[z][0]!='-')
 				strncpy(outputfile,argv[z],40);
-		}
-
-		if (strcmp(argv[x],"-n")==0) {
-			z=x+1;
-			if (z<=y && argv[z][0] && argv[z][0]!='-')
-				strncpy(netport,argv[z],5);
 		}
 	}
 
