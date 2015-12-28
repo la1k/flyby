@@ -94,8 +94,6 @@ char	qthfile[50], tlefile[50], dbfile[50], temp[80],
 
 int	rotctld_socket, uplink_socket, downlink_socket;
 
-unsigned char val[256];
-
 double reduce(value,rangeMin,rangeMax)
 double value, rangeMin, rangeMax;
 {
@@ -338,6 +336,15 @@ char *line1, *line2;
 
 	int x;
 	unsigned sum1, sum2;
+
+	unsigned char val[256];
+
+	/* Set up translation table for computing TLE checksums */
+
+	for (x=0; x<=255; val[x]=0, x++);
+	for (x='0'; x<='9'; val[x]=x-'0', x++);
+
+	val['-']=1;
 
 	/* Compute checksum for each line */
 
@@ -2805,14 +2812,6 @@ char argc, *argv[];
 	struct tle_db_entry sats[MAX_NUM_SATS] = {0};
 	struct sat_db_entry sat_db[MAX_NUM_SATS] = {0};
 
-
-
-	/* Set up translation table for computing TLE checksums */
-
-	for (x=0; x<=255; val[x]=0, x++);
-	for (x='0'; x<='9'; val[x]=x-'0', x++);
-
-	val['-']=1;
 
 	updatefile[0]=0;
 	outputfile[0]=0;
