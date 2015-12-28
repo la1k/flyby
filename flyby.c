@@ -1765,8 +1765,6 @@ void SingleTrack(bool once_per_second, double horizon, int orbit_ind, int num_or
 			downlink=0.0, uplink=0.0, downlink_start=0.0,
 			downlink_end=0.0, uplink_start=0.0, uplink_end=0.0;
 
-		double shift = 0;
-
 		double doppler100, delay;
 		double dopp;
 		double loss;
@@ -2137,6 +2135,8 @@ void SingleTrack(bool once_per_second, double horizon, int orbit_ind, int num_or
 					downlink=0.5*(downlink_start+downlink_end);
 					uplink=0.5*(uplink_start+uplink_end);
 				}
+
+				double shift = 0;
 
 				/* Raise uplink frequency */
 				if (ans==KEY_UP || ans=='>' || ans=='.') {
