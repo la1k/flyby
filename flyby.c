@@ -1753,49 +1753,54 @@ void QthEdit(predict_observer_t *qth)
 	}
 }
 
-void SingleTrack(bool once_per_second, double horizon, predict_orbit_t *orbit, predict_observer_t *qth, struct sat_db_entry sat_db)
+void SingleTrack(bool once_per_second, double horizon, int orbit_ind, int num_orbits, predict_orbit_t **orbits, predict_observer_t *qth, struct sat_db_entry *sat_db_entries)
 {
 	/* This function tracks a single satellite in real-time
-	   until 'Q' or ESC is pressed.  x represents the index
-	   of the satellite being tracked. */
+	   until 'Q' or ESC is pressed. */
 
-	int	ans, length, xponder=0,
-		polarity=0;
-	bool	aos_alarm=0;
-	double	nextaos=0.0, lostime=0.0, aoslos=0.0,
-		downlink=0.0, uplink=0.0, downlink_start=0.0,
-		downlink_end=0.0, uplink_start=0.0, uplink_end=0.0;
+	int     ans;
 	bool	downlink_update=true, uplink_update=true, readfreq=false;
 
-	double doppler100, delay;
-	double dopp;
-	double loss;
-
-	//elevation and azimuth at previous timestep, for checking when to send messages to rotctld
-	int prev_elevation = 0;
-	int prev_azimuth = 0;
-	time_t prev_time = 0;
-
-	char tracking_mode[MAX_NUM_CHARS];
-	char ephemeris_string[MAX_NUM_CHARS];
-	switch (orbit->ephemeris) {
-		case EPHEMERIS_SGP4:
-			strcpy(ephemeris_string, "SGP4");
-		break;
-		case EPHEMERIS_SDP4:
-			strcpy(ephemeris_string, "SDP4");
-		break;
-		case EPHEMERIS_SGP8:
-			strcpy(ephemeris_string, "SGP8");
-		break;
-		case EPHEMERIS_SDP8:
-			strcpy(ephemeris_string, "SDP8");
-		break;
-	}
-
-	char time_string[MAX_NUM_CHARS];
-
 	do {
+		int     length, xponder=0,
+			polarity=0;
+		bool	aos_alarm=0;
+		double	nextaos=0.0, lostime=0.0, aoslos=0.0,
+			downlink=0.0, uplink=0.0, downlink_start=0.0,
+			downlink_end=0.0, uplink_start=0.0, uplink_end=0.0;
+
+		double doppler100, delay;
+		double dopp;
+		double loss;
+
+		//elevation and azimuth at previous timestep, for checking when to send messages to rotctld
+		int prev_elevation = 0;
+		int prev_azimuth = 0;
+		time_t prev_time = 0;
+
+		char tracking_mode[MAX_NUM_CHARS];
+		char ephemeris_string[MAX_NUM_CHARS];
+
+		char time_string[MAX_NUM_CHARS];
+
+		predict_orbit_t *orbit = orbits[orbit_ind];
+		struct sat_db_entry sat_db = sat_db_entries[orbit_ind];
+
+		switch (orbit->ephemeris) {
+			case EPHEMERIS_SGP4:
+				strcpy(ephemeris_string, "SGP4");
+			break;
+			case EPHEMERIS_SDP4:
+				strcpy(ephemeris_string, "SDP4");
+			break;
+			case EPHEMERIS_SGP8:
+				strcpy(ephemeris_string, "SGP8");
+			break;
+			case EPHEMERIS_SDP8:
+				strcpy(ephemeris_string, "SDP8");
+			break;
+		}
+
 		bool comsat = sat_db.transponders > 0;
 
 		if (comsat) {
@@ -1906,7 +1911,11 @@ void SingleTrack(bool once_per_second, double horizon, predict_orbit_t *orbit, p
 			mvprintw(18,3,"%+6.2f deg",orbit->eclipse_depth*180.0/M_PI);
 			mvprintw(18,20,"%5.1f",256.0*(orbit->phase/(2*M_PI)));
 			mvprintw(18,37,"%s",ephemeris_string);
-			mvprintw(18,52,"%+6.2f",squint);
+			if (sat_db.squintflag) {
+				mvprintw(18,52,"%+6.2f",squint);
+			} else {
+				mvprintw(18,52,"N/A");
+			}
 			mvprintw(5,42,"%0.f ",orbit->footprint*KM_TO_MI);
 			mvprintw(6,42,"%0.f ",orbit->footprint);
 
@@ -1927,14 +1936,15 @@ void SingleTrack(bool once_per_second, double horizon, predict_orbit_t *orbit, p
 				mvprintw(21,1,"Satellite orbit is geostationary");
 				aoslos=-3651.0;
 			} else if ((obs.elevation>=0.0) && !geostationary && !decayed && daynum>lostime) {
-				lostime = predict_next_los(qth, orbit, daynum);
+				predict_julian_date_t calc_time = daynum;
+				lostime = predict_next_los(qth, orbit, calc_time);
 				time_t epoch = predict_from_julian(lostime);
 				strftime(time_string, MAX_NUM_CHARS, "%a %d%b%y %j.%H:%M:%S", gmtime(&epoch));
 				mvprintw(21,1,"LOS at: %s %s  ",time_string, "GMT");
 				aoslos=lostime;
 			} else if (obs.elevation<0.0 && !geostationary && !decayed && aos_happens && daynum>aoslos) {
-				daynum+=0.003;  /* Move ahead slightly... */
-				nextaos=predict_next_aos(qth, orbit, daynum);
+				predict_julian_date_t calc_time = daynum + 0.003;  /* Move ahead slightly... */
+				nextaos=predict_next_aos(qth, orbit, calc_time);
 				time_t epoch = predict_from_julian(nextaos);
 				strftime(time_string, MAX_NUM_CHARS, "%a %d%b%y %j.%H:%M:%S", gmtime(&epoch));
 				mvprintw(21,1,"Next AOS: %s %s",time_string, "GMT");
@@ -1974,6 +1984,10 @@ void SingleTrack(bool once_per_second, double horizon, predict_orbit_t *orbit, p
 
 			//display downlink/uplink information
 			if (comsat) {
+				length=strlen(sat_db.transponder_name[xponder])/2;
+	      mvprintw(10,0,"                                                                                ");
+				mvprintw(10,40-length,"%s",sat_db.transponder_name[xponder]);
+
 				if (downlink!=0.0)
 					mvprintw(12,11,"%11.5f MHz%c%c%c",downlink,
 					readfreq ? '<' : ' ',
@@ -2156,10 +2170,6 @@ void SingleTrack(bool once_per_second, double horizon, predict_orbit_t *orbit, p
 					downlink=downlink_start;
 				}
 
-				length=strlen(sat_db.transponder_name[xponder])/2;
-	      mvprintw(10,0,"                                                                                ");
-				mvprintw(10,40-length,"%s",sat_db.transponder_name[xponder]);
-
 				if (ans=='d')
 					downlink_update=true;
 				if (ans=='D')
@@ -2197,6 +2207,17 @@ void SingleTrack(bool once_per_second, double horizon, predict_orbit_t *orbit, p
 			}
 
 			refresh();
+
+			if ((ans == KEY_LEFT) || (ans == '-')) {
+				orbit_ind -= 1;
+				if (orbit_ind < 0) {
+					orbit_ind = num_orbits-1;
+				}
+			}
+
+			if ((ans == KEY_RIGHT) || (ans == '+')) {
+				orbit_ind = (orbit_ind + 1) % num_orbits;
+			}
 
 			halfdelay(HALF_DELAY_TIME);
 
@@ -3240,7 +3261,7 @@ char argc, *argv[];
 					indx=Select(num_sats, orbits);
 
 					if (indx!=-1) {
-						SingleTrack(once_per_second, horizon, orbits[indx], observer, sat_db[indx]);
+						SingleTrack(once_per_second, horizon, indx, num_sats, orbits, observer, sat_db);
 					}
 
 					MainMenu();
