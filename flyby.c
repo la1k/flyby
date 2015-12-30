@@ -513,8 +513,9 @@ char ReadDataFiles(int *num_sats, struct sat_db_entry *sat_db, struct tle_db_ent
 				/* Get satellite number, so that the satellite database can be parsed. */
 
 				const char *tle[2] = {sats[x].line1, sats[x].line2};
-				predict_orbital_elements_t temp_elements = predict_parse_tle(tle);
-				sats[x].catnum = temp_elements.satellite_number;
+				predict_orbital_elements_t *temp_elements = predict_parse_tle(tle);
+				sats[x].catnum = temp_elements->satellite_number;
+				predict_destroy_orbital_elements(temp_elements);
 
 				x++;
 
@@ -715,7 +716,7 @@ void SaveTLE(int num_sats, struct tle_db_entry *sats)
 	fclose(fd);
 }
 
-int AutoUpdate(char *string, int num_sats, struct tle_db_entry *tle_db, predict_orbit_t **orbits)
+int AutoUpdate(char *string, int num_sats, struct tle_db_entry *tle_db, predict_orbital_elements_t **orbits)
 {
 	/* This function updates PREDICT's orbital datafile from a NASA
 	   2-line element file either through a menu (interactive mode)
@@ -794,19 +795,19 @@ int AutoUpdate(char *string, int num_sats, struct tle_db_entry *tle_db, predict_
 					kepcount++;
 
 					const char *tle[2] = {line1, line2};
-					predict_orbital_elements_t orbital_elements = predict_parse_tle(tle);
+					predict_orbital_elements_t *orbital_elements = predict_parse_tle(tle);
 
 					/* Scan for object number in datafile to see
 					   if this is something we're interested in */
 
-					for (i=0; (i<num_sats && orbits[i]->orbital_elements.satellite_number!=orbital_elements.satellite_number); i++);
+					for (i=0; (i<num_sats && orbits[i]->satellite_number!=orbital_elements->satellite_number); i++);
 
 					if (i!=MAX_NUM_SATS) {
 						/* We found it!  Check to see if it's more
 						   recent than the data we already have. */
 
-						database_epoch = orbits[i]->orbital_elements.epoch_year*1000.0 + orbits[i]->orbital_elements.epoch_day;
-						tle_epoch = orbital_elements.epoch_year*1000.0 + orbital_elements.epoch_day;
+						database_epoch = orbits[i]->epoch_year*1000.0 + orbits[i]->epoch_day;
+						tle_epoch = orbital_elements->epoch_year*1000.0 + orbital_elements->epoch_day;
 
 						/* Update only if TLE epoch >= epoch in data file
 						   so we don't overwrite current data with older
@@ -833,7 +834,7 @@ int AutoUpdate(char *string, int num_sats, struct tle_db_entry *tle_db, predict_
 
 							if (interactive) {
 								bkgdset(COLOR_PAIR(3));
-								printw(" %-8s ",orbits[i]->name);
+								printw(" %-8s ",tle_db->name);
 							}
 
 							savecount++;
@@ -845,12 +846,13 @@ int AutoUpdate(char *string, int num_sats, struct tle_db_entry *tle_db, predict_
 
 							/* Update orbit struct */
 
-							char name[255];
-							strncpy(name, orbits[i]->name, 255);
-							predict_destroy_orbit(orbits[i]);
-							orbits[i] = predict_create_orbit(orbital_elements);
-							strncpy(orbits[i]->name, name, 255);
+							predict_destroy_orbital_elements(orbits[i]);
+							orbits[i] = orbital_elements;
+						} else {
+							predict_destroy_orbital_elements(orbital_elements);
 						}
+					} else {
+						predict_destroy_orbital_elements(orbital_elements);
 					}
 
 					fgets(str0,75,fd);
@@ -905,7 +907,7 @@ int AutoUpdate(char *string, int num_sats, struct tle_db_entry *tle_db, predict_
 	return (saveflag ? 0 : -1);
 }
 
-int Select(int num_orbits, predict_orbit_t **orbits)
+int Select(int num_orbits, struct tle_db_entry *tle_db, predict_orbital_elements_t **orbitals)
 {
 	ITEM **my_items;
 	int c;
@@ -946,7 +948,7 @@ int Select(int num_orbits, predict_orbit_t **orbits)
 		n_choices = num_orbits;
 		my_items = (ITEM **)calloc(n_choices + 1, sizeof(ITEM *));
 		for(i = 0; i < n_choices; ++i) {
-			my_items[i] = new_item(orbits[i]->name, orbits[i]->orbital_elements.designator);
+			my_items[i] = new_item(tle_db[i].name, orbitals[i]->designator);
 		}
 		my_items[n_choices] = NULL; //terminate the menu list
 
@@ -994,7 +996,7 @@ int Select(int num_orbits, predict_orbit_t **orbits)
 		}
 
 		for (i=0, j=0; i<num_orbits; i++)
-			if (strcmp(item_name(current_item(my_menu)),orbits[i]->name)==0)
+			if (strcmp(item_name(current_item(my_menu)),tle_db[i].name)==0)
 				j = i;
 
 		/* Unpost and free all the memory taken up */
@@ -1337,7 +1339,7 @@ char *string;
 	return quit;
 }
 
-void Predict(predict_orbit_t *orbit, predict_observer_t *qth, char mode)
+void Predict(const char *name, predict_orbital_elements_t *orbital_elements, predict_observer_t *qth, char mode)
 {
 	/* This function predicts satellite passes.  It displays
 	   output through the Print() function if mode=='p' (show
@@ -1349,43 +1351,45 @@ void Predict(predict_orbit_t *orbit, predict_observer_t *qth, char mode)
 	char data_string[MAX_NUM_CHARS];
 	char time_string[MAX_NUM_CHARS];
 
-	predict_julian_date_t curr_time = GetStartTime(orbit->name);
-	predict_orbit(orbit, curr_time);
+	predict_julian_date_t curr_time = GetStartTime(name);
+
+	struct predict_orbit orbit;
+	predict_orbit(orbital_elements, &orbit, curr_time);
 	clear();
 
-	if (predict_aos_happens(orbit, qth->latitude) && !predict_is_geostationary(orbit) && !predict_decayed(orbit)) {
+	if (predict_aos_happens(orbital_elements, qth->latitude) && !predict_is_geostationary(orbital_elements) && !(orbit.decayed)) {
 		do {
-			predict_julian_date_t next_aos = predict_next_aos(qth, orbit, curr_time);
-			predict_julian_date_t next_los = predict_next_los(qth, orbit, next_aos);
+			predict_julian_date_t next_aos = predict_next_aos(qth, orbital_elements, curr_time);
+			predict_julian_date_t next_los = predict_next_los(qth, orbital_elements, next_aos);
 			curr_time = next_aos;
 
 			struct predict_observation obs;
-			predict_orbit(orbit, curr_time);
-			predict_observe_orbit(qth, orbit, &obs);
+			predict_orbit(orbital_elements, &orbit, curr_time);
+			predict_observe_orbit(qth, &orbit, &obs);
 			bool has_printed_last_entry = false;
 			int last_printed_elevation = 1;
 			do {
-				mvprintw(1,60, "%s (%d)", orbit->name, orbit->orbital_elements.satellite_number);
+				mvprintw(1,60, "%s (%d)", name, orbital_elements->satellite_number);
 
 				//get formatted time
 				time_t epoch = predict_from_julian(curr_time);
 				strftime(time_string, MAX_NUM_CHARS, "%a %d%b%y %H:%M:%S", gmtime(&epoch));
 
 				//modulo 256 phase
-				int ma256 = (int)rint(256.0*(orbit->phase/(2*M_PI)));
+				int ma256 = (int)rint(256.0*(orbit.phase/(2*M_PI)));
 
 				//satellite visibility status
 				char visibility;
 				if (obs.visible) {
 					visibility = '+';
-				} else if (!(orbit->eclipsed)) {
+				} else if (!(orbit.eclipsed)) {
 					visibility = '*';
 				} else {
 					visibility = ' ';
 				}
 
 				//format line of data
-				sprintf(data_string,"      %s%4d %4d  %4d  %4d   %4d   %6ld  %6ld %c\n", time_string, (int)(obs.elevation*180.0/M_PI), (int)(obs.azimuth*180.0/M_PI), ma256, (int)(orbit->latitude*180.0/M_PI), (int)(orbit->longitude*180.0/M_PI), (long)(obs.range), orbit->revolutions, visibility);
+				sprintf(data_string,"      %s%4d %4d  %4d  %4d   %4d   %6ld  %6ld %c\n", time_string, (int)(obs.elevation*180.0/M_PI), (int)(obs.azimuth*180.0/M_PI), ma256, (int)(orbit.latitude*180.0/M_PI), (int)(orbit.longitude*180.0/M_PI), (long)(obs.range), orbit.revolutions, visibility);
 				last_printed_elevation = obs.elevation*180.0/M_PI;
 
 				//print data to screen
@@ -1413,17 +1417,17 @@ void Predict(predict_orbit_t *orbit, predict_observer_t *qth, char mode)
 				}
 
 				//calculate results for next timestep
-				curr_time += cos((obs.elevation*180/M_PI-1.0)*M_PI/180.0)*sqrt(orbit->altitude)/25000.0; //predict's magic time increment formula
-				predict_orbit(orbit, curr_time);
-				predict_observe_orbit(qth, orbit, &obs);
+				curr_time += cos((obs.elevation*180/M_PI-1.0)*M_PI/180.0)*sqrt(orbit.altitude)/25000.0; //predict's magic time increment formula
+				predict_orbit(orbital_elements, &orbit, curr_time);
+				predict_observe_orbit(qth, &orbit, &obs);
 
 				//make sure that the last printed line is at elevation 0 (since that looks nicer)
 				if ((last_printed_elevation != 0) && (obs.elevation < 0) && !has_printed_last_entry) {
 					has_printed_last_entry = true;
 					curr_time = next_los;
 
-					predict_orbit(orbit, curr_time);
-					predict_observe_orbit(qth, orbit, &obs);
+					predict_orbit(orbital_elements, &orbit, curr_time);
+					predict_observe_orbit(qth, &orbit, &obs);
 				}
 			} while (((obs.elevation >= 0) || (curr_time <= next_los)) && !should_quit);
 
@@ -1434,17 +1438,17 @@ void Predict(predict_orbit_t *orbit, predict_observer_t *qth, char mode)
 			if (mode=='v') {
 				should_quit=PrintVisible("\n");
 			}
-		} while (!should_quit && !should_break && !predict_decayed(orbit));
+		} while (!should_quit && !should_break && !(orbit.decayed));
 	} else {
 		//display warning that passes are impossible
 		bkgdset(COLOR_PAIR(5)|A_BOLD);
 		clear();
 
-		if (!predict_aos_happens(orbit, qth->latitude) || predict_decayed(orbit)) {
-			mvprintw(12,5,"*** Passes for %s cannot occur for your ground station! ***\n",orbit->name);
+		if (!predict_aos_happens(orbital_elements, qth->latitude) || orbit.decayed) {
+			mvprintw(12,5,"*** Passes for %s cannot occur for your ground station! ***\n",name);
 		}
 
-		if (predict_is_geostationary(orbit)) {
+		if (predict_is_geostationary(orbital_elements)) {
 			mvprintw(12,3,"*** Orbital predictions cannot be made for a geostationary satellite! ***\n");
 		}
 
@@ -1587,7 +1591,7 @@ bool KbEdit(int x, int y, int num_characters, char *output_string)
 	return filled;
 }
 
-void ShowOrbitData(int num_orbits, predict_orbit_t **orbits)
+void ShowOrbitData(int num_orbits, struct tle_db_entry *tle_db, predict_orbital_elements_t **orbitals)
 {
 	/* This function permits displays a satellite's orbital
 	   data.  The age of the satellite data is also provided. */
@@ -1596,19 +1600,19 @@ void ShowOrbitData(int num_orbits, predict_orbit_t **orbits)
 	double an_period, no_period, sma, c1, e2, satepoch;
 	char days[5];
 
-	x=Select(num_orbits, orbits);
+	x=Select(num_orbits, tle_db, orbitals);
 
 	while (x!=-1) {
-		predict_orbital_elements_t orbital_elements = orbits[x]->orbital_elements;
-		if (orbital_elements.mean_motion!=0.0) {
+		predict_orbital_elements_t *orbital_elements = orbitals[x];
+		if (orbital_elements->mean_motion!=0.0) {
 			bkgdset(COLOR_PAIR(2)|A_BOLD);
 			clear();
-			sma=331.25*exp(log(1440.0/orbital_elements.mean_motion)*(2.0/3.0));
-			an_period=1440.0/orbital_elements.mean_motion;
-			c1=cos(orbital_elements.inclination*M_PI/180.0);
-			e2=1.0-(orbital_elements.eccentricity*orbital_elements.eccentricity);
-			no_period=(an_period*360.0)/(360.0+(4.97*pow((EARTH_RADIUS_KM/sma),3.5)*((5.0*c1*c1)-1.0)/(e2*e2))/orbital_elements.mean_motion);
-			satepoch=DayNum(1,0,orbital_elements.epoch_year)+orbital_elements.epoch_day;
+			sma=331.25*exp(log(1440.0/orbital_elements->mean_motion)*(2.0/3.0));
+			an_period=1440.0/orbital_elements->mean_motion;
+			c1=cos(orbital_elements->inclination*M_PI/180.0);
+			e2=1.0-(orbital_elements->eccentricity*orbital_elements->eccentricity);
+			no_period=(an_period*360.0)/(360.0+(4.97*pow((EARTH_RADIUS_KM/sma),3.5)*((5.0*c1*c1)-1.0)/(e2*e2))/orbital_elements->mean_motion);
+			satepoch=DayNum(1,0,orbital_elements->epoch_year)+orbital_elements->epoch_day;
 			age=(int)rint(predict_to_julian(time(NULL))-satepoch);
 
 			if (age==1)
@@ -1616,7 +1620,7 @@ void ShowOrbitData(int num_orbits, predict_orbit_t **orbits)
 			else
 				strcpy(days,"days");
 
-			namelength=strlen(orbits[x]->name);
+			namelength=strlen(tle_db[x].name);
 
 			printw("\n");
 
@@ -1631,7 +1635,7 @@ void ShowOrbitData(int num_orbits, predict_orbit_t **orbits)
 			mvprintw(1,0,"  flyby Orbital Data                                                            ");
 			mvprintw(2,0,"                                                                                ");
 
-			mvprintw(1,25,"(%ld) %s", orbital_elements.satellite_number, orbits[x]->name);
+			mvprintw(1,25,"(%ld) %s", orbital_elements->satellite_number, tle_db[x].name);
 
 			attrset(COLOR_PAIR(4)|A_BOLD);
 			mvprintw( 4, 4,"Data Issued        : ");
@@ -1655,29 +1659,29 @@ void ShowOrbitData(int num_orbits, predict_orbit_t **orbits)
 
 			attrset(COLOR_PAIR(2)|A_BOLD);
 			mvprintw( 4,25,"%d %s ago",age,days);
-			mvprintw( 5,25,"%02d %.8f",orbital_elements.epoch_year,orbital_elements.epoch_day);
-			mvprintw( 6,25,"%.4f deg",orbital_elements.inclination);
-			mvprintw( 7,25,"%.4f deg",orbital_elements.right_ascension);
-			mvprintw( 8,25,"%g",orbital_elements.eccentricity);
-			mvprintw( 9,25,"%.4f deg",orbital_elements.argument_of_perigee);
-			mvprintw(10,25,"%.4f deg",orbital_elements.mean_anomaly);
-			mvprintw(11,25,"%.8f rev/day",orbital_elements.mean_motion);
-			mvprintw(12,25,"%g rev/day/day",orbital_elements.derivative_mean_motion);
-			mvprintw(13,25,"%g rev/day/day/day",orbital_elements.second_derivative_mean_motion);
-			mvprintw(14,25,"%g 1/earth radii",orbital_elements.bstar_drag_term);
+			mvprintw( 5,25,"%02d %.8f",orbital_elements->epoch_year,orbital_elements->epoch_day);
+			mvprintw( 6,25,"%.4f deg",orbital_elements->inclination);
+			mvprintw( 7,25,"%.4f deg",orbital_elements->right_ascension);
+			mvprintw( 8,25,"%g",orbital_elements->eccentricity);
+			mvprintw( 9,25,"%.4f deg",orbital_elements->argument_of_perigee);
+			mvprintw(10,25,"%.4f deg",orbital_elements->mean_anomaly);
+			mvprintw(11,25,"%.8f rev/day",orbital_elements->mean_motion);
+			mvprintw(12,25,"%g rev/day/day",orbital_elements->derivative_mean_motion);
+			mvprintw(13,25,"%g rev/day/day/day",orbital_elements->second_derivative_mean_motion);
+			mvprintw(14,25,"%g 1/earth radii",orbital_elements->bstar_drag_term);
 			mvprintw(15,25,"%.4f km",sma);
-			mvprintw(16,25,"%.4f km",sma*(1.0+orbital_elements.eccentricity)-EARTH_RADIUS_KM);
-			mvprintw(17,25,"%.4f km",sma*(1.0-orbital_elements.eccentricity)-EARTH_RADIUS_KM);
+			mvprintw(16,25,"%.4f km",sma*(1.0+orbital_elements->eccentricity)-EARTH_RADIUS_KM);
+			mvprintw(17,25,"%.4f km",sma*(1.0-orbital_elements->eccentricity)-EARTH_RADIUS_KM);
 			mvprintw(18,25,"%.4f mins",an_period);
 			mvprintw(19,25,"%.4f mins",no_period);
-			mvprintw(20,25,"%ld",orbital_elements.revolutions_at_epoch);
-			mvprintw(21,25,"%ld",orbital_elements.element_number);
+			mvprintw(20,25,"%ld",orbital_elements->revolutions_at_epoch);
+			mvprintw(21,25,"%ld",orbital_elements->element_number);
 
 			attrset(COLOR_PAIR(3)|A_BOLD);
 			refresh();
 			AnyKey();
 		}
-		x=Select(num_orbits, orbits);
+		x=Select(num_orbits, tle_db, orbitals);
 	 };
 }
 
@@ -1752,7 +1756,7 @@ void QthEdit(predict_observer_t *qth)
 	}
 }
 
-void SingleTrack(bool once_per_second, double horizon, int orbit_ind, int num_orbits, predict_orbit_t **orbits, predict_observer_t *qth, struct sat_db_entry *sat_db_entries)
+void SingleTrack(bool once_per_second, double horizon, int orbit_ind, int num_orbits, predict_orbital_elements_t **orbitals, predict_observer_t *qth, struct sat_db_entry *sat_db_entries, struct tle_db_entry *tle_db)
 {
 	/* This function tracks a single satellite in real-time
 	   until 'Q' or ESC is pressed. */
@@ -1781,10 +1785,11 @@ void SingleTrack(bool once_per_second, double horizon, int orbit_ind, int num_or
 
 		char time_string[MAX_NUM_CHARS];
 
-		predict_orbit_t *orbit = orbits[orbit_ind];
+		predict_orbital_elements_t *orbital_elements = orbitals[orbit_ind];
+		struct predict_orbit orbit;
 		struct sat_db_entry sat_db = sat_db_entries[orbit_ind];
 
-		switch (orbit->ephemeris) {
+		switch (orbital_elements->ephemeris) {
 			case EPHEMERIS_SGP4:
 				strcpy(ephemeris_string, "SGP4");
 			break;
@@ -1828,12 +1833,12 @@ void SingleTrack(bool once_per_second, double horizon, int orbit_ind, int num_or
 			uplink=0.0;
 		}
 
-		bool aos_happens = predict_aos_happens(orbit, qth->latitude);
-		bool geostationary = predict_is_geostationary(orbit);
+		bool aos_happens = predict_aos_happens(orbital_elements, qth->latitude);
+		bool geostationary = predict_is_geostationary(orbital_elements);
 
 		predict_julian_date_t daynum = predict_to_julian(time(NULL));
-		predict_orbit(orbit, daynum);
-		bool decayed = predict_decayed(orbit);
+		predict_orbit(orbital_elements, &orbit, daynum);
+		bool decayed = orbit.decayed;
 
 		halfdelay(HALF_DELAY_TIME);
 		curs_set(0);
@@ -1844,7 +1849,7 @@ void SingleTrack(bool once_per_second, double horizon, int orbit_ind, int num_or
 		mvprintw(0,0,"                                                                                ");
 		mvprintw(1,0,"  flyby Tracking:                                                               ");
 		mvprintw(2,0,"                                                                                ");
-		mvprintw(1,21,"%-24s (%d)", orbit->name, orbit->orbital_elements.satellite_number);
+		mvprintw(1,21,"%-24s (%d)", tle_db->name, orbital_elements->satellite_number);
 
 		attrset(COLOR_PAIR(4)|A_BOLD);
 
@@ -1877,11 +1882,11 @@ void SingleTrack(bool once_per_second, double horizon, int orbit_ind, int num_or
 			//predict and observe satellite orbit
 			time_t epoch = time(NULL);
 			daynum = predict_to_julian(epoch);
-			predict_orbit(orbit, daynum);
+			predict_orbit(orbital_elements, &orbit, daynum);
 			struct predict_observation obs;
-			predict_observe_orbit(qth, orbit, &obs);
-			double sat_vel = sqrt(pow(orbit->velocity[0], 2.0) + pow(orbit->velocity[1], 2.0) + pow(orbit->velocity[2], 2.0));
-			double squint = predict_squint_angle(qth, orbit, sat_db.alon, sat_db.alat);
+			predict_observe_orbit(qth, &orbit, &obs);
+			double sat_vel = sqrt(pow(orbit.velocity[0], 2.0) + pow(orbit.velocity[1], 2.0) + pow(orbit.velocity[2], 2.0));
+			double squint = predict_squint_angle(qth, &orbit, sat_db.alon, sat_db.alat);
 
 			//display current time
 			attrset(COLOR_PAIR(6)|A_REVERSE|A_BOLD);
@@ -1894,36 +1899,36 @@ void SingleTrack(bool once_per_second, double horizon, int orbit_ind, int num_or
 
 			//display satellite data
 			attrset(COLOR_PAIR(2)|A_BOLD);
-			mvprintw(5,1,"%-6.2f",orbit->latitude*180.0/M_PI);
+			mvprintw(5,1,"%-6.2f",orbit.latitude*180.0/M_PI);
 
 			attrset(COLOR_PAIR(2)|A_BOLD);
-			mvprintw(5,55,"%0.f ",orbit->altitude*KM_TO_MI);
-			mvprintw(6,55,"%0.f ",orbit->altitude);
+			mvprintw(5,55,"%0.f ",orbit.altitude*KM_TO_MI);
+			mvprintw(6,55,"%0.f ",orbit.altitude);
 			mvprintw(5,68,"%-5.0f",obs.range*KM_TO_MI);
 			mvprintw(6,68,"%-5.0f",obs.range);
-			mvprintw(6,1,"%-7.2f",orbit->longitude*180.0/M_PI);
+			mvprintw(6,1,"%-7.2f",orbit.longitude*180.0/M_PI);
 			mvprintw(5,15,"%-7.2f",obs.azimuth*180.0/M_PI);
 			mvprintw(6,14,"%+-6.2f",obs.elevation*180.0/M_PI);
 			mvprintw(5,29,"%0.f ",(3600.0*sat_vel)*KM_TO_MI);
 			mvprintw(6,29,"%0.f ",3600.0*sat_vel);
-			mvprintw(18,3,"%+6.2f deg",orbit->eclipse_depth*180.0/M_PI);
-			mvprintw(18,20,"%5.1f",256.0*(orbit->phase/(2*M_PI)));
+			mvprintw(18,3,"%+6.2f deg",orbit.eclipse_depth*180.0/M_PI);
+			mvprintw(18,20,"%5.1f",256.0*(orbit.phase/(2*M_PI)));
 			mvprintw(18,37,"%s",ephemeris_string);
 			if (sat_db.squintflag) {
 				mvprintw(18,52,"%+6.2f",squint);
 			} else {
 				mvprintw(18,52,"N/A");
 			}
-			mvprintw(5,42,"%0.f ",orbit->footprint*KM_TO_MI);
-			mvprintw(6,42,"%0.f ",orbit->footprint);
+			mvprintw(5,42,"%0.f ",orbit.footprint*KM_TO_MI);
+			mvprintw(6,42,"%0.f ",orbit.footprint);
 
 			attrset(COLOR_PAIR(1)|A_BOLD);
-			mvprintw(20,1,"Orbit Number: %ld", orbit->revolutions);
+			mvprintw(20,1,"Orbit Number: %ld", orbit.revolutions);
 
 			mvprintw(22,1,"Spacecraft is currently ");
 			if (obs.visible) {
 				mvprintw(22,25,"visible    ");
-			} else if (!(orbit->eclipsed)) {
+			} else if (!(orbit.eclipsed)) {
 				mvprintw(22,25,"in sunlight");
 			} else {
 				mvprintw(22,25,"in eclipse ");
@@ -1935,14 +1940,14 @@ void SingleTrack(bool once_per_second, double horizon, int orbit_ind, int num_or
 				aoslos=-3651.0;
 			} else if ((obs.elevation>=0.0) && !geostationary && !decayed && daynum>lostime) {
 				predict_julian_date_t calc_time = daynum;
-				lostime = predict_next_los(qth, orbit, calc_time);
+				lostime = predict_next_los(qth, orbital_elements, calc_time);
 				time_t epoch = predict_from_julian(lostime);
 				strftime(time_string, MAX_NUM_CHARS, "%a %d%b%y %j.%H:%M:%S", gmtime(&epoch));
 				mvprintw(21,1,"LOS at: %s %s  ",time_string, "GMT");
 				aoslos=lostime;
 			} else if (obs.elevation<0.0 && !geostationary && !decayed && aos_happens && daynum>aoslos) {
 				predict_julian_date_t calc_time = daynum + 0.003;  /* Move ahead slightly... */
-				nextaos=predict_next_aos(qth, orbit, calc_time);
+				nextaos=predict_next_aos(qth, orbital_elements, calc_time);
 				time_t epoch = predict_from_julian(nextaos);
 				strftime(time_string, MAX_NUM_CHARS, "%a %d%b%y %j.%H:%M:%S", gmtime(&epoch));
 				mvprintw(21,1,"Next AOS: %s %s",time_string, "GMT");
@@ -2258,7 +2263,7 @@ double scrk, scel;
 		return (COLOR_PAIR(2)|A_REVERSE); /* reverse */
 }
 
-void MultiTrack(predict_observer_t *qth, int num_orbits, predict_orbit_t **orbits, char multitype, char disttype)
+void MultiTrack(predict_observer_t *qth, int num_orbits, predict_orbital_elements_t **orbitals, struct tle_db_entry *tle_db, char multitype, char disttype)
 {
 	/* This function tracks all satellites in the program's
 	   database simultaneously until 'Q' or ESC is pressed.
@@ -2272,6 +2277,7 @@ void MultiTrack(predict_observer_t *qth, int num_orbits, predict_orbit_t **orbit
 	char ans = '\0';
 
 	struct predict_observation *observations = (struct predict_observation*)malloc(sizeof(struct predict_observation)*num_orbits);
+	struct predict_orbit *orbits = (struct predict_orbit*)malloc(sizeof(struct predict_orbit)*num_orbits);
 	NCURSES_ATTR_T *attributes = (NCURSES_ATTR_T*)malloc(sizeof(NCURSES_ATTR_T)*num_orbits);
 	char **string_lines = (char**)malloc(sizeof(char*)*num_orbits);
 	for (int i=0; i < num_orbits; i++) {
@@ -2302,7 +2308,7 @@ void MultiTrack(predict_observer_t *qth, int num_orbits, predict_orbit_t **orbit
 	char time_string[MAX_NUM_CHARS];
 
 	for (int x=0; x < num_orbits; x++) {
-		predict_orbit(orbits[x], daynum);
+		predict_orbit(orbitals[x], &orbits[x], daynum);
 		los[x]=0.0;
 		aos[x]=0.0;
 		satindex[x]=x;
@@ -2327,10 +2333,10 @@ void MultiTrack(predict_observer_t *qth, int num_orbits, predict_orbit_t **orbit
 
 		//predict orbits
 		for (int i=0; i < num_orbits; i++){
-			predict_orbit_t *orbit = orbits[i];
+			struct predict_orbit *orbit = &(orbits[i]);
 
 			struct predict_observation obs;
-			predict_orbit(orbit, daynum);
+			predict_orbit(orbitals[i], orbit, daynum);
 			predict_observe_orbit(qth, orbit, &obs);
 
 			//sun status
@@ -2356,13 +2362,13 @@ void MultiTrack(predict_observer_t *qth, int num_orbits, predict_orbit_t **orbit
 			}
 
 			//set text formatting attributes according to satellite state, set AOS/LOS string
-			bool can_predict = !predict_is_geostationary(orbits[i]) && predict_aos_happens(orbits[i], qth->latitude) && !predict_decayed(orbits[i]);
+			bool can_predict = !predict_is_geostationary(orbitals[i]) && predict_aos_happens(orbitals[i], qth->latitude) && !(orbits[i].decayed);
 			char aos_los[MAX_NUM_CHARS] = {0};
 			if (obs.elevation >= 0) {
 				//different colours according to range and elevation
 				attributes[i] = MultiColours(obs.range, obs.elevation*180/M_PI);
 
-				if (predict_is_geostationary(orbit)){
+				if (predict_is_geostationary(orbitals[i])){
 					sprintf(aos_los, "*GeoS*");
 				} else {
 					time_t epoch = predict_from_julian(los[i] - daynum);
@@ -2394,12 +2400,12 @@ void MultiTrack(predict_observer_t *qth, int num_orbits, predict_orbit_t **orbit
 
 			/* Calculate Next Event (AOS/LOS) Times */
 			if (can_predict && (daynum > los[i]) && (obs.elevation > 0)) {
-				los[i]= predict_next_los(qth, orbit, daynum);
+				los[i]= predict_next_los(qth, orbitals[i], daynum);
 			}
 
 			if (can_predict && (daynum > aos[i])) {
 				if (obs.elevation < 0) {
-					aos[i] = predict_next_aos(qth, orbit, daynum);
+					aos[i] = predict_next_aos(qth, orbitals[i], daynum);
 				}
 			}
 
@@ -2413,12 +2419,12 @@ void MultiTrack(predict_observer_t *qth, int num_orbits, predict_orbit_t **orbit
 
 			//set string to display
 			char disp_string[MAX_NUM_CHARS];
-			sprintf(disp_string, " %-13s%5.1f  %5.1f %8s  %6.0f %6.0f %c %c %12s ", Abbreviate(orbit->name, 12), obs.azimuth*180.0/M_PI, obs.elevation*180.0/M_PI, abs_pos_string, disp_altitude, disp_range, sunstat, rangestat, aos_los);
+			sprintf(disp_string, " %-13s%5.1f  %5.1f %8s  %6.0f %6.0f %c %c %12s ", Abbreviate(tle_db[i].name, 12), obs.azimuth*180.0/M_PI, obs.elevation*180.0/M_PI, abs_pos_string, disp_altitude, disp_range, sunstat, rangestat, aos_los);
 
 			//overwrite everything if orbit was decayed
-			if (predict_decayed(orbit)) {
+			if (orbit->decayed) {
 				attributes[i] = COLOR_PAIR(2);
-				sprintf(disp_string, " %-10s   ----------------       Decayed        ---------------", Abbreviate(orbit->name,9));
+				sprintf(disp_string, " %-10s   ----------------       Decayed        ---------------", Abbreviate(tle_db[i].name,9));
 			}
 
 			memcpy(string_lines[i], disp_string, sizeof(char)*MAX_NUM_CHARS);
@@ -2466,7 +2472,7 @@ void MultiTrack(predict_observer_t *qth, int num_orbits, predict_orbit_t **orbit
 		//satellites that will eventually rise above the horizon
 		int below_horizon_counter = 0;
 		for (int i=0; i < num_orbits; i++){
-			bool will_be_visible = !predict_decayed(orbits[i]) && predict_aos_happens(orbits[i], qth->latitude) && !predict_is_geostationary(orbits[i]);
+			bool will_be_visible = !(orbits[i].decayed) && predict_aos_happens(orbitals[i], qth->latitude) && !predict_is_geostationary(orbitals[i]);
 			if ((observations[i].elevation <= 0) && will_be_visible) {
 				satindex[below_horizon_counter + above_horizon_counter] = i;
 				below_horizon_counter++;
@@ -2477,11 +2483,11 @@ void MultiTrack(predict_observer_t *qth, int num_orbits, predict_orbit_t **orbit
 		int nevervisible_counter = 0;
 		int decayed_counter = 0;
 		for (int i=0; i < num_orbits; i++){
-			bool never_visible = !predict_aos_happens(orbits[i], qth->latitude) || predict_is_geostationary(orbits[i]);
-			if ((observations[i].elevation <= 0) && never_visible && !predict_decayed(orbits[i])) {
+			bool never_visible = !predict_aos_happens(orbitals[i], qth->latitude) || predict_is_geostationary(orbitals[i]);
+			if ((observations[i].elevation <= 0) && never_visible && !(orbits[i].decayed)) {
 				satindex[below_horizon_counter + above_horizon_counter + nevervisible_counter] = i;
 				nevervisible_counter++;
-			} else if (predict_decayed(orbits[i])) {
+			} else if (orbits[i].decayed) {
 				satindex[num_orbits - 1 - decayed_counter] = i;
 				decayed_counter++;
 			}
@@ -2549,7 +2555,7 @@ void MultiTrack(predict_observer_t *qth, int num_orbits, predict_orbit_t **orbit
 	free(string_lines);
 }
 
-void Illumination(predict_orbit_t *orbit)
+void Illumination(const char *name, predict_orbital_elements_t *orbital_elements)
 {
 	double startday, oneminute, sunpercent;
 	int eclipses, minutes, quit, breakout=0, count;
@@ -2566,6 +2572,8 @@ void Illumination(predict_orbit_t *orbit)
 
 	const int NUM_MINUTES = 1440;
 
+	struct predict_orbit orbit;
+
 
 	do {
 		attrset(COLOR_PAIR(4));
@@ -2575,12 +2583,12 @@ void Illumination(predict_orbit_t *orbit)
 		count++;
 		daynum=startday;
 
-		mvprintw(1,60, "%s (%d)", orbit->name, orbit->orbital_elements.satellite_number);
+		mvprintw(1,60, "%s (%d)", name, orbital_elements->satellite_number);
 
 		for (minutes=0, eclipses=0; minutes<NUM_MINUTES; minutes++) {
-			predict_orbit(orbit, daynum);
+			predict_orbit(orbital_elements, &orbit, daynum);
 
-			if (orbit->eclipsed) {
+			if (orbit.eclipsed) {
 				eclipses++;
 			}
 
@@ -2610,9 +2618,9 @@ void Illumination(predict_orbit_t *orbit)
 		daynum=startday;
 
 		for (minutes=0, eclipses=0; minutes<NUM_MINUTES; minutes++) {
-			predict_orbit(orbit, daynum);
+			predict_orbit(orbital_elements, &orbit, daynum);
 
-			if (orbit->eclipsed) {
+			if (orbit.eclipsed) {
 				eclipses++;
 			}
 
@@ -2645,7 +2653,7 @@ void Illumination(predict_orbit_t *orbit)
 			startday+=1.0;
 		}
 	}
-	while (quit!=1 && breakout!=1 && !predict_decayed(orbit));
+	while (quit!=1 && breakout!=1 && !(orbit.decayed));
 }
 
 void MainMenu()
@@ -2811,7 +2819,7 @@ char argc, *argv[];
 	FILE *db;
 	struct addrinfo hints, *servinfo, *servinfop;
 
-	struct tle_db_entry sats[MAX_NUM_SATS] = {0};
+	struct tle_db_entry tle_db[MAX_NUM_SATS] = {0};
 	struct sat_db_entry sat_db[MAX_NUM_SATS] = {0};
 
 
@@ -2991,15 +2999,14 @@ char argc, *argv[];
 
 	predict_observer_t *observer = predict_create_observer("", 0, 0, 0);
 	int num_sats = 0;
-	x=ReadDataFiles(&num_sats, sat_db, sats, observer);
-	predict_orbit_t **orbits;
+	x=ReadDataFiles(&num_sats, sat_db, tle_db, observer);
+	predict_orbital_elements_t **orbital_elements;
 
 	if (x>1)  /* TLE file was loaded successfully */ {
-		orbits = (predict_orbit_t**)malloc(sizeof(predict_orbit_t*)*num_sats);
+		orbital_elements = (predict_orbital_elements_t**)malloc(sizeof(predict_orbital_elements_t*)*num_sats);
 		for (int i=0; i < num_sats; i++){
-			const char *tle[2] = {sats[i].line1, sats[i].line2};
-			orbits[i] = predict_create_orbit(predict_parse_tle(tle));
-			memcpy(orbits[i]->name, sats[i].name, 25);
+			const char *tle[2] = {tle_db[i].line1, tle_db[i].line2};
+			orbital_elements[i] = predict_parse_tle(tle);
 		}
 
 		if (updatefile[0]) {
@@ -3018,7 +3025,7 @@ char argc, *argv[];
 				temp[z]=0;
 
 				if (temp[0]) {
-					AutoUpdate(temp, num_sats, sats, orbits);
+					AutoUpdate(temp, num_sats, tle_db, orbital_elements);
 					temp[0]=0;
 					z=0;
 					y++;
@@ -3069,7 +3076,7 @@ char argc, *argv[];
 
 		if (x<3) {
 			NewUser();
-			x=ReadDataFiles(&num_sats, sat_db, sats, observer);
+			x=ReadDataFiles(&num_sats, sat_db, tle_db, observer);
 			QthEdit(observer);
 		}
 
@@ -3200,10 +3207,10 @@ char argc, *argv[];
 				case 'v':
 					Print("",0);
 					PrintVisible("");
-					indx=Select(num_sats, orbits);
+					indx=Select(num_sats, tle_db, orbital_elements);
 
 					if (indx!=-1) {
-						Predict(orbits[indx], observer, key);
+						Predict(tle_db[indx].name, orbital_elements[indx], observer, key);
 					}
 
 					MainMenu();
@@ -3222,12 +3229,12 @@ char argc, *argv[];
 					break;
 
 				case 'u':
-					AutoUpdate("", num_sats, sats, orbits);
+					AutoUpdate("", num_sats, tle_db, orbital_elements);
 					MainMenu();
 					break;
 
 				case 'd':
-					ShowOrbitData(num_sats, orbits);
+					ShowOrbitData(num_sats, tle_db, orbital_elements);
 					MainMenu();
 					break;
 
@@ -3238,10 +3245,10 @@ char argc, *argv[];
 
 				case 't':
 				case 'T':
-					indx=Select(num_sats, orbits);
+					indx=Select(num_sats, tle_db, orbital_elements);
 
 					if (indx!=-1) {
-						SingleTrack(once_per_second, horizon, indx, num_sats, orbits, observer, sat_db);
+						SingleTrack(once_per_second, horizon, indx, num_sats, orbital_elements, observer, sat_db, tle_db);
 					}
 
 					MainMenu();
@@ -3250,7 +3257,7 @@ char argc, *argv[];
 				case 'm':
 				case 'l':
 
-					MultiTrack(observer, num_sats, orbits, key, 'k');
+					MultiTrack(observer, num_sats, orbital_elements, tle_db, key, 'k');
 					MainMenu();
 					break;
 
@@ -3260,12 +3267,12 @@ char argc, *argv[];
 					break;
 
 				case 's':
-					indx=Select(num_sats, orbits);
+					indx=Select(num_sats, tle_db, orbital_elements);
 
 					if (indx!=-1) {
 						Print("",0);
 
-						Illumination(orbits[indx]);
+						Illumination(tle_db[indx].name, orbital_elements[indx]);
 					}
 
 					MainMenu();
@@ -3297,9 +3304,9 @@ char argc, *argv[];
 		endwin();
 
 		for (int i=0; i < num_sats; i++){
-			predict_destroy_orbit(orbits[i]);
+			predict_destroy_orbital_elements(orbital_elements[i]);
 		}
-		free(orbits);
+		free(orbital_elements);
 		predict_destroy_observer(observer);
 
 	}
