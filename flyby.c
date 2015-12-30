@@ -1055,7 +1055,7 @@ double GetStartTime(const char* info_str)
 		bkgdset(COLOR_PAIR(2)|A_BOLD);
 		clear();
 
-		printw("\n\n\n\t     Starting Date and Time for Predictions of");
+		printw("\n\n\n\t     Starting Date and Time for Predictions of ");
 
 		printw("%-15s\n\n", info_str);
 
@@ -2563,7 +2563,7 @@ void Illumination(const char *name, predict_orbital_elements_t *orbital_elements
 
 	oneminute=1.0/(24.0*60.0);
 
-	predict_julian_date_t daynum = floor(GetStartTime(0));
+	predict_julian_date_t daynum = floor(GetStartTime(name));
 	startday=daynum;
 	count=0;
 
