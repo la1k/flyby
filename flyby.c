@@ -1172,8 +1172,8 @@ double GetStartTime(const char* info_str)
 	return ((double)DayNum(mm,dd,yy)+((hr/24.0)+(min/1440.0)+(sec/86400.0)));
 }
 
-int Print(string,mode)
-char *string, mode;
+int Print(title,string,mode)
+char *title, *string, mode;
 {
 	/* This function buffers and displays orbital predictions
 	   and allows screens to be saved to a disk file. */
@@ -1230,6 +1230,7 @@ char *string, mode;
 			mvprintw(1,0,"  flyby Calendar :                                                              ");
 			mvprintw(1,21,"%-24s", type);
 			mvprintw(2,0,"                                                                                ");
+			mvprintw(1,60, "%s", title);
 			attrset(COLOR_PAIR(2)|A_REVERSE|A_BOLD);
 			mvprintw(3,0,head2);
 
@@ -1276,8 +1277,8 @@ char *string, mode;
 	return (quit);
 }
 
-int PrintVisible(string)
-char *string;
+int PrintVisible(title,string)
+char *title, *string;
 {
 	/* This function acts as a filter to display passes that could
 	   possibly be visible to the ground station.  It works by first
@@ -1324,7 +1325,7 @@ char *string;
 
 					if (line[y]=='\n') {
 						line[y+1]=0;
-						quit=Print(line,'v');
+						quit=Print(title,line,'v');
 						line[0]=0;
 						y=0;
 					} else
@@ -1357,6 +1358,9 @@ void Predict(const char *name, predict_orbital_elements_t *orbital_elements, pre
 	predict_orbit(orbital_elements, &orbit, curr_time);
 	clear();
 
+	char title[MAX_NUM_CHARS] = {0};
+	sprintf(title, "%s (%d)", name, orbital_elements->satellite_number);
+
 	if (predict_aos_happens(orbital_elements, qth->latitude) && !predict_is_geostationary(orbital_elements) && !(orbit.decayed)) {
 		do {
 			predict_julian_date_t next_aos = predict_next_aos(qth, orbital_elements, curr_time);
@@ -1369,8 +1373,6 @@ void Predict(const char *name, predict_orbital_elements_t *orbital_elements, pre
 			bool has_printed_last_entry = false;
 			int last_printed_elevation = 1;
 			do {
-				mvprintw(1,60, "%s (%d)", name, orbital_elements->satellite_number);
-
 				//get formatted time
 				time_t epoch = predict_from_julian(curr_time);
 				strftime(time_string, MAX_NUM_CHARS, "%a %d%b%y %H:%M:%S", gmtime(&epoch));
@@ -1394,7 +1396,7 @@ void Predict(const char *name, predict_orbital_elements_t *orbital_elements, pre
 
 				//print data to screen
 				if (mode=='p') {
-					should_quit=Print(data_string,'p');
+					should_quit=Print(title,data_string,'p');
 				}
 
 				//print only visible passes to screen
@@ -1413,7 +1415,7 @@ void Predict(const char *name, predict_orbital_elements_t *orbital_elements, pre
 
 					nodelay(stdscr,FALSE);
 
-					should_quit=PrintVisible(data_string);
+					should_quit=PrintVisible(title,data_string);
 				}
 
 				//calculate results for next timestep
@@ -1432,11 +1434,11 @@ void Predict(const char *name, predict_orbital_elements_t *orbital_elements, pre
 			} while (((obs.elevation >= 0) || (curr_time <= next_los)) && !should_quit);
 
 			if (mode=='p') {
-				should_quit=Print("\n",'p');
+				should_quit=Print(title,"\n",'p');
 			}
 
 			if (mode=='v') {
-				should_quit=PrintVisible("\n");
+				should_quit=PrintVisible(title,"\n");
 			}
 		} while (!should_quit && !should_break && !(orbit.decayed));
 	} else {
@@ -1528,7 +1530,7 @@ void PredictSunMoon(enum celestial_object object, predict_observer_t *qth)
 			time_t epoch = predict_from_julian(daynum);
 			strftime(time_string, MAX_NUM_CHARS, "%a %d%b%y %H:%M:%S", gmtime(&epoch));
 			sprintf(string,"      %s%4d %4d  %5.1f  %5.1f  %5.1f  %6.1f%7.3f\n",time_string, iel, iaz, right_ascension, declination, longitude, obs.range_rate, obs.range);
-			quit=Print(string,print_mode);
+			quit=Print("",string,print_mode);
 			lastel=iel;
 			lastdaynum=daynum;
 
@@ -1555,11 +1557,11 @@ void PredictSunMoon(enum celestial_object object, predict_observer_t *qth)
 			strftime(time_string, MAX_NUM_CHARS, "%a %d%b%y %H:%M:%S", gmtime(&epoch));
 
 			sprintf(string,"      %s%4d %4d  %5.1f  %5.1f  %5.1f  %6.1f%7.3f\n",time_string, iel, iaz, right_ascension, declination, longitude, obs.range_rate, obs.range);
-			quit=Print(string,print_mode);
+			quit=Print("",string,print_mode);
 			lastel=iel;
 		} //will continue until we have elevation 0 at the end of the pass
 
-		quit=Print("\n",'o');
+		quit=Print("","\n",'o');
 		daynum+=0.4;
 		rise=0.0;
 
@@ -2635,7 +2637,11 @@ void Illumination(const char *name, predict_orbital_elements_t *orbital_elements
 
 		datestring[11]=0;
 		sprintf(string,"%s\t %s    %4d    %6.2f%c\n",string1,datestring,1440-eclipses,sunpercent,37);
-		quit=Print(string,'s');
+
+		char title[MAX_NUM_CHARS] = {0};
+		sprintf(title, "%s (%d)", name, orbital_elements->satellite_number);
+
+		quit=Print(title,string,'s');
 
 		/* Allow a quick way out */
 
@@ -3205,8 +3211,8 @@ char argc, *argv[];
 			switch (key) {
 				case 'p':
 				case 'v':
-					Print("",0);
-					PrintVisible("");
+					Print("","",0);
+					PrintVisible("","");
 					indx=Select(num_sats, tle_db, orbital_elements);
 
 					if (indx!=-1) {
@@ -3217,13 +3223,13 @@ char argc, *argv[];
 					break;
 
 				case 'n':
-					Print("",0);
+					Print("","",0);
 					PredictSunMoon(PREDICT_MOON, observer);
 					MainMenu();
 					break;
 
 				case 'o':
-					Print("",0);
+					Print("","",0);
 					PredictSunMoon(PREDICT_SUN, observer);
 					MainMenu();
 					break;
@@ -3270,7 +3276,7 @@ char argc, *argv[];
 					indx=Select(num_sats, tle_db, orbital_elements);
 
 					if (indx!=-1) {
-						Print("",0);
+						Print("","",0);
 
 						Illumination(tle_db[indx].name, orbital_elements[indx]);
 					}
