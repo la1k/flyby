@@ -46,6 +46,15 @@ void show_help(const char *name, struct option long_options[], const char *short
 	}
 }
 
+#define OPT_ROTCTL_UPDATE_INTERVAL 200
+#define OPT_ROTCTL_PORT 201
+#define OPT_UPLINK_PORT 202
+#define OPT_UPLINK_VFO 203
+#define OPT_DOWNLINK_PORT 204
+#define OPT_DOWNLINK_VFO 205
+#define OPT_LONGITUDE 206
+#define OPT_LATITUDE 207
+
 int main (int argc, char **argv)
 {
 	static int verbose_flag = 0;
@@ -55,17 +64,17 @@ int main (int argc, char **argv)
 		{"tle-file",			required_argument,	0,	't'},
 		{"qth-file",			required_argument,	0,	'q'},
 		{"rotctl",			required_argument,	0,	'a'},
-		{"rotctl-update-interval",	required_argument,	0,	200},
-		{"rotctl-port",			required_argument,	0,	201},
+		{"rotctl-update-interval",	required_argument,	0,	OPT_ROTCTL_UPDATE_INTERVAL},
+		{"rotctl-port",			required_argument,	0,	OPT_ROTCTL_PORT},
 		{"horizon",			required_argument,	0,	'H'},
 		{"uplink",			required_argument,	0,	'U'},
-		{"uplink-port",			required_argument,	0,	202},
-		{"uplink-vfo",			required_argument,	0,	203},
+		{"uplink-port",			required_argument,	0,	OPT_UPLINK_PORT},
+		{"uplink-vfo",			required_argument,	0,	OPT_UPLINK_VFO},
 		{"downlink",			required_argument,	0,	'D'},
-		{"downlink-port",		required_argument,	0,	204},
-		{"downlink-vfo",		required_argument,	0,	205},
-		{"longitude",			required_argument,	0,	206},
-		{"latitude",			required_argument,	0,	207},
+		{"downlink-port",		required_argument,	0,	OPT_DOWNLINK_PORT},
+		{"downlink-vfo",		required_argument,	0,	OPT_DOWNLINK_VFO},
+		{"longitude",			required_argument,	0,	OPT_LONGITUDE},
+		{"latitude",			required_argument,	0,	OPT_LATITUDE},
 		{"help",			no_argument,		0,	'h'},
 		{0, 0, 0, 0}
 	};
@@ -121,27 +130,27 @@ int main (int argc, char **argv)
 				break;
 			case 'a': //rotctl
 				break;
-			case 200: //rotctl update interval
+			case OPT_ROTCTL_UPDATE_INTERVAL: //rotctl update interval
 				break;
-			case 201: //rotctl port
+			case OPT_ROTCTL_PORT: //rotctl port
 				break;
 			case 'H': //horizon
 				break;
 			case 'U': //uplink
 				break;
-			case 202: //uplink port
+			case OPT_UPLINK_PORT: //uplink port
 				break;
-			case 203: //uplink vfo
+			case OPT_UPLINK_VFO: //uplink vfo
 				break;
 			case 'D': //downlink
 				break;
-			case 204: //downlink port
+			case OPT_DOWNLINK_PORT: //downlink port
 				break;
-			case 205: //downlink vfo
+			case OPT_DOWNLINK_VFO: //downlink vfo
 				break;
-			case 206: //longitude
+			case OPT_LONGITUDE: //longitude
 				break;
-			case 207: //latitude
+			case OPT_LATITUDE: //latitude
 				break;
 			case 'h': //help
 				show_help(argv[0], long_options, short_options, variable_names, descriptions);
