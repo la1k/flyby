@@ -3,48 +3,6 @@
 #include <getopt.h>
 #include <string.h>
 
-#define MAX_NUM_CHARS 1024
-void show_help(const char *name, struct option long_options[], const char *short_options, char variable_names[][MAX_NUM_CHARS], char descriptions[][MAX_NUM_CHARS])
-{
-	printf("\nUsage:\n");
-	printf("%s [options]\n\n", name);
-	printf("Options:\n");
-	int index = 0;
-	while (true) {
-		//initialize display string
-		char display_string[2*MAX_NUM_CHARS] = {' '};
-		for (int i=0; i < 2*MAX_NUM_CHARS-1; i++) {
-			display_string[i] = ' ';
-		}
-
-		if (long_options[index].name == 0) {
-			break;
-		}
-
-		//display short option
-		if (short_options[index] != ':') {
-			display_string[1] = '-';
-			display_string[2] = short_options[index];
-			display_string[3] = ',';
-		}
-		
-		//display long option
-		memcpy(display_string + 5, "--", 2);
-		memcpy(display_string + 7, long_options[index].name, strlen(long_options[index].name));
-		if (long_options[index].has_arg != no_argument) {
-			display_string[7 + strlen(long_options[index].name)] = '=';
-			memcpy(display_string + 7 + strlen(long_options[index].name) + 1, variable_names[index], strlen(variable_names[index]));
-		}
-
-		//display long option description
-		int string_pos_longopt = 40;
-		memcpy(display_string + string_pos_longopt, descriptions[index], strlen(descriptions[index]));
-		display_string[string_pos_longopt + strlen(descriptions[index]) + 1] = '\0';
-		index++;
-		
-		printf("%s\n", display_string);
-	}
-}
 
 #define OPT_ROTCTL_UPDATE_INTERVAL 200
 #define OPT_ROTCTL_PORT 201
@@ -54,6 +12,82 @@ void show_help(const char *name, struct option long_options[], const char *short
 #define OPT_DOWNLINK_VFO 205
 #define OPT_LONGITUDE 206
 #define OPT_LATITUDE 207
+
+void show_help(const char *name, struct option long_options[], const char *short_options)
+{
+	printf("\nUsage:\n");
+	printf("%s [options]\n\n", name);
+	printf("Options:\n");
+	int index = 0;
+	while (true) {
+		if (long_options[index].name == 0) {
+			break;
+		}
+
+		//display short option
+		if (short_options[index] != ':') {
+			printf(" -%c,", short_options[index]);
+		} else {
+			printf("    ");
+		}
+		
+		//display long option
+		printf("--%s", long_options[index].name);
+		switch (long_options[index].val) {
+			case 'u':
+				printf("=FILE\t\tupdate TLE database with TLE file FILE");
+				break;
+			case 't':
+				printf("=FILE\t\t\tuse FILE as TLE file");
+				break;
+			case 'q':
+				printf("=FILE\t\t\tuse FILE as QTH file");
+				break;
+			case 'a':
+				printf("=SERVER_HOST\t\tconnect to a rotctl server and enable antenna tracking");
+				break;
+			case OPT_ROTCTL_UPDATE_INTERVAL:
+				printf("=SECONDS\tsend azimuth/elevation to rotctl at specified interval SECONDS instead of when they change");
+				break;
+			case OPT_ROTCTL_PORT:
+				printf("=SERVER_PORT\t\tspecify rotctl server port");
+				break;
+			case 'H':
+				printf("=HORIZON\t\t\tspecify horizon threshold for when flyby will start tracking an orbit");
+				break;
+			case 'U':
+				printf("=SERVER_HOST\t\tconnect to specified rigctl server for uplink frequency steering");
+				break;
+			case OPT_UPLINK_PORT:
+				printf("=SERVER_PORT\t\tspecify rigctl uplink port");
+				break;
+			case OPT_UPLINK_VFO:
+				printf("=VFO_NAME\t\tspecify rigctl uplink VFO");
+				break;
+			case 'D':
+				printf("=SERVER_HOST\t\tconnect to specified rigctl server for downlink frequency steering");
+				break;
+			case OPT_DOWNLINK_PORT:
+				printf("=SERVER_PORT\t\tspecify rigctl downlink port");
+				break;
+			case OPT_DOWNLINK_VFO:
+				printf("=VFO_NAME\t\tspecify rigctl downlink VFO");
+				break;
+			case OPT_LONGITUDE:
+				printf("=EAST/WEST\t\tspecify longitude display convention. Defaults to EAST");
+
+				break;
+			case OPT_LATITUDE:
+				printf("=NORTH/SOUTH\t\tspecify latitude display convention. Defaults to NORTH");
+				break;
+			case 'h':
+				printf("\t\t\t\tShow help");
+				break;
+		}
+		index++;
+		printf("\n");
+	}
+}
 
 int main (int argc, char **argv)
 {
@@ -79,40 +113,6 @@ int main (int argc, char **argv)
 		{0, 0, 0, 0}
 	};
 	char short_options[] = "utqa::HU::D::::h";
-	char descriptions[][MAX_NUM_CHARS] = {
-		"update TLE database",
-		"use TLE file",
-		"use QTH file",
-		"connect to a rotctl server and enable antenna tracking",
-		"send azimuth/elevation to rotctl at a specified interval instead of when they change",
-		"specify port of rotctl server",
-		"specify horizon above which flyby will start tracking an orbit",
-		"connect to a rigctl server for uplink frequency steering",
-		"specify rigctl uplink port",
-		"specify rigctl uplink VFO",
-		"connect to a rigctl server for downlink frequency steering",
-		"specify rigctl downlink port",
-		"specify rigctl downlink VFO",
-		"specify longitude display convention. Defaults to EAST",
-		"specify latitude display convention. Defaults to NORTH",
-		"show help"};
-	char variable_names[][MAX_NUM_CHARS] = {
-		"FILE",
-		"FILE",
-		"FILE",
-		"SERVER_HOST",
-		"SECONDS",
-		"SERVER_PORT",
-		"HORIZON",
-		"SERVER_HOST",
-		"SERVER_PORT",
-		"UPLINK_VFO_NAME",
-		"SERVER_HOST",
-		"SERVER_PORT",
-		"DOWNLINK_VFO_NAME",
-		"EAST/WEST",
-		"NORTH/SOUTH",
-		""};
 
 	while (1) {
 		int option_index = 0;
@@ -153,7 +153,7 @@ int main (int argc, char **argv)
 			case OPT_LATITUDE: //latitude
 				break;
 			case 'h': //help
-				show_help(argv[0], long_options, short_options, variable_names, descriptions);
+				show_help(argv[0], long_options, short_options);
 				break;
 		}
 	}
