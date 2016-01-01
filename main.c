@@ -8,14 +8,11 @@
 
 
 //values for command line options without shorthand
-#define FLYBY_OPT_ROTCTL_UPDATE_INTERVAL 200
 #define FLYBY_OPT_ROTCTL_PORT 201
 #define FLYBY_OPT_UPLINK_PORT 202
 #define FLYBY_OPT_UPLINK_VFO 203
 #define FLYBY_OPT_DOWNLINK_PORT 204
 #define FLYBY_OPT_DOWNLINK_VFO 205
-#define FLYBY_OPT_LONGITUDE 206
-#define FLYBY_OPT_LATITUDE 207
 
 /**
  * Returns true if specified option's value is a char within the short options char array (and has thus a short-hand version of the long option)
@@ -76,9 +73,6 @@ void show_help(const char *name, struct option long_options[], const char *short
 			case 'a':
 				printf("=SERVER_HOST\t\tconnect to a rotctl server with hostname SERVER_HOST and enable antenna tracking");
 				break;
-			case FLYBY_OPT_ROTCTL_UPDATE_INTERVAL:
-				printf("=SECONDS\tsend azimuth/elevation to rotctl at specified interval SECONDS instead of when they change. [NOT SUPPORTED]");
-				break;
 			case FLYBY_OPT_ROTCTL_PORT:
 				printf("=SERVER_PORT\t\tspecify rotctl server port");
 				break;
@@ -102,13 +96,6 @@ void show_help(const char *name, struct option long_options[], const char *short
 				break;
 			case FLYBY_OPT_DOWNLINK_VFO:
 				printf("=VFO_NAME\tspecify rigctl downlink VFO");
-				break;
-			case FLYBY_OPT_LONGITUDE:
-				printf("=EAST/WEST\t\tspecify longitude display convention. Defaults to EAST [NOT SUPPORTED]");
-
-				break;
-			case FLYBY_OPT_LATITUDE:
-				printf("=NORTH/SOUTH\t\tspecify latitude display convention. Defaults to NORTH [NOT SUPPORTED]");
 				break;
 			case 'h':
 				printf("\t\t\t\tShow help");
@@ -159,7 +146,6 @@ int main (int argc, char **argv)
 		{"tle-file",			required_argument,	0,	't'},
 		{"qth-file",			required_argument,	0,	'q'},
 		{"rotctl",			required_argument,	0,	'a'},
-		{"rotctl-update-interval",	required_argument,	0,	FLYBY_OPT_ROTCTL_UPDATE_INTERVAL},
 		{"rotctl-port",			required_argument,	0,	FLYBY_OPT_ROTCTL_PORT},
 		{"horizon",			required_argument,	0,	'H'},
 		{"rigctl-uplink",		required_argument,	0,	'U'},
@@ -168,8 +154,6 @@ int main (int argc, char **argv)
 		{"rigctl-downlink",		required_argument,	0,	'D'},
 		{"rigctl-downlink-port",	required_argument,	0,	FLYBY_OPT_DOWNLINK_PORT},
 		{"rigctl-downlink-vfo",		required_argument,	0,	FLYBY_OPT_DOWNLINK_VFO},
-		{"longitude",			required_argument,	0,	FLYBY_OPT_LONGITUDE},
-		{"latitude",			required_argument,	0,	FLYBY_OPT_LATITUDE},
 		{"help",			no_argument,		0,	'h'},
 		{0, 0, 0, 0}
 	};
@@ -192,13 +176,6 @@ int main (int argc, char **argv)
 			case 'a': //rotctl
 				use_rotctl = true;
 				strncpy(rotctl_host, optarg, MAX_NUM_CHARS);
-				break;
-			case FLYBY_OPT_ROTCTL_UPDATE_INTERVAL: //rotctl update interval
-				if ((atoi(optarg) > 1) || (atoi(optarg) <= 0)) {
-					printf("Update intervals larger than 1 not supported.\n");
-					exit(1);
-				}
-				rotctl_once_per_second = true;
 				break;
 			case FLYBY_OPT_ROTCTL_PORT: //rotctl port
 				strncpy(rotctl_port, optarg, MAX_NUM_CHARS);
@@ -225,12 +202,6 @@ int main (int argc, char **argv)
 				break;
 			case FLYBY_OPT_DOWNLINK_VFO: //downlink vfo
 				strncpy(rigctl_downlink_vfo, optarg, MAX_NUM_CHARS);
-				break;
-			case FLYBY_OPT_LONGITUDE: //longitude
-				printf("Longitude convention setting not supported.\n");
-				break;
-			case FLYBY_OPT_LATITUDE: //latitude
-				printf("Latitude convention setting not supported\n");
 				break;
 			case 'h': //help
 				show_help(argv[0], long_options, short_options);
