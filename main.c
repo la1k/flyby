@@ -4,6 +4,9 @@
 #include <string.h>
 #include <stdbool.h>
 
+#define MAX_NUM_CHARS 1024
+
+
 //values for command line options without shorthand
 #define FLYBY_OPT_ROTCTL_UPDATE_INTERVAL 200
 #define FLYBY_OPT_ROTCTL_PORT 201
@@ -15,12 +18,13 @@
 #define FLYBY_OPT_LATITUDE 207
 
 /**
- * Returns true if specified option's value is a char within the short options char array.
+ * Returns true if specified option's value is a char within the short options char array (and has thus a short-hand version of the long option)
+ *
  * \param short_options Array over short option chars
  * \param long_option Option struct to check
  * \returns True if option has a short option, false otherwise
  **/
-bool is_short_option(const char *short_options, struct option long_option) {
+bool has_short_option(const char *short_options, struct option long_option) {
 	const char *ptr = strchr(short_options, long_option.val);
 	if (ptr == NULL) {
 		return false;
@@ -30,6 +34,7 @@ bool is_short_option(const char *short_options, struct option long_option) {
 
 /**
  * Print flyby program usage to stdout. Option descriptions are set here.
+ *
  * \param name Name of program, use argv[0]
  * \param long_options List of long options used in getopts_long
  * \param short_options List of short options used in getopts_long
@@ -48,7 +53,7 @@ void show_help(const char *name, struct option long_options[], const char *short
 		}
 
 		//display short option
-		if (is_short_option(short_options, long_options[index])) {
+		if (has_short_option(short_options, long_options[index])) {
 			printf(" -%c,", long_options[index].val);
 		} else {
 			printf("    ");
@@ -72,7 +77,7 @@ void show_help(const char *name, struct option long_options[], const char *short
 				printf("=SERVER_HOST\t\tconnect to a rotctl server with hostname SERVER_HOST and enable antenna tracking");
 				break;
 			case FLYBY_OPT_ROTCTL_UPDATE_INTERVAL:
-				printf("=SECONDS\tsend azimuth/elevation to rotctl at specified interval SECONDS instead of when they change");
+				printf("=SECONDS\tsend azimuth/elevation to rotctl at specified interval SECONDS instead of when they change. [NOT SUPPORTED]");
 				break;
 			case FLYBY_OPT_ROTCTL_PORT:
 				printf("=SERVER_PORT\t\tspecify rotctl server port");
@@ -99,11 +104,11 @@ void show_help(const char *name, struct option long_options[], const char *short
 				printf("=VFO_NAME\tspecify rigctl downlink VFO");
 				break;
 			case FLYBY_OPT_LONGITUDE:
-				printf("=EAST/WEST\t\tspecify longitude display convention. Defaults to EAST");
+				printf("=EAST/WEST\t\tspecify longitude display convention. Defaults to EAST [NOT SUPPORTED]");
 
 				break;
 			case FLYBY_OPT_LATITUDE:
-				printf("=NORTH/SOUTH\t\tspecify latitude display convention. Defaults to NORTH");
+				printf("=NORTH/SOUTH\t\tspecify latitude display convention. Defaults to NORTH [NOT SUPPORTED]");
 				break;
 			case 'h':
 				printf("\t\t\t\tShow help");
@@ -114,8 +119,41 @@ void show_help(const char *name, struct option long_options[], const char *short
 	}
 }
 
+#define ROTCTL_DEFAULT_HOST "localhost"
+#define ROTCTL_DEFAULT_PORT "4533\0\0"
+#define RIGCTL_UPLINK_DEFAULT_HOST "localhost"
+#define RIGCTL_UPLINK_DEFAULT_PORT "4532\0\0"
+#define RIGCTL_DOWNLINK_DEFAULT_HOST "localhost"
+#define RIGCTL_DOWNLINK_DEFAULT_PORT "4532\0\0"
+
 int main (int argc, char **argv)
 {
+	//rotctl options
+	bool use_rotctl = false;
+	char rotctl_host[MAX_NUM_CHARS] = ROTCTL_DEFAULT_HOST;
+	char rotctl_port[MAX_NUM_CHARS] = ROTCTL_DEFAULT_PORT;
+	bool rotctl_once_per_second = false;
+	double tracking_horizon = 0;
+
+	//rigctl uplink options
+	bool use_rigctl_uplink = false;
+	char rigctl_uplink_host[MAX_NUM_CHARS] = RIGCTL_UPLINK_DEFAULT_HOST;
+	char rigctl_uplink_port[MAX_NUM_CHARS] = RIGCTL_UPLINK_DEFAULT_PORT;
+	char rigctl_uplink_vfo[MAX_NUM_CHARS] = {0};
+	
+	//rigctl downlink options
+	bool use_rigctl_downlink = false;
+	char rigctl_downlink_host[MAX_NUM_CHARS] = RIGCTL_DOWNLINK_DEFAULT_HOST;
+	char rigctl_downlink_port[MAX_NUM_CHARS] = RIGCTL_DOWNLINK_DEFAULT_HOST;
+	char rigctl_downlink_vfo[MAX_NUM_CHARS] = {0};
+
+	//files
+	char qth_config_filename[MAX_NUM_CHARS] = {0};
+	char **tle_filenames = NULL;
+	char **tle_update_filenames = NULL;
+
+
+	//command line options
 	struct option long_options[] = {
 		{"update-tle-db",		required_argument,	0,	'u'},
 		{"tle-file",			required_argument,	0,	't'},
@@ -149,30 +187,50 @@ int main (int argc, char **argv)
 			case 't': //tlefile
 				break;
 			case 'q': //qth
+				strncpy(qth_config_filename, optarg, MAX_NUM_CHARS);
 				break;
 			case 'a': //rotctl
+				use_rotctl = true;
+				strncpy(rotctl_host, optarg, MAX_NUM_CHARS);
 				break;
 			case FLYBY_OPT_ROTCTL_UPDATE_INTERVAL: //rotctl update interval
+				if ((atoi(optarg) > 1) || (atoi(optarg) <= 0)) {
+					printf("Update intervals larger than 1 not supported.\n");
+					exit(1);
+				}
+				rotctl_once_per_second = true;
 				break;
 			case FLYBY_OPT_ROTCTL_PORT: //rotctl port
+				strncpy(rotctl_port, optarg, MAX_NUM_CHARS);
 				break;
 			case 'H': //horizon
+				tracking_horizon = strtod(optarg, NULL);
 				break;
 			case 'U': //uplink
+				use_rigctl_uplink = true;
+				strncpy(rigctl_uplink_host, optarg, MAX_NUM_CHARS);
 				break;
 			case FLYBY_OPT_UPLINK_PORT: //uplink port
+				strncpy(rigctl_uplink_port, optarg, MAX_NUM_CHARS);
 				break;
 			case FLYBY_OPT_UPLINK_VFO: //uplink vfo
+				strncpy(rigctl_uplink_vfo, optarg, MAX_NUM_CHARS);
 				break;
 			case 'D': //downlink
+				use_rigctl_downlink = true;
+				strncpy(rigctl_downlink_host, optarg, MAX_NUM_CHARS);
 				break;
 			case FLYBY_OPT_DOWNLINK_PORT: //downlink port
+				strncpy(rigctl_downlink_port, optarg, MAX_NUM_CHARS);
 				break;
 			case FLYBY_OPT_DOWNLINK_VFO: //downlink vfo
+				strncpy(rigctl_downlink_vfo, optarg, MAX_NUM_CHARS);
 				break;
 			case FLYBY_OPT_LONGITUDE: //longitude
+				printf("Longitude convention setting not supported.\n");
 				break;
 			case FLYBY_OPT_LATITUDE: //latitude
+				printf("Latitude convention setting not supported\n");
 				break;
 			case 'h': //help
 				show_help(argv[0], long_options, short_options);
