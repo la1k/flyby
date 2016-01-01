@@ -5,14 +5,14 @@
 #include <stdbool.h>
 
 //values for command line options without shorthand
-#define OPT_ROTCTL_UPDATE_INTERVAL 200
-#define OPT_ROTCTL_PORT 201
-#define OPT_UPLINK_PORT 202
-#define OPT_UPLINK_VFO 203
-#define OPT_DOWNLINK_PORT 204
-#define OPT_DOWNLINK_VFO 205
-#define OPT_LONGITUDE 206
-#define OPT_LATITUDE 207
+#define FLYBY_OPT_ROTCTL_UPDATE_INTERVAL 200
+#define FLYBY_OPT_ROTCTL_PORT 201
+#define FLYBY_OPT_UPLINK_PORT 202
+#define FLYBY_OPT_UPLINK_VFO 203
+#define FLYBY_OPT_DOWNLINK_PORT 204
+#define FLYBY_OPT_DOWNLINK_VFO 205
+#define FLYBY_OPT_LONGITUDE 206
+#define FLYBY_OPT_LATITUDE 207
 
 /**
  * Returns true if specified option's value is a char within the short options char array.
@@ -71,10 +71,10 @@ void show_help(const char *name, struct option long_options[], const char *short
 			case 'a':
 				printf("=SERVER_HOST\t\tconnect to a rotctl server with hostname SERVER_HOST and enable antenna tracking");
 				break;
-			case OPT_ROTCTL_UPDATE_INTERVAL:
+			case FLYBY_OPT_ROTCTL_UPDATE_INTERVAL:
 				printf("=SECONDS\tsend azimuth/elevation to rotctl at specified interval SECONDS instead of when they change");
 				break;
-			case OPT_ROTCTL_PORT:
+			case FLYBY_OPT_ROTCTL_PORT:
 				printf("=SERVER_PORT\t\tspecify rotctl server port");
 				break;
 			case 'H':
@@ -83,26 +83,26 @@ void show_help(const char *name, struct option long_options[], const char *short
 			case 'U':
 				printf("=SERVER_HOST\tconnect to specified rigctl server for uplink frequency steering");
 				break;
-			case OPT_UPLINK_PORT:
+			case FLYBY_OPT_UPLINK_PORT:
 				printf("=SERVER_PORT\tspecify rigctl uplink port");
 				break;
-			case OPT_UPLINK_VFO:
+			case FLYBY_OPT_UPLINK_VFO:
 				printf("=VFO_NAME\tspecify rigctl uplink VFO");
 				break;
 			case 'D':
 				printf("=SERVER_HOST\tconnect to specified rigctl server for downlink frequency steering");
 				break;
-			case OPT_DOWNLINK_PORT:
+			case FLYBY_OPT_DOWNLINK_PORT:
 				printf("=SERVER_PORT\tspecify rigctl downlink port");
 				break;
-			case OPT_DOWNLINK_VFO:
+			case FLYBY_OPT_DOWNLINK_VFO:
 				printf("=VFO_NAME\tspecify rigctl downlink VFO");
 				break;
-			case OPT_LONGITUDE:
+			case FLYBY_OPT_LONGITUDE:
 				printf("=EAST/WEST\t\tspecify longitude display convention. Defaults to EAST");
 
 				break;
-			case OPT_LATITUDE:
+			case FLYBY_OPT_LATITUDE:
 				printf("=NORTH/SOUTH\t\tspecify latitude display convention. Defaults to NORTH");
 				break;
 			case 'h':
@@ -121,17 +121,17 @@ int main (int argc, char **argv)
 		{"tle-file",			required_argument,	0,	't'},
 		{"qth-file",			required_argument,	0,	'q'},
 		{"rotctl",			required_argument,	0,	'a'},
-		{"rotctl-update-interval",	required_argument,	0,	OPT_ROTCTL_UPDATE_INTERVAL},
-		{"rotctl-port",			required_argument,	0,	OPT_ROTCTL_PORT},
+		{"rotctl-update-interval",	required_argument,	0,	FLYBY_OPT_ROTCTL_UPDATE_INTERVAL},
+		{"rotctl-port",			required_argument,	0,	FLYBY_OPT_ROTCTL_PORT},
 		{"horizon",			required_argument,	0,	'H'},
 		{"rigctl-uplink",		required_argument,	0,	'U'},
-		{"rigctl-uplink-port",		required_argument,	0,	OPT_UPLINK_PORT},
-		{"rigctl-uplink-vfo",		required_argument,	0,	OPT_UPLINK_VFO},
+		{"rigctl-uplink-port",		required_argument,	0,	FLYBY_OPT_UPLINK_PORT},
+		{"rigctl-uplink-vfo",		required_argument,	0,	FLYBY_OPT_UPLINK_VFO},
 		{"rigctl-downlink",		required_argument,	0,	'D'},
-		{"rigctl-downlink-port",	required_argument,	0,	OPT_DOWNLINK_PORT},
-		{"rigctl-downlink-vfo",		required_argument,	0,	OPT_DOWNLINK_VFO},
-		{"longitude",			required_argument,	0,	OPT_LONGITUDE},
-		{"latitude",			required_argument,	0,	OPT_LATITUDE},
+		{"rigctl-downlink-port",	required_argument,	0,	FLYBY_OPT_DOWNLINK_PORT},
+		{"rigctl-downlink-vfo",		required_argument,	0,	FLYBY_OPT_DOWNLINK_VFO},
+		{"longitude",			required_argument,	0,	FLYBY_OPT_LONGITUDE},
+		{"latitude",			required_argument,	0,	FLYBY_OPT_LATITUDE},
 		{"help",			no_argument,		0,	'h'},
 		{0, 0, 0, 0}
 	};
@@ -152,27 +152,27 @@ int main (int argc, char **argv)
 				break;
 			case 'a': //rotctl
 				break;
-			case OPT_ROTCTL_UPDATE_INTERVAL: //rotctl update interval
+			case FLYBY_OPT_ROTCTL_UPDATE_INTERVAL: //rotctl update interval
 				break;
-			case OPT_ROTCTL_PORT: //rotctl port
+			case FLYBY_OPT_ROTCTL_PORT: //rotctl port
 				break;
 			case 'H': //horizon
 				break;
 			case 'U': //uplink
 				break;
-			case OPT_UPLINK_PORT: //uplink port
+			case FLYBY_OPT_UPLINK_PORT: //uplink port
 				break;
-			case OPT_UPLINK_VFO: //uplink vfo
+			case FLYBY_OPT_UPLINK_VFO: //uplink vfo
 				break;
 			case 'D': //downlink
 				break;
-			case OPT_DOWNLINK_PORT: //downlink port
+			case FLYBY_OPT_DOWNLINK_PORT: //downlink port
 				break;
-			case OPT_DOWNLINK_VFO: //downlink vfo
+			case FLYBY_OPT_DOWNLINK_VFO: //downlink vfo
 				break;
-			case OPT_LONGITUDE: //longitude
+			case FLYBY_OPT_LONGITUDE: //longitude
 				break;
-			case OPT_LATITUDE: //latitude
+			case FLYBY_OPT_LATITUDE: //latitude
 				break;
 			case 'h': //help
 				show_help(argv[0], long_options, short_options);
