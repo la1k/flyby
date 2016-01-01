@@ -99,9 +99,7 @@ void show_help(const char *name, struct option long_options[], const char *short
 
 int main (int argc, char **argv)
 {
-	static int verbose_flag = 0;
-	int c;
-	static struct option long_options[] = {
+	struct option long_options[] = {
 		{"update-tle-db",		required_argument,	0,	'u'},
 		{"tle-file",			required_argument,	0,	't'},
 		{"qth-file",			required_argument,	0,	'q'},
@@ -109,22 +107,21 @@ int main (int argc, char **argv)
 		{"rotctl-update-interval",	required_argument,	0,	OPT_ROTCTL_UPDATE_INTERVAL},
 		{"rotctl-port",			required_argument,	0,	OPT_ROTCTL_PORT},
 		{"horizon",			required_argument,	0,	'H'},
-		{"uplink",			required_argument,	0,	'U'},
-		{"uplink-port",			required_argument,	0,	OPT_UPLINK_PORT},
-		{"uplink-vfo",			required_argument,	0,	OPT_UPLINK_VFO},
-		{"downlink",			required_argument,	0,	'D'},
-		{"downlink-port",		required_argument,	0,	OPT_DOWNLINK_PORT},
-		{"downlink-vfo",		required_argument,	0,	OPT_DOWNLINK_VFO},
+		{"rigctl-uplink",		required_argument,	0,	'U'},
+		{"rigctl-uplink-port",		required_argument,	0,	OPT_UPLINK_PORT},
+		{"rigctl-uplink-vfo",		required_argument,	0,	OPT_UPLINK_VFO},
+		{"rigctl-downlink",		required_argument,	0,	'D'},
+		{"rigctl-downlink-port",	required_argument,	0,	OPT_DOWNLINK_PORT},
+		{"rigctl-downlink-vfo",		required_argument,	0,	OPT_DOWNLINK_VFO},
 		{"longitude",			required_argument,	0,	OPT_LONGITUDE},
 		{"latitude",			required_argument,	0,	OPT_LATITUDE},
 		{"help",			no_argument,		0,	'h'},
 		{0, 0, 0, 0}
 	};
 	char short_options[] = "u:t:q:a:H:U:D:h";
-
 	while (1) {
 		int option_index = 0;
-		c = getopt_long(argc, argv, short_options, long_options, &option_index);
+		int c = getopt_long(argc, argv, short_options, long_options, &option_index);
 
 		if (c == -1)
 			break;
