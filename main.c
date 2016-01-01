@@ -21,7 +21,8 @@
  * \param long_option Option struct to check
  * \returns True if option has a short option, false otherwise
  **/
-bool has_short_option(const char *short_options, struct option long_option) {
+bool has_short_option(const char *short_options, struct option long_option)
+{
 	const char *ptr = strchr(short_options, long_option.val);
 	if (ptr == NULL) {
 		return false;
@@ -113,6 +114,40 @@ void show_help(const char *name, struct option long_options[], const char *short
 #define RIGCTL_DOWNLINK_DEFAULT_HOST "localhost"
 #define RIGCTL_DOWNLINK_DEFAULT_PORT "4532\0\0"
 
+typedef struct {
+	int num_strings;
+	char **strings;
+} string_array_t;
+
+void string_array_add(string_array_t *string_array, const char *string)
+{
+	char **temp = realloc(string_array->strings, string_array->num_strings + 1);
+	if (temp != NULL) {
+		string_array->strings = temp;
+		string_array->strings[string_array->num_strings] = (char*)malloc(sizeof(char)*MAX_NUM_CHARS);
+		strncpy(string_array->strings[string_array->num_strings], string, MAX_NUM_CHARS);
+		string_array->num_strings++;
+	}
+}
+
+char* string_array_get(string_array_t *string_array, int index)
+{
+	if (index < string_array->num_strings) {
+		return string_array->strings[index];
+	}
+	return NULL;
+}
+
+void string_array_free(string_array_t *string_array)
+{
+	for (int i=0; i < string_array->num_strings; i++) {
+		free(string_array->strings[i]);
+	}
+	free(string_array->strings);
+	string_array->num_strings = 0;
+	string_array->strings = NULL;
+}
+
 int main (int argc, char **argv)
 {
 	//rotctl options
@@ -136,9 +171,15 @@ int main (int argc, char **argv)
 
 	//files
 	char qth_config_filename[MAX_NUM_CHARS] = {0};
-	char **tle_filenames = NULL;
-	char **tle_update_filenames = NULL;
 
+	string_array_t tle_cmd_filenames = {0}; //TLE files specified in the command line input
+	string_array_t tle_config_filenames = {0}; //TLE files specified in config dirs
+	string_array_t tle_update_filenames = {0}; //TLE files to be used to update the TLE databases
+
+	//<- TODO: Here, system-wide/user config file filenames should be read using XDG_HOME_CONFIG and friends
+	//flyby_config_tle_filenames
+	//flyby_config_qth_filename
+	//flyby_config_db_filename
 
 	//command line options
 	struct option long_options[] = {
@@ -158,6 +199,7 @@ int main (int argc, char **argv)
 		{0, 0, 0, 0}
 	};
 	char short_options[] = "u:t:q:a:H:U:D:h";
+	char **temp;
 	while (1) {
 		int option_index = 0;
 		int c = getopt_long(argc, argv, short_options, long_options, &option_index);
@@ -167,8 +209,10 @@ int main (int argc, char **argv)
 
 		switch (c) {
 			case 'u': //updatefile
+				string_array_add(&tle_update_filenames, optarg);
 				break;
 			case 't': //tlefile
+				string_array_add(&tle_cmd_filenames, optarg);
 				break;
 			case 'q': //qth
 				strncpy(qth_config_filename, optarg, MAX_NUM_CHARS);
@@ -207,5 +251,9 @@ int main (int argc, char **argv)
 				show_help(argv[0], long_options, short_options);
 				break;
 		}
+	}
+
+	for (int i=0; i < tle_cmd_filenames.num_strings; i++) {
+		printf("%s\n", tle_cmd_filenames.strings[i]);
 	}
 }
