@@ -13,6 +13,14 @@
 #define OPT_LONGITUDE 206
 #define OPT_LATITUDE 207
 
+bool is_short_option(const char *short_options, struct option long_option) {
+	const char *ptr = strchr(short_options, long_option.val);
+	if (ptr == NULL) {
+		return false;
+	}
+	return true;
+}
+
 void show_help(const char *name, struct option long_options[], const char *short_options)
 {
 	printf("\nUsage:\n");
@@ -25,8 +33,8 @@ void show_help(const char *name, struct option long_options[], const char *short
 		}
 
 		//display short option
-		if (short_options[index] != ':') {
-			printf(" -%c,", short_options[index]);
+		if (is_short_option(short_options, long_options[index])) {
+			printf(" -%c,", long_options[index].val);
 		} else {
 			printf("    ");
 		}
@@ -38,13 +46,13 @@ void show_help(const char *name, struct option long_options[], const char *short
 				printf("=FILE\t\tupdate TLE database with TLE file FILE");
 				break;
 			case 't':
-				printf("=FILE\t\t\tuse FILE as TLE file");
+				printf("=FILE\t\t\tuse FILE as TLE database file");
 				break;
 			case 'q':
-				printf("=FILE\t\t\tuse FILE as QTH file");
+				printf("=FILE\t\t\tuse FILE as QTH config file");
 				break;
 			case 'a':
-				printf("=SERVER_HOST\t\tconnect to a rotctl server and enable antenna tracking");
+				printf("=SERVER_HOST\t\tconnect to a rotctl server with hostname SERVER_HOST and enable antenna tracking");
 				break;
 			case OPT_ROTCTL_UPDATE_INTERVAL:
 				printf("=SECONDS\tsend azimuth/elevation to rotctl at specified interval SECONDS instead of when they change");
@@ -53,7 +61,7 @@ void show_help(const char *name, struct option long_options[], const char *short
 				printf("=SERVER_PORT\t\tspecify rotctl server port");
 				break;
 			case 'H':
-				printf("=HORIZON\t\t\tspecify horizon threshold for when flyby will start tracking an orbit");
+				printf("=HORIZON\t\t\tspecify horizon threshold for when %s will start tracking an orbit", name);
 				break;
 			case 'U':
 				printf("=SERVER_HOST\t\tconnect to specified rigctl server for uplink frequency steering");
@@ -112,7 +120,7 @@ int main (int argc, char **argv)
 		{"help",			no_argument,		0,	'h'},
 		{0, 0, 0, 0}
 	};
-	char short_options[] = "utqa::HU::D::::h";
+	char short_options[] = "u:t:q:a:H:U:D:h";
 
 	while (1) {
 		int option_index = 0;
@@ -125,6 +133,7 @@ int main (int argc, char **argv)
 			case 'u': //updatefile
 				break;
 			case 't': //tlefile
+				printf("tle file\n");
 				break;
 			case 'q': //qth
 				break;
