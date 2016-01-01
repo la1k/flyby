@@ -2,8 +2,9 @@
 #include <stdlib.h>
 #include <getopt.h>
 #include <string.h>
+#include <stdbool.h>
 
-
+//values for command line options without shorthand
 #define OPT_ROTCTL_UPDATE_INTERVAL 200
 #define OPT_ROTCTL_PORT 201
 #define OPT_UPLINK_PORT 202
@@ -13,6 +14,12 @@
 #define OPT_LONGITUDE 206
 #define OPT_LATITUDE 207
 
+/**
+ * Returns true if specified option's value is a char within the short options char array.
+ * \param short_options Array over short option chars
+ * \param long_option Option struct to check
+ * \returns True if option has a short option, false otherwise
+ **/
 bool is_short_option(const char *short_options, struct option long_option) {
 	const char *ptr = strchr(short_options, long_option.val);
 	if (ptr == NULL) {
@@ -21,11 +28,19 @@ bool is_short_option(const char *short_options, struct option long_option) {
 	return true;
 }
 
+/**
+ * Print flyby program usage to stdout. Option descriptions are set here.
+ * \param name Name of program, use argv[0]
+ * \param long_options List of long options used in getopts_long
+ * \param short_options List of short options used in getopts_long
+ **/
 void show_help(const char *name, struct option long_options[], const char *short_options)
 {
+	//display initial description
 	printf("\nUsage:\n");
 	printf("%s [options]\n\n", name);
 	printf("Options:\n");
+
 	int index = 0;
 	while (true) {
 		if (long_options[index].name == 0) {
@@ -41,15 +56,17 @@ void show_help(const char *name, struct option long_options[], const char *short
 		
 		//display long option
 		printf("--%s", long_options[index].name);
+
+		//display usage information
 		switch (long_options[index].val) {
 			case 'u':
 				printf("=FILE\t\tupdate TLE database with TLE file FILE");
 				break;
 			case 't':
-				printf("=FILE\t\t\tuse FILE as TLE database file");
+				printf("=FILE\t\t\tuse FILE as TLE database file. Overrides user and system TLE database files");
 				break;
 			case 'q':
-				printf("=FILE\t\t\tuse FILE as QTH config file");
+				printf("=FILE\t\t\tuse FILE as QTH config file. Overrides existing QTH config file");
 				break;
 			case 'a':
 				printf("=SERVER_HOST\t\tconnect to a rotctl server with hostname SERVER_HOST and enable antenna tracking");
@@ -64,22 +81,22 @@ void show_help(const char *name, struct option long_options[], const char *short
 				printf("=HORIZON\t\t\tspecify horizon threshold for when %s will start tracking an orbit", name);
 				break;
 			case 'U':
-				printf("=SERVER_HOST\t\tconnect to specified rigctl server for uplink frequency steering");
+				printf("=SERVER_HOST\tconnect to specified rigctl server for uplink frequency steering");
 				break;
 			case OPT_UPLINK_PORT:
-				printf("=SERVER_PORT\t\tspecify rigctl uplink port");
+				printf("=SERVER_PORT\tspecify rigctl uplink port");
 				break;
 			case OPT_UPLINK_VFO:
-				printf("=VFO_NAME\t\tspecify rigctl uplink VFO");
+				printf("=VFO_NAME\tspecify rigctl uplink VFO");
 				break;
 			case 'D':
-				printf("=SERVER_HOST\t\tconnect to specified rigctl server for downlink frequency steering");
+				printf("=SERVER_HOST\tconnect to specified rigctl server for downlink frequency steering");
 				break;
 			case OPT_DOWNLINK_PORT:
-				printf("=SERVER_PORT\t\tspecify rigctl downlink port");
+				printf("=SERVER_PORT\tspecify rigctl downlink port");
 				break;
 			case OPT_DOWNLINK_VFO:
-				printf("=VFO_NAME\t\tspecify rigctl downlink VFO");
+				printf("=VFO_NAME\tspecify rigctl downlink VFO");
 				break;
 			case OPT_LONGITUDE:
 				printf("=EAST/WEST\t\tspecify longitude display convention. Defaults to EAST");
@@ -130,7 +147,6 @@ int main (int argc, char **argv)
 			case 'u': //updatefile
 				break;
 			case 't': //tlefile
-				printf("tle file\n");
 				break;
 			case 'q': //qth
 				break;
