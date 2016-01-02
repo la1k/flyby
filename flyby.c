@@ -512,7 +512,7 @@ char ReadDataFiles(int *num_sats, struct sat_db_entry *sat_db, struct tle_db_ent
 
 				/* Get satellite number, so that the satellite database can be parsed. */
 
-				const char *tle[2] = {sats[x].line1, sats[x].line2};
+				char *tle[2] = {sats[x].line1, sats[x].line2};
 				predict_orbital_elements_t *temp_elements = predict_parse_tle(tle);
 				sats[x].catnum = temp_elements->satellite_number;
 				predict_destroy_orbital_elements(temp_elements);
@@ -794,7 +794,7 @@ int AutoUpdate(char *string, int num_sats, struct tle_db_entry *tle_db, predict_
 					strncpy(line2,str2,75);
 					kepcount++;
 
-					const char *tle[2] = {line1, line2};
+					char *tle[2] = {line1, line2};
 					predict_orbital_elements_t *orbital_elements = predict_parse_tle(tle);
 
 					/* Scan for object number in datafile to see
@@ -3011,7 +3011,7 @@ char argc, *argv[];
 	if (x>1)  /* TLE file was loaded successfully */ {
 		orbital_elements = (predict_orbital_elements_t**)malloc(sizeof(predict_orbital_elements_t*)*num_sats);
 		for (int i=0; i < num_sats; i++){
-			const char *tle[2] = {tle_db[i].line1, tle_db[i].line2};
+			char *tle[2] = {tle_db[i].line1, tle_db[i].line2};
 			orbital_elements[i] = predict_parse_tle(tle);
 		}
 
