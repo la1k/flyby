@@ -3,12 +3,11 @@
 #include <getopt.h>
 #include <string.h>
 #include <stdbool.h>
+#include "flyby_defines.h"
+#include "flyby_hamlib.h"
 
-#define MAX_NUM_CHARS 1024
-
-
-//values for command line options without shorthand
-#define FLYBY_OPT_ROTCTL_PORT 201
+//longopt value identificators for command line options without shorthand
+#define FLYBY_OPT_ROTCTLD_PORT 201
 #define FLYBY_OPT_UPLINK_PORT 202
 #define FLYBY_OPT_UPLINK_VFO 203
 #define FLYBY_OPT_DOWNLINK_PORT 204
@@ -22,13 +21,6 @@
  * \param short_options List of short options used in getopts_long
  **/
 void show_help(const char *program_name, struct option long_options[], const char *short_options);
-
-#define ROTCTL_DEFAULT_HOST "localhost"
-#define ROTCTL_DEFAULT_PORT "4533\0\0"
-#define RIGCTL_UPLINK_DEFAULT_HOST "localhost"
-#define RIGCTL_UPLINK_DEFAULT_PORT "4532\0\0"
-#define RIGCTL_DOWNLINK_DEFAULT_HOST "localhost"
-#define RIGCTL_DOWNLINK_DEFAULT_PORT "4532\0\0"
 
 /**
  * Dynamic size string array for the situations where we don't know in advance the number of filenames.
@@ -77,22 +69,22 @@ int main (int argc, char **argv)
 {
 	//rotctl options
 	bool use_rotctl = false;
-	char rotctl_host[MAX_NUM_CHARS] = ROTCTL_DEFAULT_HOST;
-	char rotctl_port[MAX_NUM_CHARS] = ROTCTL_DEFAULT_PORT;
-	bool rotctl_once_per_second = false;
+	char rotctld_host[MAX_NUM_CHARS] = ROTCTLD_DEFAULT_HOST;
+	char rotctld_port[MAX_NUM_CHARS] = ROTCTLD_DEFAULT_PORT;
+	bool rotctld_once_per_second = false;
 	double tracking_horizon = 0;
 
 	//rigctl uplink options
-	bool use_rigctl_uplink = false;
-	char rigctl_uplink_host[MAX_NUM_CHARS] = RIGCTL_UPLINK_DEFAULT_HOST;
-	char rigctl_uplink_port[MAX_NUM_CHARS] = RIGCTL_UPLINK_DEFAULT_PORT;
-	char rigctl_uplink_vfo[MAX_NUM_CHARS] = {0};
+	bool use_rigctld_uplink = false;
+	char rigctld_uplink_host[MAX_NUM_CHARS] = RIGCTLD_UPLINK_DEFAULT_HOST;
+	char rigctld_uplink_port[MAX_NUM_CHARS] = RIGCTLD_UPLINK_DEFAULT_PORT;
+	char rigctld_uplink_vfo[MAX_NUM_CHARS] = {0};
 	
 	//rigctl downlink options
-	bool use_rigctl_downlink = false;
-	char rigctl_downlink_host[MAX_NUM_CHARS] = RIGCTL_DOWNLINK_DEFAULT_HOST;
-	char rigctl_downlink_port[MAX_NUM_CHARS] = RIGCTL_DOWNLINK_DEFAULT_HOST;
-	char rigctl_downlink_vfo[MAX_NUM_CHARS] = {0};
+	bool use_rigctld_downlink = false;
+	char rigctld_downlink_host[MAX_NUM_CHARS] = RIGCTLD_DOWNLINK_DEFAULT_HOST;
+	char rigctld_downlink_port[MAX_NUM_CHARS] = RIGCTLD_DOWNLINK_DEFAULT_HOST;
+	char rigctld_downlink_vfo[MAX_NUM_CHARS] = {0};
 
 	//files
 	char qth_config_filename[MAX_NUM_CHARS] = {0};
@@ -112,14 +104,14 @@ int main (int argc, char **argv)
 		{"tle-file",			required_argument,	0,	't'},
 		{"qth-file",			required_argument,	0,	'q'},
 		{"rotctl",			required_argument,	0,	'a'},
-		{"rotctl-port",			required_argument,	0,	FLYBY_OPT_ROTCTL_PORT},
+		{"rotctld-port",		required_argument,	0,	FLYBY_OPT_ROTCTLD_PORT},
 		{"horizon",			required_argument,	0,	'H'},
-		{"rigctl-uplink",		required_argument,	0,	'U'},
-		{"rigctl-uplink-port",		required_argument,	0,	FLYBY_OPT_UPLINK_PORT},
-		{"rigctl-uplink-vfo",		required_argument,	0,	FLYBY_OPT_UPLINK_VFO},
-		{"rigctl-downlink",		required_argument,	0,	'D'},
-		{"rigctl-downlink-port",	required_argument,	0,	FLYBY_OPT_DOWNLINK_PORT},
-		{"rigctl-downlink-vfo",		required_argument,	0,	FLYBY_OPT_DOWNLINK_VFO},
+		{"rigctld-uplink",		required_argument,	0,	'U'},
+		{"rigctld-uplink-port",		required_argument,	0,	FLYBY_OPT_UPLINK_PORT},
+		{"rigctld-uplink-vfo",		required_argument,	0,	FLYBY_OPT_UPLINK_VFO},
+		{"rigctld-downlink",		required_argument,	0,	'D'},
+		{"rigctld-downlink-port",	required_argument,	0,	FLYBY_OPT_DOWNLINK_PORT},
+		{"rigctld-downlink-vfo",	required_argument,	0,	FLYBY_OPT_DOWNLINK_VFO},
 		{"help",			no_argument,		0,	'h'},
 		{0, 0, 0, 0}
 	};
@@ -143,33 +135,33 @@ int main (int argc, char **argv)
 				break;
 			case 'a': //rotctl
 				use_rotctl = true;
-				strncpy(rotctl_host, optarg, MAX_NUM_CHARS);
+				strncpy(rotctld_host, optarg, MAX_NUM_CHARS);
 				break;
-			case FLYBY_OPT_ROTCTL_PORT: //rotctl port
-				strncpy(rotctl_port, optarg, MAX_NUM_CHARS);
+			case FLYBY_OPT_ROTCTLD_PORT: //rotctl port
+				strncpy(rotctld_port, optarg, MAX_NUM_CHARS);
 				break;
 			case 'H': //horizon
 				tracking_horizon = strtod(optarg, NULL);
 				break;
 			case 'U': //uplink
-				use_rigctl_uplink = true;
-				strncpy(rigctl_uplink_host, optarg, MAX_NUM_CHARS);
+				use_rigctld_uplink = true;
+				strncpy(rigctld_uplink_host, optarg, MAX_NUM_CHARS);
 				break;
 			case FLYBY_OPT_UPLINK_PORT: //uplink port
-				strncpy(rigctl_uplink_port, optarg, MAX_NUM_CHARS);
+				strncpy(rigctld_uplink_port, optarg, MAX_NUM_CHARS);
 				break;
 			case FLYBY_OPT_UPLINK_VFO: //uplink vfo
-				strncpy(rigctl_uplink_vfo, optarg, MAX_NUM_CHARS);
+				strncpy(rigctld_uplink_vfo, optarg, MAX_NUM_CHARS);
 				break;
 			case 'D': //downlink
-				use_rigctl_downlink = true;
-				strncpy(rigctl_downlink_host, optarg, MAX_NUM_CHARS);
+				use_rigctld_downlink = true;
+				strncpy(rigctld_downlink_host, optarg, MAX_NUM_CHARS);
 				break;
 			case FLYBY_OPT_DOWNLINK_PORT: //downlink port
-				strncpy(rigctl_downlink_port, optarg, MAX_NUM_CHARS);
+				strncpy(rigctld_downlink_port, optarg, MAX_NUM_CHARS);
 				break;
 			case FLYBY_OPT_DOWNLINK_VFO: //downlink vfo
-				strncpy(rigctl_downlink_vfo, optarg, MAX_NUM_CHARS);
+				strncpy(rigctld_downlink_vfo, optarg, MAX_NUM_CHARS);
 				break;
 			case 'h': //help
 				show_help(argv[0], long_options, short_options);
@@ -179,6 +171,22 @@ int main (int argc, char **argv)
 
 	for (int i=0; i < tle_cmd_filenames.num_strings; i++) {
 		printf("%s\n", tle_cmd_filenames.strings[i]);
+	}
+
+	//connect to rotctld
+	rotctld_info_t rotctld = {0};
+	if (use_rotctl) {
+		rotctld_connect(rotctld_host, rotctld_port, &rotctld);
+	}
+
+	//connect to rigctld
+	rigctld_info_t uplink = {0};
+	if (use_rigctld_uplink) {
+		rigctld_connect(rigctld_uplink_host, rigctld_uplink_port, rigctld_uplink_vfo, &uplink);
+	}
+	rigctld_info_t downlink = {0};
+	if (use_rigctld_downlink) {
+		rigctld_connect(rigctld_downlink_host, rigctld_downlink_port, rigctld_downlink_vfo, &downlink);
 	}
 }
 
@@ -233,31 +241,31 @@ void show_help(const char *name, struct option long_options[], const char *short
 				printf("=FILE\t\t\tuse FILE as QTH config file. Overrides existing QTH config file");
 				break;
 			case 'a':
-				printf("=SERVER_HOST\t\tconnect to a rotctl server with hostname SERVER_HOST and enable antenna tracking");
+				printf("=SERVER_HOST\t\tconnect to a rotctld server with hostname SERVER_HOST and enable antenna tracking");
 				break;
-			case FLYBY_OPT_ROTCTL_PORT:
-				printf("=SERVER_PORT\t\tspecify rotctl server port");
+			case FLYBY_OPT_ROTCTLD_PORT:
+				printf("=SERVER_PORT\t\tspecify rotctld server port");
 				break;
 			case 'H':
 				printf("=HORIZON\t\t\tspecify horizon threshold for when %s will start tracking an orbit", name);
 				break;
 			case 'U':
-				printf("=SERVER_HOST\tconnect to specified rigctl server for uplink frequency steering");
+				printf("=SERVER_HOST\tconnect to specified rigctld server for uplink frequency steering");
 				break;
 			case FLYBY_OPT_UPLINK_PORT:
-				printf("=SERVER_PORT\tspecify rigctl uplink port");
+				printf("=SERVER_PORT\tspecify rigctld uplink port");
 				break;
 			case FLYBY_OPT_UPLINK_VFO:
-				printf("=VFO_NAME\tspecify rigctl uplink VFO");
+				printf("=VFO_NAME\tspecify rigctld uplink VFO");
 				break;
 			case 'D':
-				printf("=SERVER_HOST\tconnect to specified rigctl server for downlink frequency steering");
+				printf("=SERVER_HOST\tconnect to specified rigctld server for downlink frequency steering");
 				break;
 			case FLYBY_OPT_DOWNLINK_PORT:
-				printf("=SERVER_PORT\tspecify rigctl downlink port");
+				printf("=SERVER_PORT\tspecify rigctld downlink port");
 				break;
 			case FLYBY_OPT_DOWNLINK_VFO:
-				printf("=VFO_NAME\tspecify rigctl downlink VFO");
+				printf("=VFO_NAME\tspecify rigctld downlink VFO");
 				break;
 			case 'h':
 				printf("\t\t\t\tShow help");
