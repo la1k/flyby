@@ -65,6 +65,10 @@ int string_array_size(string_array_t *string_array);
  **/
 void string_array_free(string_array_t *string_array);
 
+//int flyby_read_tle_files(string_array_t tle_files, struct tle_db *ret_db);
+//int flyby_read_qth_file(const char *qth_file, predict_observer_t *ret_observer);
+//int flyby_read_transponder_db(const char *db_file, struct transponder_db *ret_db);
+
 int main (int argc, char **argv)
 {
 	//rotctl options
@@ -86,17 +90,18 @@ int main (int argc, char **argv)
 	char rigctld_downlink_port[MAX_NUM_CHARS] = RIGCTLD_DOWNLINK_DEFAULT_HOST;
 	char rigctld_downlink_vfo[MAX_NUM_CHARS] = {0};
 
-	//files
-	char qth_config_filename[MAX_NUM_CHARS] = {0};
+	//config files
+	char qth_filename[MAX_NUM_CHARS] = {0};
+	char db_filename[MAX_NUM_CHARS] = {0};
+	char tle_filename[MAX_NUM_CHARS] = {0};
 
-	string_array_t tle_cmd_filenames = {0}; //TLE files specified in the command line input
-	string_array_t tle_config_filenames = {0}; //TLE files specified in config dirs
+	//read config filenames
+	char *env = getenv("HOME");
+	snprintf(qth_filename, MAX_NUM_CHARS, "%s/.flyby/flyby.qth", env);
+	snprintf(db_filename, MAX_NUM_CHARS, "%s/.flyby/flyby.db", env);
+	snprintf(tle_filename, MAX_NUM_CHARS, "%s/.flyby/flyby.tle", env);
+
 	string_array_t tle_update_filenames = {0}; //TLE files to be used to update the TLE databases
-
-	//<- TODO: Here, system-wide/user config file filenames should be read using XDG_HOME_CONFIG and friends
-	//flyby_config_tle_filenames
-	//flyby_config_qth_filename
-	//flyby_config_db_filename
 
 	//command line options
 	struct option long_options[] = {
@@ -128,10 +133,10 @@ int main (int argc, char **argv)
 				string_array_add(&tle_update_filenames, optarg);
 				break;
 			case 't': //tlefile
-				string_array_add(&tle_cmd_filenames, optarg);
+				strncpy(tle_filename, optarg, MAX_NUM_CHARS);
 				break;
 			case 'q': //qth
-				strncpy(qth_config_filename, optarg, MAX_NUM_CHARS);
+				strncpy(qth_filename, optarg, MAX_NUM_CHARS);
 				break;
 			case 'a': //rotctl
 				use_rotctl = true;
@@ -169,8 +174,14 @@ int main (int argc, char **argv)
 		}
 	}
 
-	for (int i=0; i < tle_cmd_filenames.num_strings; i++) {
-		printf("%s\n", tle_cmd_filenames.strings[i]);
+	//use tle update files to update the TLE database
+	int num_update_files = string_array_size(&tle_update_filenames);
+	if (num_update_files > 0) {
+		for (int i=0; i < num_update_files; i++) {
+			printf("Updating TLE database using %s.\n", string_array_get(&tle_update_filenames, i));
+			//FIXME: AutoUpdate(something something, string_array_get(&tle_update_filenames, i));
+		}
+		return 0;
 	}
 
 	//connect to rotctld
@@ -232,10 +243,10 @@ void show_help(const char *name, struct option long_options[], const char *short
 		//display usage information
 		switch (long_options[index].val) {
 			case 'u':
-				printf("=FILE\t\tupdate TLE database with TLE file FILE. Multiple files can be specified using the same option multiple times (e.g. -u file1 -u file2 ...)");
+				printf("=FILE\t\tupdate TLE database with TLE file FILE. Multiple files can be specified using the same option multiple times (e.g. -u file1 -u file2 ...). %s will exit afterwards", name);
 				break;
 			case 't':
-				printf("=FILE\t\t\tuse FILE as TLE database file. Overrides user and system TLE database files. Multiple files can be specified using the same option multiple times (e.g. -t file1 -t file2 ...)");
+				printf("=FILE\t\t\tuse FILE as TLE database file. Overrides user and system TLE database files. Only a single file is supported.");
 				break;
 			case 'q':
 				printf("=FILE\t\t\tuse FILE as QTH config file. Overrides existing QTH config file");
@@ -247,7 +258,7 @@ void show_help(const char *name, struct option long_options[], const char *short
 				printf("=SERVER_PORT\t\tspecify rotctld server port");
 				break;
 			case 'H':
-				printf("=HORIZON\t\t\tspecify horizon threshold for when %s will start tracking an orbit", name);
+				printf("=HORIZON\t\t\tspecify elevation threshold for when %s will start tracking an orbit", name);
 				break;
 			case 'U':
 				printf("=SERVER_HOST\tconnect to specified rigctld server for uplink frequency steering");
@@ -287,7 +298,6 @@ int string_array_add(string_array_t *string_array, const char *string)
 
 	//extend size to twice the current size
 	if (string_array->num_strings+1 > string_array->available_size) {
-		printf("%d\n", string_array->available_size);
 		char **temp = realloc(string_array->strings, sizeof(char*)*string_array->available_size*2);
 		if (temp == NULL) {
 			return -1;
