@@ -7,6 +7,9 @@
 #include "flyby_hamlib.h"
 #include <predict/predict.h>
 
+//FIXME
+#include "flyby.c"
+
 //longopt value identificators for command line options without shorthand
 #define FLYBY_OPT_ROTCTLD_PORT 201
 #define FLYBY_OPT_UPLINK_PORT 202
@@ -205,6 +208,12 @@ int main(int argc, char **argv)
 		rigctld_connect(rigctld_downlink_host, rigctld_downlink_port, rigctld_downlink_vfo, &downlink);
 	}
 
+	//display flyby UI
+	predict_observer_t *observer = predict_create_observer("", 0, 0, 0);
+	struct tle_db tle_db = {0};
+	struct transponder_db transponder_db = {0};
+	bool is_new_user = false;
+	RunFlybyUI(is_new_user, observer, &tle_db, &transponder_db);
 
 	//disconnect from rigctl and rotctl
 	rigctld_disconnect(&downlink);
