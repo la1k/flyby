@@ -1,52 +1,64 @@
-typedef struct {
-	int socket;
-} rotctl_info_t;
+#include "flyby_defines.h"
+#include <stdbool.h>
+
+#define ROTCTL_DEFAULT_HOST "localhost"
+#define ROTCTL_DEFAULT_PORT "4533\0\0"
+#define RIGCTL_UPLINK_DEFAULT_HOST "localhost"
+#define RIGCTL_UPLINK_DEFAULT_PORT "4532\0\0"
+#define RIGCTL_DOWNLINK_DEFAULT_HOST "localhost"
+#define RIGCTL_DOWNLINK_DEFAULT_PORT "4532\0\0"
 
 typedef struct {
+	bool connected;
+	int socket;
+} rotctld_info_t;
+
+typedef struct {
+	bool connected;
 	int socket;
 	char vfo_name[MAX_NUM_CHARS];
-} rigctl_info_t;
+} rigctld_info_t;
 
 /**
- * Connect to rotctl. 
+ * Connect to rotctld. 
  *
  * \param hostname Hostname/IP address
  * \param port Port
- * \param ret_info Returned rotctl connection instance
+ * \param ret_info Returned rotctld connection instance
  **/
-void rotctl_connect(const char *hostname, const char *port, rotctl_info_t *ret_info);
+void rotctld_connect(const char *hostname, const char *port, rotctld_info_t *ret_info);
 
 /**
- * Send track data to rotctl. 
+ * Send track data to rotctld. 
  *
- * \param info rotctl connection instance
+ * \param info rotctld connection instance
  * \param azimuth Azimuth in degrees
  * \param elevation Elevation in degrees
  **/
-void rotctl_track(const rotctl_info_t *info, double azimuth, double elevation);
+void rotctld_track(const rotctld_info_t *info, double azimuth, double elevation);
 
 /**
- * Connect to rigctl. 
+ * Connect to rigctld. 
  *
  * \param hostname Hostname/IP address
  * \param port Port
  * \param vfo_name VFO name
- * \param ret_info Returned rigctl connection instance
+ * \param ret_info Returned rigctld connection instance
  **/
-void rigctl_connect(const char *hostname, const char *port, const char *vfo_name, rigctl_info_t *ret_info);
+void rigctld_connect(const char *hostname, const char *port, const char *vfo_name, rigctld_info_t *ret_info);
 
 /*
- * Send frequency data to rigctl. 
+ * Send frequency data to rigctld. 
  *
- * \param info rigctl connection instance
+ * \param info rigctld connection instance
  * \param frequency Frequency in MHz
  **/
-void rigctl_set_frequency(const rigctl_info_t *info, double frequency);
+void rigctld_set_frequency(const rigctld_info_t *info, double frequency);
 
 /**
- * Read frequency from rigctl. 
+ * Read frequency from rigctld. 
  *
- * \param info rigctl connection instance
+ * \param info rigctld connection instance
  * \return Current frequency in MHz
  **/
-double rigctl_read_frequency(const rigctl_info_t *info);
+double rigctld_read_frequency(const rigctld_info_t *info);

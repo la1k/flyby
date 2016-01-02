@@ -1,0 +1,1 @@
+#define MAX_NUM_CHARS 1024
