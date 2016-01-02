@@ -27,8 +27,7 @@ include_directories(${CMAKE_BINARY_DIR})
 add_executable(flyby flyby.c)
 install(TARGETS flyby RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 
-target_link_libraries(flyby pthread)
 target_link_libraries(flyby m)
 target_link_libraries(flyby ncurses)
 target_link_libraries(flyby menu)
-
+target_link_libraries(flyby predict)
