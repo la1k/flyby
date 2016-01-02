@@ -24,7 +24,7 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall")
 
 configure_file(config.h.in config.h @ONLY)
 include_directories(${CMAKE_BINARY_DIR})
-add_executable(flyby flyby.c)
+add_executable(flyby flyby.c flyby_hamlib.c flyby_main.c)
 install(TARGETS flyby RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 
 target_link_libraries(flyby m)

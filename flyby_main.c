@@ -66,45 +66,13 @@ int string_array_size(string_array_t *string_array);
  **/
 void string_array_free(string_array_t *string_array);
 
-struct tle_db_entry {
-	long satellite_number;
-	char name[MAX_NUM_CHARS];
-	char line_1[MAX_NUM_CHARS];
-	char line_2[MAX_NUM_CHARS];
-};
-
-struct tle_db {
-	int num_tles;
-	struct tle_db_entry *tles;
-};
-
-#define MAX_NUM_TRANSPONDERS 10
-struct sat_db_entry {
-	long satellite_number;
-	bool squint;
-	double alat;
-	double alon;
-	int num_transponders;
-	char transponder_name[MAX_NUM_TRANSPONDERS][MAX_NUM_CHARS];
-	double uplink_start[MAX_NUM_TRANSPONDERS];
-	double uplink_end[MAX_NUM_TRANSPONDERS];
-	double downlink_start[MAX_NUM_TRANSPONDERS];
-	double downlink_end[MAX_NUM_TRANSPONDERS];
-	unsigned char dayofweek[MAX_NUM_TRANSPONDERS];
-	int phase_start[MAX_NUM_TRANSPONDERS];
-	int phase_end[MAX_NUM_TRANSPONDERS];
-};
-
-struct transponder_db {
-	int num_sats;
-	struct sat_db_entry *sats;
-};
-
+/*
 int flyby_read_tle_file(const char *tle_file, struct tle_db *ret_db);
 int flyby_read_qth_file(const char *qth_file, predict_observer_t *ret_observer);
 int flyby_read_transponder_db(const char *db_file, struct transponder_db *ret_db);
+*/
 
-int main (int argc, char **argv)
+int main(int argc, char **argv)
 {
 	//rotctl options
 	bool use_rotctl = false;
@@ -215,7 +183,7 @@ int main (int argc, char **argv)
 	if (num_update_files > 0) {
 		for (int i=0; i < num_update_files; i++) {
 			printf("Updating TLE database using %s.\n", string_array_get(&tle_update_filenames, i));
-			//FIXME: AutoUpdate(something something, string_array_get(&tle_update_filenames, i));
+			// FIXME: AutoUpdate(temp, num_sats, tle_db, NULL);
 		}
 		string_array_free(&tle_update_filenames);
 		return 0;
@@ -380,7 +348,7 @@ int string_array_size(string_array_t *string_array)
 	return string_array->num_strings;
 }
 
-
+/*
 int flyby_read_tle_file(const char *tle_file, struct tle_db *ret_db)
 {
 }
@@ -391,4 +359,4 @@ int flyby_read_qth_file(const char *qth_file, predict_observer_t *ret_observer);
 
 int flyby_read_transponder_db(const char *db_file, struct transponder_db *ret_db);
 {
-}
+}*/

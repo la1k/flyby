@@ -8,9 +8,7 @@
 #include <netinet/in.h>
 #include <netdb.h>
 
-void bailout(const char *msg)
-{
-}
+void bailout(const char *msg);
 
 int sock_readline(int sockd, char *message, size_t bufsize)
 {
