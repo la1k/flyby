@@ -69,11 +69,33 @@ int string_array_size(string_array_t *string_array);
  **/
 void string_array_free(string_array_t *string_array);
 
-/*
+/**
+ * Read TLE database from file.
+ *
+ * \param tle_file TLE database file
+ * \param ret_db Returned TLE database
+ * \return 0 on success, -1 otherwise
+ **/
 int flyby_read_tle_file(const char *tle_file, struct tle_db *ret_db);
+
+/**
+ * Read QTH information from file.
+ *
+ * \param qth_file .qth file
+ * \param ret_observer Returned observer structure
+ * \return 0 on success, -1 otherwise
+ **/
 int flyby_read_qth_file(const char *qth_file, predict_observer_t *ret_observer);
-int flyby_read_transponder_db(const char *db_file, struct transponder_db *ret_db);
-*/
+
+/**
+ * Read transponder database from file.
+ *
+ * \param db_file .db file
+ * \param tle_db Previously read TLE database, for which fields from transponder database are matched
+ * \param ret_db Returned transponder database
+ * \return 0 on success, -1 otherwise
+ **/
+int flyby_read_transponder_db(const char *db_file, const struct tle_db *tle_db, struct transponder_db *ret_db);
 
 int main(int argc, char **argv)
 {
@@ -208,11 +230,15 @@ int main(int argc, char **argv)
 		rigctld_connect(rigctld_downlink_host, rigctld_downlink_port, rigctld_downlink_vfo, &downlink);
 	}
 
-	//display flyby UI
+	//read flyby config files
 	predict_observer_t *observer = predict_create_observer("", 0, 0, 0);
 	struct tle_db tle_db = {0};
 	struct transponder_db transponder_db = {0};
-	bool is_new_user = false;
+
+	flyby_read_tle_file(tle_filename, &tle_db);
+	bool is_new_user = flyby_read_qth_file(qth_filename, observer) == -1;
+	flyby_read_transponder_db(db_filename, &tle_db, &transponder_db);
+
 	RunFlybyUI(is_new_user, observer, &tle_db, &transponder_db);
 
 	//disconnect from rigctl and rotctl
@@ -357,15 +383,220 @@ int string_array_size(string_array_t *string_array)
 	return string_array->num_strings;
 }
 
-/*
+int flyby_read_qth_file(const char *qthfile, predict_observer_t *observer)
+{
+	char callsign[MAX_NUM_CHARS];
+	FILE *fd=fopen(qthfile,"r");
+	if (fd!=NULL) {
+		fgets(callsign,16,fd);
+		callsign[strlen(callsign)-1]=0;
+
+		double latitude, longitude;
+		int altitude;
+		fscanf(fd,"%lf", &latitude);
+		fscanf(fd,"%lf", &longitude);
+		fscanf(fd,"%d", &altitude);
+		fclose(fd);
+
+		strncpy(observer->name, callsign, 16);
+		observer->latitude = latitude*M_PI/180.0;
+		observer->longitude = -longitude*M_PI/180.0; //convert from N/W to N/E
+		observer->altitude = altitude*M_PI/180.0;
+	} else {
+		return -1;
+	}
+	return 0;
+}
+
 int flyby_read_tle_file(const char *tle_file, struct tle_db *ret_db)
 {
+	ret_db->num_tles = 0;
+	int x = 0, y = 0;
+	char name[80], line1[80], line2[80];
+
+	struct tle_db_entry *sats;
+	if (ret_db->tles == NULL) {
+		sats = (struct tle_db_entry*)malloc(sizeof(struct tle_db_entry)*MAX_NUM_SATS);
+		ret_db->tles = sats;
+	} else {
+		sats = ret_db->tles;
+	}
+
+	FILE *fd=fopen(tle_file,"r");
+	if (fd!=NULL) {
+		strncpy(ret_db->filename, tle_file, MAX_NUM_CHARS);
+
+		while (x<MAX_NUM_SATS && feof(fd)==0) {
+			/* Initialize variables */
+
+			name[0]=0;
+			line1[0]=0;
+			line2[0]=0;
+
+			/* Read element set */
+
+			fgets(name,75,fd);
+			fgets(line1,75,fd);
+			fgets(line2,75,fd);
+
+			if (KepCheck(line1,line2) && (feof(fd)==0)) {
+				/* We found a valid TLE! */
+
+				/* Some TLE sources left justify the sat
+				   name in a 24-byte field that is padded
+				   with blanks.  The following lines cut
+				   out the blanks as well as the line feed
+				   character read by the fgets() function. */
+
+				y=strlen(name);
+
+				while (name[y]==32 || name[y]==0 || name[y]==10 || name[y]==13 || y==0) {
+					name[y]=0;
+					y--;
+				}
+
+				/* Copy TLE data into the sat data structure */
+
+				strncpy(sats[x].name,name,24);
+				strncpy(sats[x].line1,line1,69);
+				strncpy(sats[x].line2,line2,69);
+
+				/* Get satellite number, so that the satellite database can be parsed. */
+
+				char *tle[2] = {sats[x].line1, sats[x].line2};
+				predict_orbital_elements_t *temp_elements = predict_parse_tle(tle);
+				sats[x].satellite_number = temp_elements->satellite_number;
+				predict_destroy_orbital_elements(temp_elements);
+
+				x++;
+
+			}
+		}
+
+		fclose(fd);
+		ret_db->num_tles=x;
+	} else {
+		return -1;
+	}
+	return 0;
 }
 
-int flyby_read_qth_file(const char *qth_file, predict_observer_t *ret_observer);
+int flyby_read_transponder_db(const char *dbfile, const struct tle_db *tle_db, struct transponder_db *ret_db)
 {
-}
+	/* Load satellite database file */
+	ret_db->num_sats = tle_db->num_tles;
+	if (ret_db->sats == NULL) {
+		ret_db->sats = (struct sat_db_entry*)malloc(sizeof(struct sat_db_entry)*MAX_NUM_SATS);
+	}
 
-int flyby_read_transponder_db(const char *db_file, struct transponder_db *ret_db);
-{
-}*/
+	//initialize
+	for (int i=0; i < MAX_NUM_SATS; i++) {
+		struct sat_db_entry temp = {0};
+		ret_db->sats[i] = temp;
+	}
+
+	FILE *fd=fopen(dbfile,"r");
+	long catnum;
+	unsigned char dayofweek;
+	char line1[80];
+	int y = 0, match = 0, transponders = 0, entry = 0;
+	if (fd!=NULL) {
+		fgets(line1,40,fd);
+
+		while (strncmp(line1,"end",3)!=0 && line1[0]!='\n' && feof(fd)==0) {
+			/* The first line is the satellite
+			   name which is ignored here. */
+
+			fgets(line1,40,fd);
+			sscanf(line1,"%ld",&catnum);
+
+			/* Search for match */
+
+			for (y=0, match=0; y<tle_db->num_tles && match==0; y++) {
+				if (catnum==tle_db->tles[y].satellite_number)
+					match=1;
+			}
+
+			if (match) {
+				transponders=0;
+				entry=0;
+				y--;
+			}
+
+			fgets(line1,40,fd);
+
+			if (match) {
+				if (strncmp(line1,"No",2)!=0) {
+					sscanf(line1,"%lf, %lf",&(ret_db->sats[y].alat), &(ret_db->sats[y].alon));
+					ret_db->sats[y].squintflag=1;
+				}
+
+				else
+					ret_db->sats[y].squintflag=0;
+			}
+
+			fgets(line1,80,fd);
+
+			while (strncmp(line1,"end",3)!=0 && line1[0]!='\n' && feof(fd)==0) {
+				if (entry<MAX_NUM_TRANSPONDERS) {
+					if (match) {
+						if (strncmp(line1,"No",2)!=0) {
+							line1[strlen(line1)-1]=0;
+							strcpy(ret_db->sats[y].transponder_name[entry],line1);
+						} else
+							ret_db->sats[y].transponder_name[entry][0]=0;
+					}
+
+					fgets(line1,40,fd);
+
+					if (match)
+						sscanf(line1,"%lf, %lf", &(ret_db->sats[y].uplink_start[entry]), &(ret_db->sats[y].uplink_end[entry]));
+
+					fgets(line1,40,fd);
+
+					if (match)
+						sscanf(line1,"%lf, %lf", &(ret_db->sats[y].downlink_start[entry]), &(ret_db->sats[y].downlink_end[entry]));
+
+					fgets(line1,40,fd);
+
+					if (match) {
+						if (strncmp(line1,"No",2)!=0) {
+							dayofweek=(unsigned char)atoi(line1);
+							ret_db->sats[y].dayofweek[entry]=dayofweek;
+						} else
+							ret_db->sats[y].dayofweek[entry]=0;
+					}
+
+					fgets(line1,40,fd);
+
+					if (match) {
+						if (strncmp(line1,"No",2)!=0)
+							sscanf(line1,"%d, %d",&(ret_db->sats[y].phase_start[entry]), &(ret_db->sats[y].phase_end[entry]));
+						else {
+							ret_db->sats[y].phase_start[entry]=0;
+							ret_db->sats[y].phase_end[entry]=0;
+						}
+
+						if (ret_db->sats[y].uplink_start[entry]!=0.0 || ret_db->sats[y].downlink_start[entry]!=0.0)
+							transponders++;
+
+						entry++;
+					}
+				}
+				fgets(line1,80,fd);
+			}
+			fgets(line1,80,fd);
+
+			if (match)
+				ret_db->sats[y].num_transponders=transponders;
+
+			entry=0;
+			transponders=0;
+		}
+
+		fclose(fd);
+	} else {
+		return -1;
+	}
+	return 0;
+}
