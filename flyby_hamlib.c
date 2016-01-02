@@ -193,3 +193,19 @@ double rigctld_read_frequency(const rigctld_info_t *info)
 
 	return freq;
 }
+
+void rigctld_disconnect(rigctld_info_t *info) {
+	if (info->connected) {
+		send(info->socket, "q\n", 2, 0);
+		close(info->socket);
+		info->connected = false;
+	}
+}
+
+void rotctld_disconnect(rotctld_info_t *info) {
+	if (info->connected) {
+		send(info->socket, "q\n", 2, 0);
+		close(info->socket);
+		info->connected = false;
+	}
+}

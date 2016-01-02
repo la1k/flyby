@@ -29,6 +29,12 @@ typedef struct {
 void rotctld_connect(const char *hostname, const char *port, rotctld_info_t *ret_info);
 
 /**
+ * Disconnect from rotctld.
+ * \param info Rigctld connection instance
+ **/
+void rotctld_disconnect(rotctld_info_t *info);
+
+/**
  * Send track data to rotctld. 
  *
  * \param info rotctld connection instance
@@ -46,6 +52,12 @@ void rotctld_track(const rotctld_info_t *info, double azimuth, double elevation)
  * \param ret_info Returned rigctld connection instance
  **/
 void rigctld_connect(const char *hostname, const char *port, const char *vfo_name, rigctld_info_t *ret_info);
+
+/**
+ * Disconnect from rigctld.
+ * \param info Rigctld connection instance
+ **/
+void rigctld_disconnect(rigctld_info_t *info);
 
 /*
  * Send frequency data to rigctld. 

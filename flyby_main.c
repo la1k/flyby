@@ -96,6 +96,7 @@ int main (int argc, char **argv)
 	char tle_filename[MAX_NUM_CHARS] = {0};
 
 	//read config filenames
+	//TODO: To be replaced with config paths from XDG-standard, issue #1.
 	char *env = getenv("HOME");
 	snprintf(qth_filename, MAX_NUM_CHARS, "%s/.flyby/flyby.qth", env);
 	snprintf(db_filename, MAX_NUM_CHARS, "%s/.flyby/flyby.db", env);
@@ -181,6 +182,7 @@ int main (int argc, char **argv)
 			printf("Updating TLE database using %s.\n", string_array_get(&tle_update_filenames, i));
 			//FIXME: AutoUpdate(something something, string_array_get(&tle_update_filenames, i));
 		}
+		string_array_free(&tle_update_filenames);
 		return 0;
 	}
 
@@ -199,6 +201,12 @@ int main (int argc, char **argv)
 	if (use_rigctld_downlink) {
 		rigctld_connect(rigctld_downlink_host, rigctld_downlink_port, rigctld_downlink_vfo, &downlink);
 	}
+
+
+	//disconnect from rigctl and rotctl
+	rigctld_disconnect(&downlink);
+	rigctld_disconnect(&uplink);
+	rotctld_disconnect(&rotctld);
 }
 
 /**
