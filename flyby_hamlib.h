@@ -1,3 +1,6 @@
+#ifndef FLYBY_HAMLIB_H_DEFINED
+#define FLYBY_HAMLIB_H_DEFINED
+
 #include "flyby_defines.h"
 #include <stdbool.h>
 
@@ -76,3 +79,5 @@ void rigctld_set_frequency(const rigctld_info_t *info, double frequency);
  * \return Current frequency in MHz
  **/
 double rigctld_read_frequency(const rigctld_info_t *info);
+
+#endif

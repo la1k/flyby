@@ -6,9 +6,8 @@
 #include "flyby_defines.h"
 #include "flyby_hamlib.h"
 #include <predict/predict.h>
-
-//FIXME
-#include "flyby_ui.c"
+#include <math.h>
+#include "flyby_ui.h"
 
 //longopt value identificators for command line options without shorthand
 #define FLYBY_OPT_ROTCTLD_PORT 201
