@@ -348,7 +348,7 @@ void SaveTLE(struct tle_db *tle_db)
 	fclose(fd);
 }
 
-int AutoUpdate(char *string, struct tle_db *_tle_db, predict_orbital_elements_t **orbits)
+int AutoUpdate(const char *string, struct tle_db *_tle_db, predict_orbital_elements_t **orbits)
 {
 	int num_sats = _tle_db->num_tles;
 	struct tle_db_entry *tle_db = _tle_db->tles;
@@ -430,13 +430,15 @@ int AutoUpdate(char *string, struct tle_db *_tle_db, predict_orbital_elements_t 
 					/* Scan for object number in datafile to see
 					   if this is something we're interested in */
 
-					for (i=0; (i<num_sats && orbits[i]->satellite_number!=orbital_elements->satellite_number); i++);
+					for (i=0; (i<num_sats && tle_db[i].satellite_number!=orbital_elements->satellite_number); i++);
 
 					if (i!=MAX_NUM_SATS) {
 						/* We found it!  Check to see if it's more
 						   recent than the data we already have. */
+						char *db_tle[2] = {tle_db[i].line1, tle_db[i].line2};
+						predict_orbital_elements_t *orbital_elements_db = predict_parse_tle(db_tle);
 
-						database_epoch = orbits[i]->epoch_year*1000.0 + orbits[i]->epoch_day;
+						database_epoch = orbital_elements_db->epoch_year*1000.0 + orbital_elements_db->epoch_day;
 						tle_epoch = orbital_elements->epoch_year*1000.0 + orbital_elements->epoch_day;
 
 						/* Update only if TLE epoch >= epoch in data file
@@ -475,9 +477,11 @@ int AutoUpdate(char *string, struct tle_db *_tle_db, predict_orbital_elements_t 
 							strncpy(tle_db[i].line2,line2,69);
 
 							/* Update orbit struct */
-
-							predict_destroy_orbital_elements(orbits[i]);
-							orbits[i] = orbital_elements;
+							if (orbits != NULL) {
+								predict_destroy_orbital_elements(orbits[i]);
+								orbits[i] = orbital_elements;
+							}
+							predict_destroy_orbital_elements(orbital_elements_db);
 						} else {
 							predict_destroy_orbital_elements(orbital_elements);
 						}

@@ -217,7 +217,7 @@ int main(int argc, char **argv)
 	if (num_update_files > 0) {
 		for (int i=0; i < num_update_files; i++) {
 			printf("Updating TLE database using %s.\n", string_array_get(&tle_update_filenames, i));
-			// FIXME: AutoUpdate(temp, num_sats, tle_db, NULL);
+			AutoUpdate(string_array_get(&tle_update_filenames, i), &tle_db, NULL);
 		}
 		string_array_free(&tle_update_filenames);
 		return 0;

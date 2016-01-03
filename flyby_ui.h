@@ -104,7 +104,7 @@ char KepCheck(char *line1, char *line2);
  * \param orbits Parsed orbital elements to be updated along with updated TLE database. Can be set to NULL
  * \return 0 on success, -1 otherwise
  **/
-int AutoUpdate(char *string, struct tle_db *tle_db, predict_orbital_elements_t **orbits);
+int AutoUpdate(const char *string, struct tle_db *tle_db, predict_orbital_elements_t **orbits);
 
 /**
  * Displays a menu for selecting a satellite based on their names and international designators.
