@@ -537,8 +537,9 @@ int AutoUpdate(char *string, struct tle_db *_tle_db, predict_orbital_elements_t 
 	return (saveflag ? 0 : -1);
 }
 
-int Select(int num_orbits, struct tle_db_entry *tle_db, predict_orbital_elements_t **orbital_elements_array)
+int Select(struct tle_db *tle_db, predict_orbital_elements_t **orbital_elements_array)
 {
+	int num_orbits = tle_db->num_tles;
 	ITEM **my_items;
 	int c;
 	MENU *my_menu;
@@ -578,7 +579,7 @@ int Select(int num_orbits, struct tle_db_entry *tle_db, predict_orbital_elements
 		n_choices = num_orbits;
 		my_items = (ITEM **)calloc(n_choices + 1, sizeof(ITEM *));
 		for(i = 0; i < n_choices; ++i) {
-			my_items[i] = new_item(tle_db[i].name, orbital_elements_array[i]->designator);
+			my_items[i] = new_item(tle_db->tles[i].name, orbital_elements_array[i]->designator);
 		}
 		my_items[n_choices] = NULL; //terminate the menu list
 
@@ -626,7 +627,7 @@ int Select(int num_orbits, struct tle_db_entry *tle_db, predict_orbital_elements
 		}
 
 		for (i=0, j=0; i<num_orbits; i++)
-			if (strcmp(item_name(current_item(my_menu)),tle_db[i].name)==0)
+			if (strcmp(item_name(current_item(my_menu)),tle_db->tles[i].name)==0)
 				j = i;
 
 		/* Unpost and free all the memory taken up */
@@ -1203,13 +1204,13 @@ bool KbEdit(int x, int y, int num_characters, char *output_string)
 	return filled;
 }
 
-void ShowOrbitData(int num_orbits, struct tle_db_entry *tle_db, predict_orbital_elements_t **orbital_elements_array)
+void ShowOrbitData(struct tle_db *tle_db, predict_orbital_elements_t **orbital_elements_array)
 {
 	int c, x, namelength, age;
 	double an_period, no_period, sma, c1, e2, satepoch;
 	char days[5];
 
-	x=Select(num_orbits, tle_db, orbital_elements_array);
+	x=Select(tle_db, orbital_elements_array);
 
 	while (x!=-1) {
 		predict_orbital_elements_t *orbital_elements = orbital_elements_array[x];
@@ -1229,7 +1230,7 @@ void ShowOrbitData(int num_orbits, struct tle_db_entry *tle_db, predict_orbital_
 			else
 				strcpy(days,"days");
 
-			namelength=strlen(tle_db[x].name);
+			namelength=strlen(tle_db->tles[x].name);
 
 			printw("\n");
 
@@ -1244,7 +1245,7 @@ void ShowOrbitData(int num_orbits, struct tle_db_entry *tle_db, predict_orbital_
 			mvprintw(1,0,"  flyby Orbital Data                                                            ");
 			mvprintw(2,0,"                                                                                ");
 
-			mvprintw(1,25,"(%ld) %s", orbital_elements->satellite_number, tle_db[x].name);
+			mvprintw(1,25,"(%ld) %s", orbital_elements->satellite_number, tle_db->tles[x].name);
 
 			attrset(COLOR_PAIR(4)|A_BOLD);
 			mvprintw( 4, 4,"Data Issued        : ");
@@ -1290,7 +1291,7 @@ void ShowOrbitData(int num_orbits, struct tle_db_entry *tle_db, predict_orbital_
 			refresh();
 			AnyKey();
 		}
-		x=Select(num_orbits, tle_db, orbital_elements_array);
+		x=Select(tle_db, orbital_elements_array);
 	 };
 }
 
@@ -1365,8 +1366,12 @@ void QthEdit(const char *qthfile, predict_observer_t *qth)
 	}
 }
 
-void SingleTrack(bool once_per_second, double horizon, int orbit_ind, int num_orbits, predict_orbital_elements_t **orbital_elements_array, predict_observer_t *qth, struct sat_db_entry *sat_db_entries, struct tle_db_entry *tle_db_entries, rotctld_info_t *rotctld, rigctld_info_t *downlink_info, rigctld_info_t *uplink_info)
+void SingleTrack(bool once_per_second, double horizon, int orbit_ind, predict_orbital_elements_t **orbital_elements_array, predict_observer_t *qth, struct transponder_db *sat_db, struct tle_db *tle_db, rotctld_info_t *rotctld, rigctld_info_t *downlink_info, rigctld_info_t *uplink_info)
 {
+	int num_orbits = tle_db->num_tles;
+	struct sat_db_entry *sat_db_entries = sat_db->sats;
+	struct tle_db_entry *tle_db_entries = tle_db->tles;
+
 	int     ans;
 	bool	downlink_update=true, uplink_update=true, readfreq=false;
 
@@ -1869,8 +1874,9 @@ double scrk, scel;
 		return (COLOR_PAIR(2)|A_REVERSE); /* reverse */
 }
 
-void MultiTrack(predict_observer_t *qth, int num_orbits, predict_orbital_elements_t **orbital_elements_array, struct tle_db_entry *tle_db, char multitype, char disttype)
+void MultiTrack(predict_observer_t *qth, predict_orbital_elements_t **orbital_elements_array, struct tle_db *tle_db, char multitype, char disttype)
 {
+	int num_orbits = tle_db->num_tles;
 	int 		*satindex = (int*)malloc(sizeof(int)*num_orbits);
 
 	double		*aos = (double*)malloc(sizeof(double)*num_orbits);
@@ -2020,12 +2026,12 @@ void MultiTrack(predict_observer_t *qth, int num_orbits, predict_orbital_element
 
 			//set string to display
 			char disp_string[MAX_NUM_CHARS];
-			sprintf(disp_string, " %-13s%5.1f  %5.1f %8s  %6.0f %6.0f %c %c %12s ", Abbreviate(tle_db[i].name, 12), obs.azimuth*180.0/M_PI, obs.elevation*180.0/M_PI, abs_pos_string, disp_altitude, disp_range, sunstat, rangestat, aos_los);
+			sprintf(disp_string, " %-13s%5.1f  %5.1f %8s  %6.0f %6.0f %c %c %12s ", Abbreviate(tle_db->tles[i].name, 12), obs.azimuth*180.0/M_PI, obs.elevation*180.0/M_PI, abs_pos_string, disp_altitude, disp_range, sunstat, rangestat, aos_los);
 
 			//overwrite everything if orbit was decayed
 			if (orbit->decayed) {
 				attributes[i] = COLOR_PAIR(2);
-				sprintf(disp_string, " %-10s   ----------------       Decayed        ---------------", Abbreviate(tle_db[i].name,9));
+				sprintf(disp_string, " %-10s   ----------------       Decayed        ---------------", Abbreviate(tle_db->tles[i].name,9));
 			}
 
 			memcpy(string_lines[i], disp_string, sizeof(char)*MAX_NUM_CHARS);
@@ -2446,7 +2452,7 @@ void RunFlybyUI(bool new_user, const char *qthfile, predict_observer_t *observer
 			case 'v':
 				Print("","",0);
 				PrintVisible("","");
-				indx=Select(num_sats, tle_db->tles, orbital_elements_array);
+				indx=Select(tle_db, orbital_elements_array);
 
 				if (indx!=-1) {
 					Predict(tle_db->tles[indx].name, orbital_elements_array[indx], observer, key);
@@ -2473,7 +2479,7 @@ void RunFlybyUI(bool new_user, const char *qthfile, predict_observer_t *observer
 				break;
 
 			case 'd':
-				ShowOrbitData(num_sats, tle_db->tles, orbital_elements_array);
+				ShowOrbitData(tle_db, orbital_elements_array);
 				MainMenu();
 				break;
 
@@ -2484,10 +2490,10 @@ void RunFlybyUI(bool new_user, const char *qthfile, predict_observer_t *observer
 
 			case 't':
 			case 'T':
-				indx=Select(num_sats, tle_db->tles, orbital_elements_array);
+				indx=Select(tle_db, orbital_elements_array);
 
 				if (indx!=-1) {
-					SingleTrack(once_per_second, horizon, indx, num_sats, orbital_elements_array, observer, sat_db->sats, tle_db->tles, rotctld, downlink, uplink);
+					SingleTrack(once_per_second, horizon, indx, orbital_elements_array, observer, sat_db, tle_db, rotctld, downlink, uplink);
 				}
 
 				MainMenu();
@@ -2496,7 +2502,7 @@ void RunFlybyUI(bool new_user, const char *qthfile, predict_observer_t *observer
 			case 'm':
 			case 'l':
 
-				MultiTrack(observer, num_sats, orbital_elements_array, tle_db->tles, key, 'k');
+				MultiTrack(observer, orbital_elements_array, tle_db, key, 'k');
 				MainMenu();
 				break;
 
@@ -2506,7 +2512,7 @@ void RunFlybyUI(bool new_user, const char *qthfile, predict_observer_t *observer
 				break;
 
 			case 's':
-				indx=Select(num_sats, tle_db->tles, orbital_elements_array);
+				indx=Select(tle_db, orbital_elements_array);
 
 				if (indx!=-1) {
 					Print("","",0);

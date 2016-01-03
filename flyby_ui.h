@@ -109,11 +109,10 @@ int AutoUpdate(char *string, struct tle_db *tle_db, predict_orbital_elements_t *
 /**
  * Displays a menu for selecting a satellite based on their names and international designators.
  *
- * \param num_orbits Number of orbits
  * \param tle_db TLE database
  * \param orbital_elements_array Orbital elements list
  **/
-int Select(int num_orbits, struct tle_db_entry *tle_db, predict_orbital_elements_t **orbital_elements_array);
+int Select(struct tle_db *tle_db, predict_orbital_elements_t **orbital_elements_array);
 
 /* This function buffers and displays orbital predictions.
  *
@@ -169,7 +168,7 @@ void PredictSunMoon(enum celestial_object object, predict_observer_t *qth);
  * \param tle_db TLE database
  * \param orbital_elements_array List of rbital elements
  **/
-void ShowOrbitData(int num_orbits, struct tle_db_entry *tle_db, predict_orbital_elements_t **orbital_elements_array);
+void ShowOrbitData(struct tle_db *tle_db, predict_orbital_elements_t **orbital_elements_array);
 
 /**
  * Edit QTH information and save to file.
@@ -183,7 +182,7 @@ void QthEdit(const char *qthfile, predict_observer_t *qth);
  * until 'Q' or ESC is pressed.
  *
  * \param once_per_second Whether tracking information should be sent to rotctld once per second or when azimuth,elevation changes
- * \param orizon Tracking horizon in degrees
+ * \param horizon Tracking horizon in degrees
  * \param orbit_ind Which orbit is first displayed on screen (can be changed within SingleTrack using left/right buttons)
  * \param orbital_elements_array Array over orbital elements that can be tracked
  * \param qth Point of observation
@@ -193,7 +192,7 @@ void QthEdit(const char *qthfile, predict_observer_t *qth);
  * \param downlink_info rigctld connection instance for downlink
  * \param uplink_info rigctld connection instance for uplink
  **/
-void SingleTrack(bool once_per_second, double horizon, int orbit_ind, int num_orbits, predict_orbital_elements_t **orbital_elements_array, predict_observer_t *qth, struct sat_db_entry *transponder_db, struct tle_db_entry *tle_db, rotctld_info_t *rotctld, rigctld_info_t *downlink_info, rigctld_info_t *uplink_info);
+void SingleTrack(bool once_per_second, double horizon, int orbit_ind, predict_orbital_elements_t **orbital_elements_array, predict_observer_t *qth, struct transponder_db *transponder_db, struct tle_db *tle_db, rotctld_info_t *rotctld, rigctld_info_t *downlink_info, rigctld_info_t *uplink_info);
 
 /**
  * Displays information on all satellites in real-time.
@@ -205,7 +204,7 @@ void SingleTrack(bool once_per_second, double horizon, int orbit_ind, int num_or
  * \param multitype Display locator ('m') or lat/long ('l')
  * \param disttype Display units in miles ('i') or km ('k')
  **/
-void MultiTrack(predict_observer_t *qth, int num_orbits, predict_orbital_elements_t **orbital_elements_array, struct tle_db_entry *tle_db, char multitype, char disttype);
+void MultiTrack(predict_observer_t *qth, predict_orbital_elements_t **orbital_elements_array, struct tle_db *tle_db, char multitype, char disttype);
 
 /**
  * Display solar illumination predictions.
