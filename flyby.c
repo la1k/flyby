@@ -66,7 +66,7 @@ struct tle_db_entry {
 
 struct tle_db {
 	int num_tles;
-	struct tle_db_entry *tles;
+	struct tle_db_entry tles[MAX_NUM_SATS];
 	char filename[MAX_NUM_CHARS];
 };
 
@@ -89,7 +89,7 @@ struct sat_db_entry {
 
 struct transponder_db {
 	int num_sats;
-	struct sat_db_entry *sats;
+	struct sat_db_entry sats[MAX_NUM_SATS];
 	char filename[MAX_NUM_CHARS];
 	bool loaded;
 };

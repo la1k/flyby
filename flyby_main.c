@@ -199,6 +199,7 @@ int main(int argc, char **argv)
 				break;
 			case 'h': //help
 				show_help(argv[0], long_options, short_options);
+				return 0;
 				break;
 		}
 	}
@@ -388,6 +389,8 @@ int string_array_size(string_array_t *string_array)
 
 int flyby_read_qth_file(const char *qthfile, predict_observer_t *observer)
 {
+	//copied from ReadDataFiles().
+
 	char callsign[MAX_NUM_CHARS];
 	FILE *fd=fopen(qthfile,"r");
 	if (fd!=NULL) {
@@ -413,17 +416,13 @@ int flyby_read_qth_file(const char *qthfile, predict_observer_t *observer)
 
 int flyby_read_tle_file(const char *tle_file, struct tle_db *ret_db)
 {
+	//copied from ReadDataFiles().
+
 	ret_db->num_tles = 0;
 	int x = 0, y = 0;
 	char name[80], line1[80], line2[80];
 
-	struct tle_db_entry *sats;
-	if (ret_db->tles == NULL) {
-		sats = (struct tle_db_entry*)malloc(sizeof(struct tle_db_entry)*MAX_NUM_SATS);
-		ret_db->tles = sats;
-	} else {
-		sats = ret_db->tles;
-	}
+	struct tle_db_entry *sats = ret_db->tles;
 
 	FILE *fd=fopen(tle_file,"r");
 	if (fd!=NULL) {
@@ -486,11 +485,10 @@ int flyby_read_tle_file(const char *tle_file, struct tle_db *ret_db)
 
 int flyby_read_transponder_db(const char *dbfile, const struct tle_db *tle_db, struct transponder_db *ret_db)
 {
+	//copied from ReadDataFiles().
+
 	/* Load satellite database file */
 	ret_db->num_sats = tle_db->num_tles;
-	if (ret_db->sats == NULL) {
-		ret_db->sats = (struct sat_db_entry*)malloc(sizeof(struct sat_db_entry)*MAX_NUM_SATS);
-	}
 
 	//initialize
 	for (int i=0; i < MAX_NUM_SATS; i++) {
