@@ -91,11 +91,12 @@ struct transponder_db {
 	int num_sats;
 	struct sat_db_entry *sats;
 	char filename[MAX_NUM_CHARS];
+	bool loaded;
 };
 
 /* Global variables for sharing data among functions... */
 
-char	qthfile[50], tlefile[50], dbfile[50], temp[80],
+char	temp[80],
 	rotctld_host[256], rotctld_port[6]="4533\0\0",
 	uplink_host[256], uplink_port[6]="4532\0\0", uplink_vfo[30],
 	downlink_host[256], downlink_port[6]="4532\0\0", downlink_vfo[30],
@@ -463,7 +464,7 @@ char *destination;
 	return error;
 }
 
-void SaveQTH(predict_observer_t *qth)
+void SaveQTH(const char *qthfile, predict_observer_t *qth)
 {
 	/* This function saves QTH data file normally
 	   found under ~/.flyby/flyby.qth */
@@ -480,32 +481,35 @@ void SaveQTH(predict_observer_t *qth)
 	fclose(fd);
 }
 
-void SaveTLE(int num_sats, struct tle_db_entry *sats)
+void SaveTLE(struct tle_db *tle_db)
 {
 	int x;
 	FILE *fd;
 
 	/* Save orbital data to tlefile */
 
-	fd=fopen(tlefile,"w");
+	fd=fopen(tle_db->filename,"w");
 
-	for (x=0; x<num_sats; x++) {
+	for (x=0; x<tle_db->num_tles; x++) {
 		/* Write name, line1, line2 to flyby.tle */
 
-		fprintf(fd,"%s\n", sats[x].name);
-		fprintf(fd,"%s\n", sats[x].line1);
-		fprintf(fd,"%s\n", sats[x].line2);
+		fprintf(fd,"%s\n", tle_db->tles[x].name);
+		fprintf(fd,"%s\n", tle_db->tles[x].line1);
+		fprintf(fd,"%s\n", tle_db->tles[x].line2);
 	}
 
 	fclose(fd);
 }
 
-int AutoUpdate(char *string, int num_sats, struct tle_db_entry *tle_db, predict_orbital_elements_t **orbits)
+int AutoUpdate(char *string, struct tle_db *_tle_db, predict_orbital_elements_t **orbits)
 {
 	/* This function updates PREDICT's orbital datafile from a NASA
 	   2-line element file either through a menu (interactive mode)
 	   or via the command line.  string==filename of 2-line element
 	   set if this function is invoked via the command line. */
+
+	int num_sats = _tle_db->num_tles;
+	struct tle_db_entry *tle_db = _tle_db->tles;
 
 	char line1[80], line2[80], str0[80], str1[80], str2[80],
 	     filename[50], saveflag=0, interactive=0;
@@ -685,7 +689,7 @@ int AutoUpdate(char *string, int num_sats, struct tle_db_entry *tle_db, predict_
 		}
 
 		if (saveflag)
-			SaveTLE(num_sats, tle_db);
+			SaveTLE(_tle_db);
 	} while (success==0 && interactive);
 
 	return (saveflag ? 0 : -1);
@@ -1471,7 +1475,7 @@ void ShowOrbitData(int num_orbits, struct tle_db_entry *tle_db, predict_orbital_
 	 };
 }
 
-void QthEdit(predict_observer_t *qth)
+void QthEdit(const char *qthfile, predict_observer_t *qth)
 {
 	//display current QTH information
 	bkgdset(COLOR_PAIR(3)|A_BOLD);
@@ -1538,7 +1542,7 @@ void QthEdit(predict_observer_t *qth)
 	}
 
 	if (should_save) {
-		SaveQTH(qth);
+		SaveQTH(qthfile, qth);
 	}
 }
 
@@ -2516,20 +2520,25 @@ void MainMenu()
 
 }
 
-void ProgramInfo(bool once_per_second, double horizon)
+void ProgramInfo(bool once_per_second, double horizon, const char *qthfile, struct tle_db *tle_db, struct transponder_db *transponder_db)
 {
 	Banner();
 	attrset(COLOR_PAIR(3)|A_BOLD);
 
 	printw("\n\n\n\n\n\t\tflyby version : %s\n",FLYBY_VERSION);
-	printw("\t\tQTH file loaded : %s\n",qthfile);
-	printw("\t\tTLE file loaded : %s\n",tlefile);
-	printw("\t\tDatabase file   : ");
-
-	if (database)
-		printw("Loaded\n");
-	else
+	printw("\t\tQTH file        : %s\n", qthfile);
+	printw("\t\tTLE file        : ");
+	if (tle_db->num_tles > 0) {
+		printw("%s\n", tle_db->filename);
+	} else {
 		printw("Not loaded\n");
+	}
+	printw("\t\tDatabase file   : ");
+	if (transponder_db->loaded) {
+		printw("%s\n", transponder_db->filename);
+	} else {
+		printw("Not loaded\n");
+	}
 
 	if (rotctld_socket!=-1) {
 		printw("\t\tAutoTracking    : Enabled\n");
@@ -2543,10 +2552,6 @@ void ProgramInfo(bool once_per_second, double horizon)
 		printw("\n");
 	} else
 		printw("\t\tAutoTracking    : Not enabled\n");
-
-	printw("\t\tRunning Mode    : ");
-
-	printw("Standalone\n");
 
 	refresh();
 	attrset(COLOR_PAIR(4)|A_BOLD);
@@ -2574,30 +2579,19 @@ void NewUser()
 	sprintf(temp,"%s/.flyby",getenv("HOME"));
 	mkdir(temp,0777);
 
-	/* Copy default files into ~/.flyby directory */
-	char *flybypath={"/etc/flyby/"};
-
-	sprintf(temp,"%sdefault/flyby.tle",flybypath);
-
-	CopyFile(temp,tlefile);
-
-	sprintf(temp,"%sdefault/flyby.db",flybypath);
-
-	CopyFile(temp,dbfile);
-
-	sprintf(temp,"%sdefault/flyby.qth",flybypath);
-
-	CopyFile(temp,qthfile);
-
 	attrset(COLOR_PAIR(4)|A_BOLD);
 	AnyKey();
 }
 
-void RunFlybyUI(bool new_user, predict_observer_t *observer, struct tle_db *tle_db, struct transponder_db *sat_db)
+//TODO: Move this into main().
+void RunFlybyUI(bool new_user, const char *qthfile, predict_observer_t *observer, struct tle_db *tle_db, struct transponder_db *sat_db, rotctld_info_t *rotctld, rigctld_info_t *downlink, rigctld_info_t *uplink)
 {
 	//FIXME:
 	double horizon = 0;
 	bool once_per_second = false;
+	rotctld_socket = rotctld->socket;
+	uplink_socket = uplink->socket;
+	downlink_socket = downlink->socket;
 
 	/* Start ncurses */
 	initscr();
@@ -2618,7 +2612,7 @@ void RunFlybyUI(bool new_user, predict_observer_t *observer, struct tle_db *tle_
 
 	if (new_user) {
 		NewUser();
-		QthEdit(observer);
+		QthEdit(qthfile, observer);
 	}
 
 	/* Parse TLEs */
@@ -2666,7 +2660,7 @@ void RunFlybyUI(bool new_user, predict_observer_t *observer, struct tle_db *tle_
 				break;
 
 			case 'u':
-				AutoUpdate("", num_sats, tle_db->tles, orbital_elements);
+				AutoUpdate("", tle_db, orbital_elements);
 				MainMenu();
 				break;
 
@@ -2676,7 +2670,7 @@ void RunFlybyUI(bool new_user, predict_observer_t *observer, struct tle_db *tle_
 				break;
 
 			case 'g':
-				QthEdit(observer);
+				QthEdit(qthfile, observer);
 				MainMenu();
 				break;
 
@@ -2699,7 +2693,7 @@ void RunFlybyUI(bool new_user, predict_observer_t *observer, struct tle_db *tle_
 				break;
 
 			case 'i':
-				ProgramInfo(once_per_second, horizon);
+				ProgramInfo(once_per_second, horizon, qthfile, tle_db, sat_db);
 				MainMenu();
 				break;
 

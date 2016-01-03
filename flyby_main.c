@@ -216,16 +216,19 @@ int main(int argc, char **argv)
 
 	//connect to rotctld
 	rotctld_info_t rotctld = {0};
+	rotctld.socket = -1;
 	if (use_rotctl) {
 		rotctld_connect(rotctld_host, rotctld_port, &rotctld);
 	}
 
 	//connect to rigctld
 	rigctld_info_t uplink = {0};
+	uplink.socket = -1;
 	if (use_rigctld_uplink) {
 		rigctld_connect(rigctld_uplink_host, rigctld_uplink_port, rigctld_uplink_vfo, &uplink);
 	}
 	rigctld_info_t downlink = {0};
+	downlink.socket = -1;
 	if (use_rigctld_downlink) {
 		rigctld_connect(rigctld_downlink_host, rigctld_downlink_port, rigctld_downlink_vfo, &downlink);
 	}
@@ -239,7 +242,7 @@ int main(int argc, char **argv)
 	bool is_new_user = flyby_read_qth_file(qth_filename, observer) == -1;
 	flyby_read_transponder_db(db_filename, &tle_db, &transponder_db);
 
-	RunFlybyUI(is_new_user, observer, &tle_db, &transponder_db);
+	RunFlybyUI(is_new_user, qth_filename, observer, &tle_db, &transponder_db, &rotctld, &downlink, &uplink);
 
 	//disconnect from rigctl and rotctl
 	rigctld_disconnect(&downlink);
