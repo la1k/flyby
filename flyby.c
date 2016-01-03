@@ -52,7 +52,6 @@
 #include <fcntl.h>
 #include <predict/predict.h>
 
-#define MAX_NUM_SATS		250
 #define EARTH_RADIUS_KM		6.378137E3		/* WGS 84 Earth radius km */
 #define HALF_DELAY_TIME	5
 #define	KM_TO_MI		0.621371		/* km to miles */
@@ -70,7 +69,6 @@ struct tle_db {
 	char filename[MAX_NUM_CHARS];
 };
 
-#define MAX_NUM_TRANSPONDERS 10
 struct sat_db_entry {
 	long satellite_number;
 	bool squintflag;
@@ -93,10 +91,6 @@ struct transponder_db {
 	char filename[MAX_NUM_CHARS];
 	bool loaded;
 };
-
-/* Global variables for sharing data among functions... */
-
-char	temp[80];
 
 double reduce(value,rangeMin,rangeMax)
 double value, rangeMin, rangeMax;
@@ -285,6 +279,7 @@ void AnyKey()
 	getch();
 }
 
+char	temp[80];
 char *Abbreviate(string,n)
 char *string;
 int n;
