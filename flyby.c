@@ -1758,7 +1758,7 @@ void QthEdit(predict_observer_t *qth)
 	}
 }
 
-void SingleTrack(bool once_per_second, double horizon, int orbit_ind, int num_orbits, predict_orbital_elements_t **orbitals, predict_observer_t *qth, struct sat_db_entry *sat_db_entries, struct tle_db_entry *tle_db)
+void SingleTrack(bool once_per_second, double horizon, int orbit_ind, int num_orbits, predict_orbital_elements_t **orbitals, predict_observer_t *qth, struct sat_db_entry *sat_db_entries, struct tle_db_entry *tle_db_entries)
 {
 	/* This function tracks a single satellite in real-time
 	   until 'Q' or ESC is pressed. */
@@ -1851,7 +1851,7 @@ void SingleTrack(bool once_per_second, double horizon, int orbit_ind, int num_or
 		mvprintw(0,0,"                                                                                ");
 		mvprintw(1,0,"  flyby Tracking:                                                               ");
 		mvprintw(2,0,"                                                                                ");
-		mvprintw(1,21,"%-24s (%d)", tle_db->name, orbital_elements->satellite_number);
+		mvprintw(1,21,"%-24s (%d)", tle_db_entries[orbit_ind].name, orbital_elements->satellite_number);
 
 		attrset(COLOR_PAIR(4)|A_BOLD);
 
