@@ -2403,7 +2403,6 @@ void NewUser()
 	AnyKey();
 }
 
-//TODO: Move this into main().
 void RunFlybyUI(bool new_user, const char *qthfile, predict_observer_t *observer, struct tle_db *tle_db, struct transponder_db *sat_db, rotctld_info_t *rotctld, rigctld_info_t *downlink, rigctld_info_t *uplink)
 {
 	/* Start ncurses */

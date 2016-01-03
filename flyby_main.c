@@ -225,19 +225,16 @@ int main(int argc, char **argv)
 
 	//connect to rotctld
 	rotctld_info_t rotctld = {0};
-	rotctld.socket = -1;
 	if (use_rotctl) {
 		rotctld_connect(rotctld_host, rotctld_port, rotctld_once_per_second, tracking_horizon, &rotctld);
 	}
 
 	//connect to rigctld
 	rigctld_info_t uplink = {0};
-	uplink.socket = -1;
 	if (use_rigctld_uplink) {
 		rigctld_connect(rigctld_uplink_host, rigctld_uplink_port, rigctld_uplink_vfo, &uplink);
 	}
 	rigctld_info_t downlink = {0};
-	downlink.socket = -1;
 	if (use_rigctld_downlink) {
 		rigctld_connect(rigctld_downlink_host, rigctld_downlink_port, rigctld_downlink_vfo, &downlink);
 	}
