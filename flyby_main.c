@@ -8,7 +8,7 @@
 #include <predict/predict.h>
 
 //FIXME
-#include "flyby.c"
+#include "flyby_ui.c"
 
 //longopt value identificators for command line options without shorthand
 #define FLYBY_OPT_ROTCTLD_PORT 201
@@ -204,7 +204,11 @@ int main(int argc, char **argv)
 		}
 	}
 
-	//use tle update files to update the TLE database
+	//read TLE database
+	struct tle_db tle_db = {0};
+	flyby_read_tle_file(tle_filename, &tle_db);
+
+	//use tle update files to update the TLE database, if present
 	int num_update_files = string_array_size(&tle_update_filenames);
 	if (num_update_files > 0) {
 		for (int i=0; i < num_update_files; i++) {
@@ -236,10 +240,8 @@ int main(int argc, char **argv)
 
 	//read flyby config files
 	predict_observer_t *observer = predict_create_observer("", 0, 0, 0);
-	struct tle_db tle_db = {0};
 	struct transponder_db transponder_db = {0};
 
-	flyby_read_tle_file(tle_filename, &tle_db);
 	bool is_new_user = flyby_read_qth_file(qth_filename, observer) == -1;
 	flyby_read_transponder_db(db_filename, &tle_db, &transponder_db);
 
