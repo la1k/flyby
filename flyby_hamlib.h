@@ -11,6 +11,8 @@
 typedef struct {
 	bool connected;
 	int socket;
+	char host[MAX_NUM_CHARS];
+	char port[MAX_NUM_CHARS];
 } rotctld_info_t;
 
 typedef struct {

@@ -97,10 +97,8 @@ struct transponder_db {
 /* Global variables for sharing data among functions... */
 
 char	temp[80],
-	rotctld_host[256], rotctld_port[6]="4533\0\0",
-	uplink_host[256], uplink_port[6]="4532\0\0", uplink_vfo[30],
-	downlink_host[256], downlink_port[6]="4532\0\0", downlink_vfo[30],
-	database=0;
+	uplink_vfo[30],
+	downlink_vfo[30];
 
 int	rotctld_socket, uplink_socket, downlink_socket;
 
@@ -2520,7 +2518,7 @@ void MainMenu()
 
 }
 
-void ProgramInfo(bool once_per_second, double horizon, const char *qthfile, struct tle_db *tle_db, struct transponder_db *transponder_db)
+void ProgramInfo(bool once_per_second, double horizon, const char *qthfile, struct tle_db *tle_db, struct transponder_db *transponder_db, rotctld_info_t *rotctld)
 {
 	Banner();
 	attrset(COLOR_PAIR(3)|A_BOLD);
@@ -2540,9 +2538,9 @@ void ProgramInfo(bool once_per_second, double horizon, const char *qthfile, stru
 		printw("Not loaded\n");
 	}
 
-	if (rotctld_socket!=-1) {
+	if (rotctld->connected) {
 		printw("\t\tAutoTracking    : Enabled\n");
-		if (rotctld_socket!=-1) printw("\t\t - Connected to rotctld: %s:%s\n", rotctld_host, rotctld_port);
+		printw("\t\t - Connected to rotctld: %s:%s\n", rotctld->host, rotctld->port);
 
 		printw("\t\tTracking horizon: %.2f degrees. ", horizon);
 
@@ -2693,7 +2691,7 @@ void RunFlybyUI(bool new_user, const char *qthfile, predict_observer_t *observer
 				break;
 
 			case 'i':
-				ProgramInfo(once_per_second, horizon, qthfile, tle_db, sat_db);
+				ProgramInfo(once_per_second, horizon, qthfile, tle_db, sat_db, rotctld);
 				MainMenu();
 				break;
 

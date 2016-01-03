@@ -67,6 +67,8 @@ void rotctld_connect(const char *rotctld_host, const char *rotctld_port, rotctld
 
 	ret_info->socket = rotctld_socket;
 	ret_info->connected = true;
+	strncpy(ret_info->host, rotctld_host, MAX_NUM_CHARS);
+	strncpy(ret_info->port, rotctld_port, MAX_NUM_CHARS);
 }
 
 void rotctld_track(const rotctld_info_t *info, double azimuth, double elevation)
