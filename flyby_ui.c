@@ -1366,8 +1366,11 @@ void QthEdit(const char *qthfile, predict_observer_t *qth)
 	}
 }
 
-void SingleTrack(bool once_per_second, double horizon, int orbit_ind, predict_orbital_elements_t **orbital_elements_array, predict_observer_t *qth, struct transponder_db *sat_db, struct tle_db *tle_db, rotctld_info_t *rotctld, rigctld_info_t *downlink_info, rigctld_info_t *uplink_info)
+void SingleTrack(int orbit_ind, predict_orbital_elements_t **orbital_elements_array, predict_observer_t *qth, struct transponder_db *sat_db, struct tle_db *tle_db, rotctld_info_t *rotctld, rigctld_info_t *downlink_info, rigctld_info_t *uplink_info)
 {
+	bool once_per_second = rotctld->once_per_second;
+	double horizon = rotctld->tracking_horizon;
+
 	int num_orbits = tle_db->num_tles;
 	struct sat_db_entry *sat_db_entries = sat_db->sats;
 	struct tle_db_entry *tle_db_entries = tle_db->tles;
@@ -2337,7 +2340,7 @@ void MainMenu()
 
 }
 
-void ProgramInfo(bool once_per_second, double horizon, const char *qthfile, struct tle_db *tle_db, struct transponder_db *transponder_db, rotctld_info_t *rotctld)
+void ProgramInfo(const char *qthfile, struct tle_db *tle_db, struct transponder_db *transponder_db, rotctld_info_t *rotctld)
 {
 	Banner();
 	attrset(COLOR_PAIR(3)|A_BOLD);
@@ -2361,9 +2364,9 @@ void ProgramInfo(bool once_per_second, double horizon, const char *qthfile, stru
 		printw("\t\tAutoTracking    : Enabled\n");
 		printw("\t\t - Connected to rotctld: %s:%s\n", rotctld->host, rotctld->port);
 
-		printw("\t\tTracking horizon: %.2f degrees. ", horizon);
+		printw("\t\tTracking horizon: %.2f degrees. ", rotctld->tracking_horizon);
 
-		if (once_per_second)
+		if (rotctld->once_per_second)
 			printw("Update every second");
 
 		printw("\n");
@@ -2403,10 +2406,6 @@ void NewUser()
 //TODO: Move this into main().
 void RunFlybyUI(bool new_user, const char *qthfile, predict_observer_t *observer, struct tle_db *tle_db, struct transponder_db *sat_db, rotctld_info_t *rotctld, rigctld_info_t *downlink, rigctld_info_t *uplink)
 {
-	//FIXME:
-	double horizon = 0;
-	bool once_per_second = false;
-
 	/* Start ncurses */
 	initscr();
 	keypad(stdscr, TRUE);
@@ -2493,7 +2492,7 @@ void RunFlybyUI(bool new_user, const char *qthfile, predict_observer_t *observer
 				indx=Select(tle_db, orbital_elements_array);
 
 				if (indx!=-1) {
-					SingleTrack(once_per_second, horizon, indx, orbital_elements_array, observer, sat_db, tle_db, rotctld, downlink, uplink);
+					SingleTrack(indx, orbital_elements_array, observer, sat_db, tle_db, rotctld, downlink, uplink);
 				}
 
 				MainMenu();
@@ -2507,7 +2506,7 @@ void RunFlybyUI(bool new_user, const char *qthfile, predict_observer_t *observer
 				break;
 
 			case 'i':
-				ProgramInfo(once_per_second, horizon, qthfile, tle_db, sat_db, rotctld);
+				ProgramInfo(qthfile, tle_db, sat_db, rotctld);
 				MainMenu();
 				break;
 

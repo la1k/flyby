@@ -16,6 +16,8 @@ typedef struct {
 	int socket;
 	char host[MAX_NUM_CHARS];
 	char port[MAX_NUM_CHARS];
+	bool once_per_second;
+	double tracking_horizon;
 } rotctld_info_t;
 
 typedef struct {
@@ -29,9 +31,11 @@ typedef struct {
  *
  * \param hostname Hostname/IP address
  * \param port Port
+ * \param once_per_second Whether data should be sent once per second or when azimuth/elevation changes. NOTE: Not used internally in rotctld_functions, used externally in SingleTrack
+ * \param tracking_horizon Tracking horizon in degrees. NOTE: Not used internally in rotctld_ functions, used externally in SingleTrack
  * \param ret_info Returned rotctld connection instance
  **/
-void rotctld_connect(const char *hostname, const char *port, rotctld_info_t *ret_info);
+void rotctld_connect(const char *hostname, const char *port, bool once_per_second, double tracking_horizon, rotctld_info_t *ret_info);
 
 /**
  * Disconnect from rotctld.

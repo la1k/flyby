@@ -181,8 +181,6 @@ void QthEdit(const char *qthfile, predict_observer_t *qth);
 /* This function tracks a single satellite in real-time
  * until 'Q' or ESC is pressed.
  *
- * \param once_per_second Whether tracking information should be sent to rotctld once per second or when azimuth,elevation changes
- * \param horizon Tracking horizon in degrees
  * \param orbit_ind Which orbit is first displayed on screen (can be changed within SingleTrack using left/right buttons)
  * \param orbital_elements_array Array over orbital elements that can be tracked
  * \param qth Point of observation
@@ -192,7 +190,7 @@ void QthEdit(const char *qthfile, predict_observer_t *qth);
  * \param downlink_info rigctld connection instance for downlink
  * \param uplink_info rigctld connection instance for uplink
  **/
-void SingleTrack(bool once_per_second, double horizon, int orbit_ind, predict_orbital_elements_t **orbital_elements_array, predict_observer_t *qth, struct transponder_db *transponder_db, struct tle_db *tle_db, rotctld_info_t *rotctld, rigctld_info_t *downlink_info, rigctld_info_t *uplink_info);
+void SingleTrack(int orbit_ind, predict_orbital_elements_t **orbital_elements_array, predict_observer_t *qth, struct transponder_db *transponder_db, struct tle_db *tle_db, rotctld_info_t *rotctld, rigctld_info_t *downlink_info, rigctld_info_t *uplink_info);
 
 /**
  * Displays information on all satellites in real-time.
@@ -222,7 +220,7 @@ void MainMenu();
 /**
  * Display program information.
  **/
-void ProgramInfo(bool once_per_second, double horizon, const char *qthfile, struct tle_db *tle_db, struct transponder_db *transponder_db, rotctld_info_t *rotctld);
+void ProgramInfo(const char *qthfile, struct tle_db *tle_db, struct transponder_db *transponder_db, rotctld_info_t *rotctld);
 
 /**
  * Display information for new user.

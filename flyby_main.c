@@ -15,6 +15,7 @@
 #define FLYBY_OPT_UPLINK_VFO 203
 #define FLYBY_OPT_DOWNLINK_PORT 204
 #define FLYBY_OPT_DOWNLINK_VFO 205
+#define FLYBY_OPT_ROTCTLD_ONCE_PER_SECOND 206
 
 /**
  * Print flyby program usage to stdout.
@@ -138,7 +139,8 @@ int main(int argc, char **argv)
 		{"qth-file",			required_argument,	0,	'q'},
 		{"rotctl",			required_argument,	0,	'a'},
 		{"rotctld-port",		required_argument,	0,	FLYBY_OPT_ROTCTLD_PORT},
-		{"horizon",			required_argument,	0,	'H'},
+		{"rotctld-horizon",		required_argument,	0,	'H'},
+		{"rotctld-once-per-second",	no_argument,		0,	FLYBY_OPT_ROTCTLD_ONCE_PER_SECOND},
 		{"rigctld-uplink",		required_argument,	0,	'U'},
 		{"rigctld-uplink-port",		required_argument,	0,	FLYBY_OPT_UPLINK_PORT},
 		{"rigctld-uplink-vfo",		required_argument,	0,	FLYBY_OPT_UPLINK_VFO},
@@ -175,6 +177,9 @@ int main(int argc, char **argv)
 				break;
 			case 'H': //horizon
 				tracking_horizon = strtod(optarg, NULL);
+				break;
+			case FLYBY_OPT_ROTCTLD_ONCE_PER_SECOND: //once per second-option
+				rotctld_once_per_second = true;
 				break;
 			case 'U': //uplink
 				use_rigctld_uplink = true;
@@ -222,7 +227,7 @@ int main(int argc, char **argv)
 	rotctld_info_t rotctld = {0};
 	rotctld.socket = -1;
 	if (use_rotctl) {
-		rotctld_connect(rotctld_host, rotctld_port, &rotctld);
+		rotctld_connect(rotctld_host, rotctld_port, rotctld_once_per_second, tracking_horizon, &rotctld);
 	}
 
 	//connect to rigctld
@@ -309,7 +314,10 @@ void show_help(const char *name, struct option long_options[], const char *short
 				printf("=SERVER_PORT\t\tspecify rotctld server port");
 				break;
 			case 'H':
-				printf("=HORIZON\t\t\tspecify elevation threshold for when %s will start tracking an orbit", name);
+				printf("=HORIZON\t\tspecify elevation threshold for when %s will start tracking an orbit", name);
+				break;
+			case FLYBY_OPT_ROTCTLD_ONCE_PER_SECOND:
+				printf("\t\tSend updates to rotctld once per second instead of when (azimuth,elevation) changes");
 				break;
 			case 'U':
 				printf("=SERVER_HOST\tconnect to specified rigctld server for uplink frequency steering");
@@ -331,6 +339,9 @@ void show_help(const char *name, struct option long_options[], const char *short
 				break;
 			case 'h':
 				printf("\t\t\t\tShow help");
+				break;
+			default:
+				printf("DOCUMENTATION MISSING\n");
 				break;
 		}
 		index++;
