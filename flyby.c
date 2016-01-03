@@ -96,11 +96,7 @@ struct transponder_db {
 
 /* Global variables for sharing data among functions... */
 
-char	temp[80],
-	uplink_vfo[30],
-	downlink_vfo[30];
-
-int	rotctld_socket, uplink_socket, downlink_socket;
+char	temp[80];
 
 double reduce(value,rangeMin,rangeMax)
 double value, rangeMin, rangeMax;
@@ -1544,7 +1540,7 @@ void QthEdit(const char *qthfile, predict_observer_t *qth)
 	}
 }
 
-void SingleTrack(bool once_per_second, double horizon, int orbit_ind, int num_orbits, predict_orbital_elements_t **orbital_elements_array, predict_observer_t *qth, struct sat_db_entry *sat_db_entries, struct tle_db_entry *tle_db_entries)
+void SingleTrack(bool once_per_second, double horizon, int orbit_ind, int num_orbits, predict_orbital_elements_t **orbital_elements_array, predict_observer_t *qth, struct sat_db_entry *sat_db_entries, struct tle_db_entry *tle_db_entries, rotctld_info_t *rotctld, rigctld_info_t *downlink_info, rigctld_info_t *uplink_info)
 {
 	/* This function tracks a single satellite in real-time
 	   until 'Q' or ESC is pressed. */
@@ -1661,10 +1657,10 @@ void SingleTrack(bool once_per_second, double horizon, int orbit_ind, int num_or
 		}
 
 		do {
-			if (downlink_socket!=-1 && readfreq)
-				downlink=ReadFreqDataNet(downlink_socket,downlink_vfo)/(1+1.0e-08*doppler100);
-			if (uplink_socket!=-1 && readfreq)
-				uplink=ReadFreqDataNet(uplink_socket,uplink_vfo)/(1-1.0e-08*doppler100);
+			if (downlink_info->connected && readfreq)
+				downlink = rigctld_read_frequency(downlink_info)/(1+1.0e-08*doppler100);
+			if (uplink_info->connected && readfreq)
+				uplink = rigctld_read_frequency(uplink_info)/(1-1.0e-08*doppler100);
 
 
 			//predict and observe satellite orbit
@@ -1828,8 +1824,8 @@ void SingleTrack(bool once_per_second, double horizon, int orbit_ind, int num_or
 						loss=32.4+(20.0*log10(downlink))+(20.0*log10(obs.range));
 						mvprintw(12,67,"%7.3f dB",loss);
 						mvprintw(13,13,"%7.3f   ms",delay);
-						if (downlink_socket!=-1 && downlink_update)
-							FreqDataNet(downlink_socket,downlink_vfo,downlink+dopp);
+						if (downlink_info->connected && downlink_update)
+							rigctld_set_frequency(downlink_info, downlink+dopp);
 					}
 
 					else
@@ -1843,8 +1839,8 @@ void SingleTrack(bool once_per_second, double horizon, int orbit_ind, int num_or
 						mvprintw(11,32,"%11.5f MHz",uplink-dopp);
 						loss=32.4+(20.0*log10(uplink))+(20.0*log10(obs.range));
 						mvprintw(11,67,"%7.3f dB",loss);
-						if (uplink_socket!=-1 && uplink_update)
-							FreqDataNet(uplink_socket,uplink_vfo,uplink-dopp);
+						if (uplink_info->connected && uplink_update)
+							rigctld_set_frequency(uplink_info, uplink-dopp);
 					}
 					else
 					{
@@ -1874,7 +1870,7 @@ void SingleTrack(bool once_per_second, double horizon, int orbit_ind, int num_or
 			}
 
 			//display rotation information
-			if (rotctld_socket!=-1) {
+			if (rotctld->connected) {
 				if (obs.elevation>=horizon)
 					mvprintw(17,67,"   Active   ");
 				else
@@ -1892,7 +1888,7 @@ void SingleTrack(bool once_per_second, double horizon, int orbit_ind, int num_or
 				int azimuth = (int)round(obs.azimuth*180.0/M_PI);
 
 				if ((elevation != prev_elevation) || (azimuth != prev_azimuth) || (once_per_second && (curr_time > prev_time))) {
-					if (rotctld_socket!=-1) TrackDataNet(rotctld_socket, obs.elevation*180.0/M_PI, obs.azimuth*180.0/M_PI);
+					if (rotctld->connected) rotctld_track(rotctld, obs.elevation*180.0/M_PI, obs.azimuth*180.0/M_PI);
 					prev_elevation = elevation;
 					prev_azimuth = azimuth;
 					prev_time = curr_time;
@@ -1971,10 +1967,10 @@ void SingleTrack(bool once_per_second, double horizon, int orbit_ind, int num_or
 					uplink_update=false;
 				if (ans=='f' || ans=='F')
 				{
-					if (downlink_socket!=-1)
-						downlink=ReadFreqDataNet(downlink_socket,downlink_vfo)/(1+1.0e-08*doppler100);
-					if (uplink_socket!=-1)
-						uplink=ReadFreqDataNet(uplink_socket,uplink_vfo)/(1-1.0e-08*doppler100);
+					if (downlink_info->connected)
+						downlink = rigctld_read_frequency(downlink_info)/(1+1.0e-08*doppler100);
+					if (uplink_info->connected)
+						uplink = rigctld_read_frequency(uplink_info)/(1-1.0e-08*doppler100);
 					if (ans=='f')
 					{
 						downlink_update=true;
@@ -1985,16 +1981,16 @@ void SingleTrack(bool once_per_second, double horizon, int orbit_ind, int num_or
 					readfreq=true;
 				if (ans=='M')
 					readfreq=false;
-        if (ans=='x') // Reverse VFO uplink and downlink names
-        {
-          if (downlink_socket!=-1 && uplink_socket!=-1)
-          {
-            char tmp_vfo[30];
-            strncpy(tmp_vfo,downlink_vfo,sizeof(tmp_vfo));
-            strncpy(downlink_vfo,uplink_vfo,sizeof(downlink_vfo));
-            strncpy(uplink_vfo,tmp_vfo,sizeof(uplink_vfo));
-          }
-        }
+				if (ans=='x') // Reverse VFO uplink and downlink names
+				{
+					if (downlink_info->connected && uplink_info->connected)
+					{
+						char tmp_vfo[MAX_NUM_CHARS];
+						strncpy(tmp_vfo, downlink_info->vfo_name, MAX_NUM_CHARS);
+						strncpy(downlink_info->vfo_name, uplink_info->vfo_name, MAX_NUM_CHARS);
+						strncpy(uplink_info->vfo_name, tmp_vfo, MAX_NUM_CHARS);
+					}
+				}
 			}
 
 			refresh();
@@ -2587,9 +2583,6 @@ void RunFlybyUI(bool new_user, const char *qthfile, predict_observer_t *observer
 	//FIXME:
 	double horizon = 0;
 	bool once_per_second = false;
-	rotctld_socket = rotctld->socket;
-	uplink_socket = uplink->socket;
-	downlink_socket = downlink->socket;
 
 	/* Start ncurses */
 	initscr();
@@ -2677,7 +2670,7 @@ void RunFlybyUI(bool new_user, const char *qthfile, predict_observer_t *observer
 				indx=Select(num_sats, tle_db->tles, orbital_elements_array);
 
 				if (indx!=-1) {
-					SingleTrack(once_per_second, horizon, indx, num_sats, orbital_elements_array, observer, sat_db->sats, tle_db->tles);
+					SingleTrack(once_per_second, horizon, indx, num_sats, orbital_elements_array, observer, sat_db->sats, tle_db->tles, rotctld, downlink, uplink);
 				}
 
 				MainMenu();
