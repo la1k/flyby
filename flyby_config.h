@@ -42,4 +42,12 @@ int flyby_read_qth_file(const char *qth_file, predict_observer_t *ret_observer);
  **/
 int flyby_read_transponder_db(const char *db_file, const struct tle_db *tle_db, struct transponder_db *ret_db);
 
+enum qth_file_state {
+	QTH_FILE_HOME,
+	QTH_FILE_SYSTEMWIDE,
+	QTH_FILE_NOTFOUND
+};
+
+enum qth_file_state flyby_read_qth_from_xdg(predict_observer_t *ret_observer);
+
 #endif

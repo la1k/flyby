@@ -13,44 +13,82 @@
 #define XDG_DATA_DIRS_DEFAULT "/usr/local/share/:/usr/share/"
 #define XDG_DATA_HOME "XDG_DATA_HOME"
 #define XDG_DATA_HOME_DEFAULT ".local/share/"
+#define XDG_CONFIG_DIRS "XDG_CONFIG_DIRS"
+#define XDG_CONFIG_DIRS_DEFAULT "/etc/xdg/"
+#define XDG_CONFIG_HOME "XDG_CONFIG_HOME"
+#define XDG_CONFIG_HOME_DEFAULT ".config/"
 
 //default relative TLE data directory
-#define TLE_FOLDER "flyby/tles/"
+#define TLE_PATH "flyby/tles/"
 
-/**
- * \return XDG_DATA_DIRS variable, or the xdg basedir specification default if the environment variable is empty
- **/
-char *get_data_dirs()
+//default relative qth config filename
+#define QTH_PATH "flyby/flyby.qth"
+
+char *xdg_dirs(const char *varname, const char *default_val)
 {
-	char *data_dirs = getenv(XDG_DATA_DIRS);
+	char *default_copy = strdup(default_val);
+	char *data_dirs = getenv(varname);
 	if (data_dirs == NULL) {
-		data_dirs = XDG_DATA_DIRS_DEFAULT;
+		default_copy = strdup(default_val);
+		data_dirs = default_copy;
 	}
 	char *temp = data_dirs;
 	data_dirs = (char*)malloc(sizeof(char)*(strlen(data_dirs) + 1));
 	strcpy(data_dirs, temp);
+
+	if (default_copy != NULL) {
+		free(default_copy);
+	}
+
 	return data_dirs;
 }
 
-/**
- * \return XDG_DATA_HOME variable, or the xdg basedir specification default if the environment variable is empty
- **/
-char *get_data_home()
+char *xdg_home(const char *varname, const char *default_val)
 {
-	char *data_dirs = getenv(XDG_DATA_HOME);
+	char *data_dirs = getenv(varname);
 	if (data_dirs == NULL) {
 		char *home_env = getenv("HOME");
-		data_dirs = (char*)malloc(sizeof(char)*(strlen(home_env) + strlen(XDG_DATA_HOME_DEFAULT) + 2));
-		data_dirs[0] = '\0';
-		strcat(data_dirs, home_env);
-		strcat(data_dirs, "/");
-		strcat(data_dirs, XDG_DATA_HOME_DEFAULT);
+		int size = strlen(home_env) + strlen(default_val) + 2;
+		data_dirs = (char*)malloc(sizeof(char)*size);
+		snprintf(data_dirs, size, "%s%s%s", home_env, "/", default_val);
 	} else {
 		char *temp = data_dirs;
 		data_dirs = (char*)malloc(sizeof(char)*(strlen(data_dirs) + 1));
 		strcpy(data_dirs, temp);
 	}
 	return data_dirs;
+}
+
+/**
+ * \return XDG_DATA_DIRS variable, or the xdg basedir specification default if the environment variable is empty
+ **/
+char *xdg_data_dirs()
+{
+	return xdg_dirs(XDG_DATA_DIRS, XDG_DATA_DIRS_DEFAULT);
+}
+
+/**
+ * \return XDG_DATA_HOME variable, or the xdg basedir specification default if the environment variable is empty
+ **/
+char *xdg_data_home()
+{
+	return xdg_home(XDG_DATA_HOME, XDG_DATA_HOME_DEFAULT);
+}
+
+/**
+ * \return XDG_CONFIG_DIRS variable, or the xdg basedir specification default if XDG_CONFIG_DIRS is empty
+ **/
+char *xdg_config_dirs()
+{
+	return xdg_dirs(XDG_CONFIG_DIRS, XDG_CONFIG_DIRS_DEFAULT);
+}
+
+/**
+ * \return XDG_CONFIG_HOME variable, or the xdg basedir specification default if XDG_CONFIG_HOME is empty
+ **/
+char *xdg_config_home()
+{
+	return xdg_home(XDG_CONFIG_HOME, XDG_CONFIG_HOME_DEFAULT);
 }
 
 /**
@@ -159,10 +197,9 @@ void flyby_read_tle_from_directory(const char *dirpath, struct tle_db *ret_tle_d
 	if (d) {
 		while ((file = readdir(d)) != NULL) {
 			if (file->d_type == DT_REG) {
-				char *full_path = (char*)malloc(sizeof(char)*(strlen(file->d_name) + strlen(dirpath)));
-				full_path[0] = '\0';
-				strcat(full_path, dirpath);
-				strcat(full_path, file->d_name);
+				int pathsize = strlen(file->d_name) + strlen(dirpath);
+				char *full_path = (char*)malloc(sizeof(char)*pathsize);
+				snprintf(full_path, pathsize, dirpath, file->d_name);
 
 				//read into empty TLE db
 				struct tle_db temp_db = {0};
@@ -179,15 +216,14 @@ void flyby_read_tle_from_directory(const char *dirpath, struct tle_db *ret_tle_d
 
 void flyby_read_tles_from_xdg(struct tle_db *ret_tle_db)
 {
-	char *data_dirs_str = get_data_dirs();
+	char *data_dirs_str = xdg_data_dirs();
 	string_array_t data_dirs = {0};
 	stringsplit(data_dirs_str, &data_dirs);
 
 	//read tles from system-wide data directories in opposide order of precedence
 	for (int i=string_array_size(&data_dirs)-1; i >= 0; i--) {
 		char dir[MAX_NUM_CHARS] = {0};
-		strcat(dir, string_array_get(&data_dirs, i));
-		strcat(dir, TLE_FOLDER);
+		snprintf(dir, MAX_NUM_CHARS, "%s%s", string_array_get(&data_dirs, i), TLE_PATH);
 
 		struct tle_db temp_db = {0};
 		flyby_read_tle_from_directory(dir, &temp_db);
@@ -197,17 +233,46 @@ void flyby_read_tles_from_xdg(struct tle_db *ret_tle_db)
 	free(data_dirs_str);
 
 	//read tles from user directory
-	char *data_home = get_data_home();
+	char *data_home = xdg_data_home();
 	char home_tle_dir[MAX_NUM_CHARS] = {0};
-	strcat(home_tle_dir, data_home);
-	strcat(home_tle_dir, TLE_FOLDER);
+	snprintf(home_tle_dir, MAX_NUM_CHARS, "%s%s", data_home, TLE_PATH);
 	struct tle_db temp_db = {0};
 	flyby_read_tle_from_directory(home_tle_dir, &temp_db);
 	tle_merge_db(&temp_db, ret_tle_db, TLE_OVERWRITE_ALL);
+	free(data_home);
+}
 
-	//FIXME: One problem with this approach is that home directory TLEs won't have precedence if TLE db size is exceeded.
-	//FIXME: TLE db entry needs information about TLE filename and what kind of file it is and/or should
-	//solve autoupdate problem in a different way.
+enum qth_file_state flyby_read_qth_from_xdg(predict_observer_t *ret_observer)
+{
+	//try to read QTH file from user home
+	char *config_home = xdg_config_home();
+	char qth_path[MAX_NUM_CHARS] = {0};
+	snprintf(qth_path, MAX_NUM_CHARS, "%s%s", config_home, QTH_PATH);
+	int readval = flyby_read_qth_file(qth_path, ret_observer);
+	free(config_home);
+
+	if (readval != 0) {
+		//try to read from system default
+		char *config_dirs = xdg_config_dirs();
+		string_array_t dirs = {0};
+		stringsplit(config_dirs, &dirs);
+		bool qth_file_found = false;
+
+		for (int i=0; i < string_array_size(&dirs); i++) {
+			snprintf(qth_path, "%s%s", string_array_get(&dirs, i), QTH_PATH);
+			if (flyby_read_qth_file(qth_path, ret_observer) == 0) {
+				qth_file_found = true;
+				break;
+			}
+		}
+
+		if (qth_file_found) {
+			return QTH_FILE_SYSTEMWIDE;
+		} else {
+			return QTH_FILE_NOTFOUND;
+		}
+	}
+	return QTH_FILE_HOME;
 }
 
 /*

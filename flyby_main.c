@@ -50,19 +50,20 @@ int main(int argc, char **argv)
 	char rigctld_downlink_vfo[MAX_NUM_CHARS] = {0};
 
 	//config files
-	char qth_filename[MAX_NUM_CHARS] = {0};
 	char db_filename[MAX_NUM_CHARS] = {0};
 
 	//read config filenames
 	//TODO: To be replaced with config paths from XDG-standard, issue #1.
 	char *env = getenv("HOME");
-	snprintf(qth_filename, MAX_NUM_CHARS, "%s/.flyby/flyby.qth", env);
 	snprintf(db_filename, MAX_NUM_CHARS, "%s/.flyby/flyby.db", env);
 
 	string_array_t tle_update_filenames = {0}; //TLE files to be used to update the TLE databases
 
 	char tle_cmd_filename[MAX_NUM_CHARS] = {0};
 	bool tle_cmd_filename_set = false;
+
+	char qth_cmd_filename[MAX_NUM_CHARS] = {0};
+	bool qth_cmd_filename_set = false;
 
 	//command line options
 	struct option long_options[] = {
@@ -99,7 +100,8 @@ int main(int argc, char **argv)
 				tle_cmd_filename_set = true;
 				break;
 			case 'q': //qth
-				strncpy(qth_filename, optarg, MAX_NUM_CHARS);
+				strncpy(qth_cmd_filename, optarg, MAX_NUM_CHARS);
+				qth_cmd_filename_set = true;
 				break;
 			case 'a': //rotctl
 				use_rotctl = true;
@@ -178,11 +180,18 @@ int main(int argc, char **argv)
 
 	//read flyby config files
 	predict_observer_t *observer = predict_create_observer("", 0, 0, 0);
-	struct transponder_db transponder_db = {0};
+	bool is_new_user = false;
 
-	bool is_new_user = flyby_read_qth_file(qth_filename, observer) == -1;
+	if (qth_cmd_filename_set) {
+		flyby_read_qth_file(qth_cmd_filename, observer);
+	} else {
+		is_new_user = flyby_read_qth_from_xdg(observer) != QTH_FILE_HOME;
+	}
+
+	struct transponder_db transponder_db = {0};
 	flyby_read_transponder_db(db_filename, &tle_db, &transponder_db);
 
+	char qth_filename[] = "FIXME";
 	RunFlybyUI(is_new_user, qth_filename, observer, &tle_db, &transponder_db, &rotctld, &downlink, &uplink);
 
 	//disconnect from rigctl and rotctl
