@@ -2,6 +2,7 @@
 #define FLYBY_UI_H_DEFINED
 
 #include "flyby_hamlib.h"
+#include <predict/predict.h>
 
 /**
  * Entry in TLE database.

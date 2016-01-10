@@ -8,6 +8,7 @@
 #include <predict/predict.h>
 #include <math.h>
 #include "flyby_ui.h"
+#include "string_array.h"
 
 //longopt value identificators for command line options without shorthand
 #define FLYBY_OPT_ROTCTLD_PORT 201
@@ -25,49 +26,6 @@
  * \param short_options List of short options used in getopts_long
  **/
 void show_help(const char *program_name, struct option long_options[], const char *short_options);
-
-/**
- * Dynamic size string array for the situations where we don't know in advance the number of filenames.
- * Used for accumulating TLE filenames. Exchange by std::vector if we start using C++ instead. :^)
- **/
-typedef struct {
-	int available_size; //available size within string array
-	int num_strings; //current number of strings
-	char **strings; //strings
-} string_array_t;
-
-/**
- * Add string to string array. Reallocates available space to twice the size when current available size is exceeded.
- *
- * \param string_array String array
- * \param string String to add
- * \return 0 on success, -1 on failure
- **/
-int string_array_add(string_array_t *string_array, const char *string);
-
-/**
- * Get string at specified index from string array.
- *
- * \param string_array String array
- * \param index Index at which we want to extract a string
- * \return String at specified index
- **/
-const char* string_array_get(string_array_t *string_array, int index);
-
-/**
- * Get string array size.
- *
- * \param string_array String array
- * \return Size
- **/
-int string_array_size(string_array_t *string_array);
-
-/**
- * Free memory allocated in string array.
- *
- * \param string_array String array to free
- **/
-void string_array_free(string_array_t *string_array);
 
 /**
  * Read TLE database from file.
@@ -344,56 +302,6 @@ void show_help(const char *name, struct option long_options[], const char *short
 		index++;
 		printf("\n");
 	}
-}
-
-int string_array_add(string_array_t *string_array, const char *string)
-{
-	//initialize
-	if (string_array->available_size < 1) {
-		string_array->strings = (char**)malloc(sizeof(char*));
-		string_array->available_size = 1;
-		string_array->num_strings = 0;
-	}
-
-	//extend size to twice the current size
-	if (string_array->num_strings+1 > string_array->available_size) {
-		char **temp = realloc(string_array->strings, sizeof(char*)*string_array->available_size*2);
-		if (temp == NULL) {
-			return -1;
-		}
-		string_array->available_size = string_array->available_size*2;
-		string_array->strings = temp;
-	}
-
-	//copy string
-	string_array->strings[string_array->num_strings] = (char*)malloc(sizeof(char)*MAX_NUM_CHARS);
-	strncpy(string_array->strings[string_array->num_strings], string, MAX_NUM_CHARS);
-	string_array->num_strings++;
-	return 0;
-}
-
-const char* string_array_get(string_array_t *string_array, int index)
-{
-	if (index < string_array->num_strings) {
-		return string_array->strings[index];
-	}
-	return NULL;
-}
-
-void string_array_free(string_array_t *string_array)
-{
-	for (int i=0; i < string_array->num_strings; i++) {
-		free(string_array->strings[i]);
-	}
-	free(string_array->strings);
-	string_array->num_strings = 0;
-	string_array->available_size = 0;
-	string_array->strings = NULL;
-}
-
-int string_array_size(string_array_t *string_array)
-{
-	return string_array->num_strings;
 }
 
 int flyby_read_qth_file(const char *qthfile, predict_observer_t *observer)
