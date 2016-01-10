@@ -52,16 +52,17 @@ int main(int argc, char **argv)
 	//config files
 	char qth_filename[MAX_NUM_CHARS] = {0};
 	char db_filename[MAX_NUM_CHARS] = {0};
-	char tle_filename[MAX_NUM_CHARS] = {0};
 
 	//read config filenames
 	//TODO: To be replaced with config paths from XDG-standard, issue #1.
 	char *env = getenv("HOME");
 	snprintf(qth_filename, MAX_NUM_CHARS, "%s/.flyby/flyby.qth", env);
 	snprintf(db_filename, MAX_NUM_CHARS, "%s/.flyby/flyby.db", env);
-	snprintf(tle_filename, MAX_NUM_CHARS, "%s/.flyby/flyby.tle", env);
 
 	string_array_t tle_update_filenames = {0}; //TLE files to be used to update the TLE databases
+
+	char tle_cmd_filename[MAX_NUM_CHARS] = {0};
+	bool tle_cmd_filename_set = false;
 
 	//command line options
 	struct option long_options[] = {
@@ -94,7 +95,8 @@ int main(int argc, char **argv)
 				string_array_add(&tle_update_filenames, optarg);
 				break;
 			case 't': //tlefile
-				strncpy(tle_filename, optarg, MAX_NUM_CHARS);
+				strncpy(tle_cmd_filename, optarg, MAX_NUM_CHARS);
+				tle_cmd_filename_set = true;
 				break;
 			case 'q': //qth
 				strncpy(qth_filename, optarg, MAX_NUM_CHARS);
@@ -141,7 +143,11 @@ int main(int argc, char **argv)
 
 	//read TLE database
 	struct tle_db tle_db = {0};
-	flyby_read_tles_from_xdg(&tle_db);
+	if (tle_cmd_filename_set) {
+		flyby_read_tle_file(tle_cmd_filename, &tle_db);
+	} else {
+		flyby_read_tles_from_xdg(&tle_db);
+	}
 
 	//use tle update files to update the TLE database, if present
 	int num_update_files = string_array_size(&tle_update_filenames);
