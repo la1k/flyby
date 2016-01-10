@@ -112,17 +112,21 @@ void tle_merge_db(struct tle_db *new_db, struct tle_db *main_db, enum tle_merge_
 }
 
 void flyby_read_tle_from_directory(const char *dirpath, struct tle_db *ret_tle_db) {
-	printf("Reading from directory %s\n", dirpath);
 	DIR *d;
 	struct dirent *file;
 	d = opendir(dirpath);
 	if (d) {
 		while ((file = readdir(d)) != NULL) {
 			if (file->d_type == DT_REG) {
-				printf("Reading from file %s\n", file->d_name);
+				char *full_path = (char*)malloc(sizeof(char)*(strlen(file->d_name) + strlen(dirpath)));
+				full_path[0] = '\0';
+				strcat(full_path, dirpath);
+				strcat(full_path, file->d_name);
+
 				//read into empty TLE db
 				struct tle_db temp_db = {0};
-				flyby_read_tle_file(file->d_name, &temp_db);
+				flyby_read_tle_file(full_path, &temp_db);
+				free(full_path);
 
 				//merge with existing TLE db
 				tle_merge_db(&temp_db, ret_tle_db, TLE_OVERWRITE_OLD); //overwrite only entries with older epochs
@@ -130,7 +134,6 @@ void flyby_read_tle_from_directory(const char *dirpath, struct tle_db *ret_tle_d
 		}
 		closedir(d);
 	}
-	return;
 }
 
 /*

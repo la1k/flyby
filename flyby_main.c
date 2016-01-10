@@ -9,6 +9,7 @@
 #include <math.h>
 #include "flyby_ui.h"
 #include "string_array.h"
+#include "flyby_config.h"
 
 //longopt value identificators for command line options without shorthand
 #define FLYBY_OPT_ROTCTLD_PORT 201
@@ -168,7 +169,7 @@ int main(int argc, char **argv)
 
 	//read TLE database
 	struct tle_db tle_db = {0};
-	flyby_read_tle_file(tle_filename, &tle_db);
+	flyby_read_tles_from_xdg(&tle_db);
 
 	//use tle update files to update the TLE database, if present
 	int num_update_files = string_array_size(&tle_update_filenames);
