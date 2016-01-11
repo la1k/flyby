@@ -34,6 +34,9 @@ int flyby_read_qth_file(const char *qth_file, predict_observer_t *ret_observer);
 
 void flyby_write_qth_to_xdg(predict_observer_t *qth);
 
+void flyby_write_qth_to_file(const char *qth_path, predict_observer_t *qth);
+char* flyby_get_xdg_qth_writepath();
+
 /**
  * Read transponder database from file.
  *

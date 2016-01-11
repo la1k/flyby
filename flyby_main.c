@@ -51,6 +51,7 @@ int main(int argc, char **argv)
 
 	//config files
 	char db_filename[MAX_NUM_CHARS] = {0};
+	char qth_filename[] = {0};
 
 	//read config filenames
 	//TODO: To be replaced with config paths from XDG-standard, issue #1.
@@ -62,7 +63,6 @@ int main(int argc, char **argv)
 	char tle_cmd_filename[MAX_NUM_CHARS] = {0};
 	bool tle_cmd_filename_set = false;
 
-	char qth_cmd_filename[MAX_NUM_CHARS] = {0};
 	bool qth_cmd_filename_set = false;
 
 	//command line options
@@ -100,7 +100,7 @@ int main(int argc, char **argv)
 				tle_cmd_filename_set = true;
 				break;
 			case 'q': //qth
-				strncpy(qth_cmd_filename, optarg, MAX_NUM_CHARS);
+				strncpy(qth_filename, optarg, MAX_NUM_CHARS);
 				qth_cmd_filename_set = true;
 				break;
 			case 'a': //rotctl
@@ -183,15 +183,17 @@ int main(int argc, char **argv)
 	bool is_new_user = false;
 
 	if (qth_cmd_filename_set) {
-		flyby_read_qth_file(qth_cmd_filename, observer);
+		flyby_read_qth_file(qth_filename, observer);
 	} else {
 		is_new_user = flyby_read_qth_from_xdg(observer) != QTH_FILE_HOME;
+		char *temp = flyby_get_xdg_qth_writepath();
+		strncpy(qth_filename, temp, MAX_NUM_CHARS);
+		free(temp);
 	}
 
 	struct transponder_db transponder_db = {0};
 	flyby_read_transponder_db(db_filename, &tle_db, &transponder_db);
 
-	char qth_filename[] = "FIXME";
 	RunFlybyUI(is_new_user, qth_filename, observer, &tle_db, &transponder_db, &rotctld, &downlink, &uplink);
 
 	//disconnect from rigctl and rotctl

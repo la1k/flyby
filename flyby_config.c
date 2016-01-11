@@ -312,15 +312,20 @@ void create_xdg_dirs()
 	free(data_home);
 }
 
-void flyby_write_qth_to_xdg(predict_observer_t *qth)
+char* flyby_get_xdg_qth_writepath()
 {
 	create_xdg_dirs();
 
 	char *config_home = xdg_config_home();
-	char qth_path[MAX_NUM_CHARS] = {0};
+	char *qth_path = (char*)malloc(sizeof(char)*MAX_NUM_CHARS);
 	snprintf(qth_path, MAX_NUM_CHARS, "%s%s", config_home, QTH_PATH);
 	free(config_home);
 
+	return qth_path;
+}
+
+void flyby_write_qth_to_file(const char *qth_path, predict_observer_t *qth)
+{
 	FILE *fd;
 
 	fd=fopen(qth_path,"w");
