@@ -1312,14 +1312,12 @@ void QthEdit(const char *qthfile, predict_observer_t *qth)
 
 	#define INPUT_NUM_CHARS 128
 	char input_string[INPUT_NUM_CHARS] = {0};
-	bool should_save = false;
 
 	//edit QTH name
 	mvprintw(18,15, " Enter the callsign of your ground station");
 	strncpy(input_string, qth->name, INPUT_NUM_CHARS);
 	if (KbEdit(44, 12, INPUT_NUM_CHARS, input_string)) {
 		strncpy(qth->name, input_string, INPUT_NUM_CHARS);
-		should_save = true;
 	}
 
 	//edit latitude
@@ -1328,7 +1326,6 @@ void QthEdit(const char *qthfile, predict_observer_t *qth)
 	sprintf(input_string,"%g [DegN]",qth->latitude*180.0/M_PI);
 	if (KbEdit(44,13, INPUT_NUM_CHARS, input_string)) {
 		qth->latitude = ReadBearing(input_string)*M_PI/180.0;
-		should_save = true;
 	}
 
 	//edit longitude
@@ -1336,7 +1333,6 @@ void QthEdit(const char *qthfile, predict_observer_t *qth)
 	sprintf(input_string, "%g [DegE]", qth->longitude*180.0/M_PI);
 	if (KbEdit(44, 14, INPUT_NUM_CHARS, input_string)) {
 		qth->longitude = ReadBearing(input_string)*M_PI/180.0;
-		should_save = true;
 	}
 	move(19,15);
 	clrtoeol();
@@ -1346,12 +1342,9 @@ void QthEdit(const char *qthfile, predict_observer_t *qth)
 	sprintf(input_string, "%d", (int)floor(qth->altitude));
 	if (KbEdit(44,15, INPUT_NUM_CHARS, input_string)) {
 		qth->altitude = strtod(input_string, NULL);
-		should_save = true;
 	}
 
-	if (should_save) {
-		flyby_write_qth_to_xdg(qth);
-	}
+	flyby_write_qth_to_xdg(qth);
 }
 
 void SingleTrack(int orbit_ind, predict_orbital_elements_t **orbital_elements_array, predict_observer_t *qth, struct transponder_db *sat_db, struct tle_db *tle_db, rotctld_info_t *rotctld, rigctld_info_t *downlink_info, rigctld_info_t *uplink_info)

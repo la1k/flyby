@@ -7,6 +7,8 @@
 #include <dirent.h>
 #include "flyby_config.h"
 #include <math.h>
+#include <sys/stat.h>
+#include <errno.h>
 
 //xdg basedir specification variables
 #define XDG_DATA_DIRS "XDG_DATA_DIRS"
@@ -23,6 +25,9 @@
 
 //default relative qth config filename
 #define QTH_PATH "flyby/flyby.qth"
+
+//default relative subdir
+#define SUBDIR_PATH "flyby/"
 
 char *xdg_dirs(const char *varname, const char *default_val)
 {
@@ -276,8 +281,41 @@ enum qth_file_state flyby_read_qth_from_xdg(predict_observer_t *ret_observer)
 	return QTH_FILE_HOME;
 }
 
+void create_xdg_dirs()
+{
+	//create ~/.config/flyby
+	char *config_home = xdg_config_home();
+	char config_path[MAX_NUM_CHARS] = {0};
+	snprintf(config_path, MAX_NUM_CHARS, "%s%s", config_home, SUBDIR_PATH);
+	free(config_home);
+	struct stat s;
+	int err = stat(config_path, &s);
+	if ((err == -1) && (errno == ENOENT)) {
+		mkdir(config_path, 0777);
+	}
+
+	//create ~/.local/share/flyby
+	char *data_home = xdg_data_home();
+	char data_path[MAX_NUM_CHARS] = {};
+	snprintf(data_path, MAX_NUM_CHARS, "%s%s", data_home, SUBDIR_PATH);
+	err = stat(data_path, &s);
+	if ((err == -1) && (errno == ENOENT)) {
+		mkdir(data_path, 0777);
+	}
+
+	//create ~/.local/share/flyby/tles
+	snprintf(data_path, MAX_NUM_CHARS, "%s%s", data_home, TLE_PATH);
+	err = stat(data_path, &s);
+	if ((err == -1) && (errno == ENOENT)) {
+		mkdir(data_path, 0777);
+	}
+	free(data_home);
+}
+
 void flyby_write_qth_to_xdg(predict_observer_t *qth)
 {
+	create_xdg_dirs();
+
 	char *config_home = xdg_config_home();
 	char qth_path[MAX_NUM_CHARS] = {0};
 	snprintf(qth_path, MAX_NUM_CHARS, "%s%s", config_home, QTH_PATH);
