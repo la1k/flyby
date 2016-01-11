@@ -2361,10 +2361,6 @@ void ProgramInfo(const char *qthfile, struct tle_db *tle_db, struct transponder_
 
 void NewUser()
 {
-#if !defined (__CYGWIN32__)
-	int *mkdir();
-#endif
-
 	Banner();
 	attrset(COLOR_PAIR(3)|A_BOLD);
 
@@ -2374,11 +2370,6 @@ void NewUser()
 	printw("  flyby's main menu to edit your ground station information, and update\n");
 	printw("  your orbital database using option [U] or [E].  Enjoy the program!  :-)");
 	refresh();
-
-	/* Make "~/.flyby" subdirectory */
-
-	sprintf(temp,"%s/.flyby",getenv("HOME"));
-	mkdir(temp,0777);
 
 	attrset(COLOR_PAIR(4)|A_BOLD);
 	AnyKey();
