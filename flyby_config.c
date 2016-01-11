@@ -197,9 +197,9 @@ void flyby_read_tle_from_directory(const char *dirpath, struct tle_db *ret_tle_d
 	if (d) {
 		while ((file = readdir(d)) != NULL) {
 			if (file->d_type == DT_REG) {
-				int pathsize = strlen(file->d_name) + strlen(dirpath);
+				int pathsize = strlen(file->d_name) + strlen(dirpath) + 1;
 				char *full_path = (char*)malloc(sizeof(char)*pathsize);
-				snprintf(full_path, pathsize, dirpath, file->d_name);
+				snprintf(full_path, pathsize, "%s%s", dirpath, file->d_name);
 
 				//read into empty TLE db
 				struct tle_db temp_db = {0};
@@ -259,12 +259,13 @@ enum qth_file_state flyby_read_qth_from_xdg(predict_observer_t *ret_observer)
 		bool qth_file_found = false;
 
 		for (int i=0; i < string_array_size(&dirs); i++) {
-			snprintf(qth_path, "%s%s", string_array_get(&dirs, i), QTH_PATH);
+			snprintf(qth_path, MAX_NUM_CHARS, "%s%s", string_array_get(&dirs, i), QTH_PATH);
 			if (flyby_read_qth_file(qth_path, ret_observer) == 0) {
 				qth_file_found = true;
 				break;
 			}
 		}
+		free(config_dirs);
 
 		if (qth_file_found) {
 			return QTH_FILE_SYSTEMWIDE;
@@ -273,6 +274,25 @@ enum qth_file_state flyby_read_qth_from_xdg(predict_observer_t *ret_observer)
 		}
 	}
 	return QTH_FILE_HOME;
+}
+
+void flyby_write_qth_to_xdg(predict_observer_t *qth)
+{
+	char *config_home = xdg_config_home();
+	char qth_path[MAX_NUM_CHARS] = {0};
+	snprintf(qth_path, MAX_NUM_CHARS, "%s%s", config_home, QTH_PATH);
+	free(config_home);
+
+	FILE *fd;
+
+	fd=fopen(qth_path,"w");
+
+	fprintf(fd,"%s\n",qth->name);
+	fprintf(fd," %g\n",qth->latitude*180.0/M_PI);
+	fprintf(fd," %g\n",-qth->longitude*180.0/M_PI); //convert from N/E to N/W
+	fprintf(fd," %d\n",(int)floor(qth->altitude));
+
+	fclose(fd);
 }
 
 /*

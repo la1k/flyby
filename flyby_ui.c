@@ -52,6 +52,7 @@
 #include <fcntl.h>
 #include <predict/predict.h>
 #include "flyby_ui.h"
+#include "flyby_config.h"
 
 #define EARTH_RADIUS_KM		6.378137E3		/* WGS 84 Earth radius km */
 #define HALF_DELAY_TIME	5
@@ -309,23 +310,6 @@ char *destination;
 		error+=2;
 
 	return error;
-}
-
-void SaveQTH(const char *qthfile, predict_observer_t *qth)
-{
-	/* This function saves QTH data file normally
-	   found under ~/.flyby/flyby.qth */
-
-	FILE *fd;
-
-	fd=fopen(qthfile,"w");
-
-	fprintf(fd,"%s\n",qth->name);
-	fprintf(fd," %g\n",qth->latitude*180.0/M_PI);
-	fprintf(fd," %g\n",-qth->longitude*180.0/M_PI); //convert from N/E to N/W
-	fprintf(fd," %d\n",(int)floor(qth->altitude));
-
-	fclose(fd);
 }
 
 void SaveTLE(struct tle_db *tle_db)
@@ -1366,7 +1350,7 @@ void QthEdit(const char *qthfile, predict_observer_t *qth)
 	}
 
 	if (should_save) {
-		SaveQTH(qthfile, qth);
+		flyby_write_qth_to_xdg(qth);
 	}
 }
 

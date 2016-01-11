@@ -32,6 +32,8 @@ int flyby_read_tle_file(const char *tle_file, struct tle_db *ret_db);
  **/
 int flyby_read_qth_file(const char *qth_file, predict_observer_t *ret_observer);
 
+void flyby_write_qth_to_xdg(predict_observer_t *qth);
+
 /**
  * Read transponder database from file.
  *
