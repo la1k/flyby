@@ -3,7 +3,7 @@
 
 /**
  * Read TLE entries from folders defined using the XDG file specification. TLEs are read
- * from files located in {XDG_DATA_DIRS}/flyby/tles and XDG_DATA_HOME/flyby/tles. 
+ * from files located in {XDG_DATA_DIRS}/flyby/tles and XDG_DATA_HOME/flyby/tles.
  *
  * When the same TLE is defined in multiple files, the following behavior is used:
  *  - TLEs from XDG_DATA_HOME take precedence over any other folder, regardless of TLE epoch
@@ -32,7 +32,17 @@ int flyby_read_tle_file(const char *tle_file, struct tle_db *ret_db);
  **/
 int flyby_read_qth_file(const char *qth_file, predict_observer_t *ret_observer);
 
+/**
+ * Write QTH information to specified file.
+ *
+ * \param qth_path File path
+ * \param qth Qth information to write
+ **/
 void flyby_write_qth_to_file(const char *qth_path, predict_observer_t *qth);
+
+/**
+ * Get local user qth filepath (~/.config/flyby/flyby.qth).
+ **/
 char* flyby_get_xdg_qth_writepath();
 
 /**
@@ -45,12 +55,21 @@ char* flyby_get_xdg_qth_writepath();
  **/
 int flyby_read_transponder_db(const char *db_file, const struct tle_db *tle_db, struct transponder_db *ret_db);
 
+/**
+ * Used for determining from where the QTH file was read.
+ **/
 enum qth_file_state {
-	QTH_FILE_HOME,
-	QTH_FILE_SYSTEMWIDE,
-	QTH_FILE_NOTFOUND
+	QTH_FILE_HOME, //read from XDG_CONFIG_HOME
+	QTH_FILE_SYSTEMWIDE, //read from XDG_CONFIG_DIRS
+	QTH_FILE_NOTFOUND //not found
 };
 
+/**
+ * Read flyby from XDG filepaths. Try XDG_CONFIG_HOME/flyby/flyby.qth first, then the paths in XDG_CONFIG_DIRS/flyby/flyby.qth.
+ *
+ * \param ret_observer Returned QTH information
+ * \return Where the QTH file was read from, user home, system dir or not found at all
+ **/
 enum qth_file_state flyby_read_qth_from_xdg(predict_observer_t *ret_observer);
 
 #endif

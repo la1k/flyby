@@ -281,6 +281,9 @@ enum qth_file_state flyby_read_qth_from_xdg(predict_observer_t *ret_observer)
 	return QTH_FILE_HOME;
 }
 
+/**
+ * Create ~/.config/flyby and ./local/share/flyby/tles/ if these do not exist.
+ **/
 void create_xdg_dirs()
 {
 	//create ~/.config/flyby
