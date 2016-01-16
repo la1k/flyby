@@ -26,6 +26,8 @@
 //default relative qth config filename
 #define QTH_PATH "flyby/flyby.qth"
 
+#define DB_PATH "flyby/flyby.db"
+
 //default relative subdir
 #define SUBDIR_PATH "flyby/"
 
@@ -341,19 +343,26 @@ void flyby_write_qth_to_file(const char *qth_path, predict_observer_t *qth)
 	fclose(fd);
 }
 
-/*
- * .db-file:
- * * Use union of files in XDG_DATA_HOME/flyby/flyby.db and XDG_DATA_DIRS/flyby/flyby.db
- * * For multiply defined .db-entries, let the one in XDG_DATA_HOME take precedence, and then in XDG_DATA_DIRS in order of precedence
- *
- * Removing satellites/frequencies listed in the system-wide databases is covered by #20. Whitelist/blacklist should be placed in XDG_CONFIG_HOME/flyby/.
- */
-void flyby_read_transponder_db_from_xdg()
+void flyby_read_transponder_db_from_xdg(const struct tle_db *tle_db, struct transponder_db *transponder_db)
 {
-	//read entries from XDG_DATA_DIR in oppsite order of precedence
+	string_array_t data_dirs = {0};
+	char *data_home = xdg_data_home();
+	string_array_add(&data_dirs, data_home);
+	free(data_home);
 
-	//read entries from XDG_DATA_HOME
-	//overwrite whenever a new entry is encountered
+	char *data_dirs_str = xdg_data_dirs();
+	stringsplit(data_dirs_str, &data_dirs);
+	free(data_dirs_str);
+
+	//read transponder databases from system-wide data directories in opposide order of precedence, and then the home directory
+	for (int i=string_array_size(&data_dirs)-1; i >= 0; i--) {
+		char db_path[MAX_NUM_CHARS] = {0};
+		snprintf(db_path, MAX_NUM_CHARS, "%s%s", string_array_get(&data_dirs, i), DB_PATH);
+
+		//will overwrite existing entries at their correct positions automatically, and ignore everything else
+		flyby_read_transponder_db(db_path, tle_db, transponder_db);
+	}
+	string_array_free(&data_dirs);
 }
 
 int flyby_read_qth_file(const char *qthfile, predict_observer_t *observer)
