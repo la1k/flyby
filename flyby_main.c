@@ -50,19 +50,12 @@ int main(int argc, char **argv)
 	char rigctld_downlink_vfo[MAX_NUM_CHARS] = {0};
 
 	//config files
-	char db_filename[MAX_NUM_CHARS] = {0};
-	char qth_filename[] = {0};
-
-	//read config filenames
-	//TODO: To be replaced with config paths from XDG-standard, issue #1.
-	char *env = getenv("HOME");
-	snprintf(db_filename, MAX_NUM_CHARS, "%s/.flyby/flyby.db", env);
-
 	string_array_t tle_update_filenames = {0}; //TLE files to be used to update the TLE databases
 
 	char tle_cmd_filename[MAX_NUM_CHARS] = {0};
 	bool tle_cmd_filename_set = false;
 
+	char qth_filename[MAX_NUM_CHARS] = {0};
 	bool qth_cmd_filename_set = false;
 
 	//command line options
@@ -192,7 +185,7 @@ int main(int argc, char **argv)
 	}
 
 	struct transponder_db transponder_db = {0};
-	flyby_read_transponder_db(db_filename, &tle_db, &transponder_db);
+	flyby_read_transponder_db_from_xdg(&tle_db, &transponder_db);
 
 	RunFlybyUI(is_new_user, qth_filename, observer, &tle_db, &transponder_db, &rotctld, &downlink, &uplink);
 

@@ -230,6 +230,15 @@ void NewUser();
 
 /**
  * Run flyby UI.
+ *
+ * \param new_user Whether NewUser() should be run
+ * \param qthfile Write path for QTH file
+ * \param observer QTH coordinates
+ * \param tle_db TLE database
+ * \param sat_db Transponder database
+ * \param rotctld Rotctld info
+ * \param downlink Downlink info
+ * \param uplink Uplink info
  **/
 void RunFlybyUI(bool new_user, const char *qthfile, predict_observer_t *observer, struct tle_db *tle_db, struct transponder_db *sat_db, rotctld_info_t *rotctld, rigctld_info_t *downlink, rigctld_info_t *uplink);
 
