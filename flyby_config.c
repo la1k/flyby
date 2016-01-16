@@ -467,13 +467,6 @@ int flyby_read_transponder_db(const char *dbfile, const struct tle_db *tle_db, s
 
 	/* Load satellite database file */
 	ret_db->num_sats = tle_db->num_tles;
-
-	//initialize
-	for (int i=0; i < MAX_NUM_SATS; i++) {
-		struct sat_db_entry temp = {0};
-		ret_db->sats[i] = temp;
-	}
-
 	FILE *fd=fopen(dbfile,"r");
 	long catnum;
 	unsigned char dayofweek;
