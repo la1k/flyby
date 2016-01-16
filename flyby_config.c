@@ -21,15 +21,15 @@
 #define XDG_CONFIG_HOME_DEFAULT ".config/"
 
 //default relative TLE data directory
-#define TLE_PATH "flyby/tles/"
+#define TLE_RELATIVE_DIR_PATH "flyby/tles/"
 
 //default relative qth config filename
-#define QTH_PATH "flyby/flyby.qth"
+#define QTH_RELATIVE_FILE_PATH "flyby/flyby.qth"
 
-#define DB_PATH "flyby/flyby.db"
+#define DB_RELATIVE_FILE_PATH "flyby/flyby.db"
 
 //default relative subdir
-#define SUBDIR_PATH "flyby/"
+#define FLYBY_RELATIVE_ROOT_PATH "flyby/"
 
 char *xdg_dirs(const char *varname, const char *default_val)
 {
@@ -231,7 +231,7 @@ void flyby_read_tles_from_xdg(struct tle_db *ret_tle_db)
 	//read tles from system-wide data directories in opposide order of precedence
 	for (int i=string_array_size(&data_dirs)-1; i >= 0; i--) {
 		char dir[MAX_NUM_CHARS] = {0};
-		snprintf(dir, MAX_NUM_CHARS, "%s%s", string_array_get(&data_dirs, i), TLE_PATH);
+		snprintf(dir, MAX_NUM_CHARS, "%s%s", string_array_get(&data_dirs, i), TLE_RELATIVE_DIR_PATH);
 
 		struct tle_db temp_db = {0};
 		flyby_read_tle_from_directory(dir, &temp_db);
@@ -243,7 +243,7 @@ void flyby_read_tles_from_xdg(struct tle_db *ret_tle_db)
 	//read tles from user directory
 	char *data_home = xdg_data_home();
 	char home_tle_dir[MAX_NUM_CHARS] = {0};
-	snprintf(home_tle_dir, MAX_NUM_CHARS, "%s%s", data_home, TLE_PATH);
+	snprintf(home_tle_dir, MAX_NUM_CHARS, "%s%s", data_home, TLE_RELATIVE_DIR_PATH);
 	struct tle_db temp_db = {0};
 	flyby_read_tle_from_directory(home_tle_dir, &temp_db);
 	tle_merge_db(&temp_db, ret_tle_db, TLE_OVERWRITE_ALL);
@@ -255,7 +255,7 @@ enum qth_file_state flyby_read_qth_from_xdg(predict_observer_t *ret_observer)
 	//try to read QTH file from user home
 	char *config_home = xdg_config_home();
 	char qth_path[MAX_NUM_CHARS] = {0};
-	snprintf(qth_path, MAX_NUM_CHARS, "%s%s", config_home, QTH_PATH);
+	snprintf(qth_path, MAX_NUM_CHARS, "%s%s", config_home, QTH_RELATIVE_FILE_PATH);
 	int readval = flyby_read_qth_file(qth_path, ret_observer);
 	free(config_home);
 
@@ -267,7 +267,7 @@ enum qth_file_state flyby_read_qth_from_xdg(predict_observer_t *ret_observer)
 		bool qth_file_found = false;
 
 		for (int i=0; i < string_array_size(&dirs); i++) {
-			snprintf(qth_path, MAX_NUM_CHARS, "%s%s", string_array_get(&dirs, i), QTH_PATH);
+			snprintf(qth_path, MAX_NUM_CHARS, "%s%s", string_array_get(&dirs, i), QTH_RELATIVE_FILE_PATH);
 			if (flyby_read_qth_file(qth_path, ret_observer) == 0) {
 				qth_file_found = true;
 				break;
@@ -292,7 +292,7 @@ void create_xdg_dirs()
 	//create ~/.config/flyby
 	char *config_home = xdg_config_home();
 	char config_path[MAX_NUM_CHARS] = {0};
-	snprintf(config_path, MAX_NUM_CHARS, "%s%s", config_home, SUBDIR_PATH);
+	snprintf(config_path, MAX_NUM_CHARS, "%s%s", config_home, FLYBY_RELATIVE_ROOT_PATH);
 	free(config_home);
 	struct stat s;
 	int err = stat(config_path, &s);
@@ -303,14 +303,14 @@ void create_xdg_dirs()
 	//create ~/.local/share/flyby
 	char *data_home = xdg_data_home();
 	char data_path[MAX_NUM_CHARS] = {};
-	snprintf(data_path, MAX_NUM_CHARS, "%s%s", data_home, SUBDIR_PATH);
+	snprintf(data_path, MAX_NUM_CHARS, "%s%s", data_home, FLYBY_RELATIVE_ROOT_PATH);
 	err = stat(data_path, &s);
 	if ((err == -1) && (errno == ENOENT)) {
 		mkdir(data_path, 0777);
 	}
 
 	//create ~/.local/share/flyby/tles
-	snprintf(data_path, MAX_NUM_CHARS, "%s%s", data_home, TLE_PATH);
+	snprintf(data_path, MAX_NUM_CHARS, "%s%s", data_home, TLE_RELATIVE_DIR_PATH);
 	err = stat(data_path, &s);
 	if ((err == -1) && (errno == ENOENT)) {
 		mkdir(data_path, 0777);
@@ -324,7 +324,7 @@ char* flyby_get_xdg_qth_writepath()
 
 	char *config_home = xdg_config_home();
 	char *qth_path = (char*)malloc(sizeof(char)*MAX_NUM_CHARS);
-	snprintf(qth_path, MAX_NUM_CHARS, "%s%s", config_home, QTH_PATH);
+	snprintf(qth_path, MAX_NUM_CHARS, "%s%s", config_home, QTH_RELATIVE_FILE_PATH);
 	free(config_home);
 
 	return qth_path;
@@ -358,7 +358,7 @@ void flyby_read_transponder_db_from_xdg(const struct tle_db *tle_db, struct tran
 	//read transponder databases from system-wide data directories in opposide order of precedence, and then the home directory
 	for (int i=string_array_size(&data_dirs)-1; i >= 0; i--) {
 		char db_path[MAX_NUM_CHARS] = {0};
-		snprintf(db_path, MAX_NUM_CHARS, "%s%s", string_array_get(&data_dirs, i), DB_PATH);
+		snprintf(db_path, MAX_NUM_CHARS, "%s%s", string_array_get(&data_dirs, i), DB_RELATIVE_FILE_PATH);
 
 		//will overwrite existing entries at their correct positions automatically, and ignore everything else
 		flyby_read_transponder_db(db_path, tle_db, transponder_db);
