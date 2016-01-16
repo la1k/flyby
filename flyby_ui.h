@@ -16,6 +16,8 @@ struct tle_db_entry {
 	char line1[MAX_NUM_CHARS];
 	///line 2 in NORAD TLE
 	char line2[MAX_NUM_CHARS];
+	///Filename from which the TLE has been read
+	char filename[MAX_NUM_CHARS];
 };
 
 /**
@@ -26,8 +28,6 @@ struct tle_db {
 	int num_tles;
 	///TLE entries
 	struct tle_db_entry tles[MAX_NUM_SATS];
-	///Filename from which the TLEs have been read
-	char filename[MAX_NUM_CHARS];
 };
 
 /**
@@ -67,8 +67,6 @@ struct transponder_db {
 	int num_sats;
 	///transponder database entries
 	struct sat_db_entry sats[MAX_NUM_SATS];
-	///file from which the transponder database was loaded
-	char filename[MAX_NUM_CHARS];
 	///whether the transponder database is loaded, or empty
 	bool loaded;
 };

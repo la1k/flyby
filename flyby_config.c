@@ -176,6 +176,7 @@ void tle_merge_db(struct tle_db *new_db, struct tle_db *main_db, enum tle_merge_
 					strncpy(main_db->tles[j].name, new_db->tles[i].name, MAX_NUM_CHARS);
 					strncpy(main_db->tles[j].line1, new_db->tles[i].line1, MAX_NUM_CHARS);
 					strncpy(main_db->tles[j].line2, new_db->tles[i].line2, MAX_NUM_CHARS);
+					strncpy(main_db->tles[j].filename, new_db->tles[i].filename, MAX_NUM_CHARS);
 				}
 			}
 		}
@@ -404,8 +405,6 @@ int flyby_read_tle_file(const char *tle_file, struct tle_db *ret_db)
 
 	FILE *fd=fopen(tle_file,"r");
 	if (fd!=NULL) {
-		strncpy(ret_db->filename, tle_file, MAX_NUM_CHARS);
-
 		while (x<MAX_NUM_SATS && feof(fd)==0) {
 			/* Initialize variables */
 
@@ -447,6 +446,8 @@ int flyby_read_tle_file(const char *tle_file, struct tle_db *ret_db)
 				predict_orbital_elements_t *temp_elements = predict_parse_tle(tle);
 				sats[x].satellite_number = temp_elements->satellite_number;
 				predict_destroy_orbital_elements(temp_elements);
+
+				strncpy(sats[x].filename, tle_file, MAX_NUM_CHARS);
 
 				x++;
 
@@ -559,8 +560,10 @@ int flyby_read_transponder_db(const char *dbfile, const struct tle_db *tle_db, s
 			}
 			fgets(line1,80,fd);
 
-			if (match)
+			if (match) {
 				ret_db->sats[y].num_transponders=transponders;
+				ret_db->loaded = true;
+			}
 
 			entry=0;
 			transponders=0;

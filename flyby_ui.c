@@ -319,7 +319,7 @@ void SaveTLE(struct tle_db *tle_db)
 
 	/* Save orbital data to tlefile */
 
-	fd=fopen(tle_db->filename,"w");
+	//fd=fopen(tle_db->filename,"w");
 
 	for (x=0; x<tle_db->num_tles; x++) {
 		/* Write name, line1, line2 to flyby.tle */
@@ -2337,13 +2337,13 @@ void ProgramInfo(const char *qthfile, struct tle_db *tle_db, struct transponder_
 	printw("\t\tQTH file        : %s\n", qthfile);
 	printw("\t\tTLE file        : ");
 	if (tle_db->num_tles > 0) {
-		printw("%s\n", tle_db->filename);
+		printw("Loaded\n");
 	} else {
 		printw("Not loaded\n");
 	}
 	printw("\t\tDatabase file   : ");
 	if (transponder_db->loaded) {
-		printw("%s\n", transponder_db->filename);
+		printw("Loaded\n");
 	} else {
 		printw("Not loaded\n");
 	}
