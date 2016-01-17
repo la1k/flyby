@@ -308,7 +308,7 @@ void tle_update_files_with_filename_match(const char *tle_filename, struct tle_d
 	tle_write_db_to_file(tle_filename, &subset_db);
 }
 
-void tle_update_with_file(const char *filename, struct tle_db *tle_db)
+void tle_update_with_file(const char *filename, struct tle_db *tle_db, bool *ret_was_updated, bool *ret_in_new_file)
 {
 	struct tle_db new_db = {0};
 	int retval = flyby_read_tle_file(filename, &new_db);
@@ -367,10 +367,18 @@ void tle_update_with_file(const char *filename, struct tle_db *tle_db)
 						//set db indices to update to -1 in order to ignore them on the next update
 						newer_tle_indices[j] = -1;
 
+						if (ret_was_updated != NULL) {
+							ret_was_updated[tle_index] = true;
+						}
+
 						if (!file_is_writable) {
 							//add to list over unwritable TLE filenames
 							unwritable_tles[num_unwritable] = tle_index;
 							num_unwritable++;
+
+							if (ret_in_new_file != NULL) {
+								ret_in_new_file[tle_index] = true;
+							}
 						}
 					}
 				}
