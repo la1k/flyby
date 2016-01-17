@@ -9,6 +9,7 @@
 #include <math.h>
 #include <sys/stat.h>
 #include <errno.h>
+#include <unistd.h>
 
 //xdg basedir specification variables
 #define XDG_DATA_DIRS "XDG_DATA_DIRS"
@@ -99,6 +100,41 @@ char *xdg_config_home()
 }
 
 /**
+ * Create ~/.config/flyby and ./local/share/flyby/tles/ if these do not exist.
+ **/
+void create_xdg_dirs()
+{
+	//create ~/.config/flyby
+	char *config_home = xdg_config_home();
+	char config_path[MAX_NUM_CHARS] = {0};
+	snprintf(config_path, MAX_NUM_CHARS, "%s%s", config_home, FLYBY_RELATIVE_ROOT_PATH);
+	free(config_home);
+	struct stat s;
+	int err = stat(config_path, &s);
+	if ((err == -1) && (errno == ENOENT)) {
+		mkdir(config_path, 0777);
+	}
+
+	//create ~/.local/share/flyby
+	char *data_home = xdg_data_home();
+	char data_path[MAX_NUM_CHARS] = {};
+	snprintf(data_path, MAX_NUM_CHARS, "%s%s", data_home, FLYBY_RELATIVE_ROOT_PATH);
+	err = stat(data_path, &s);
+	if ((err == -1) && (errno == ENOENT)) {
+		mkdir(data_path, 0777);
+	}
+
+	//create ~/.local/share/flyby/tles
+	snprintf(data_path, MAX_NUM_CHARS, "%s%s", data_home, TLE_RELATIVE_DIR_PATH);
+	err = stat(data_path, &s);
+	if ((err == -1) && (errno == ENOENT)) {
+		mkdir(data_path, 0777);
+	}
+	free(data_home);
+}
+
+
+/**
  * Split string at ':'-delimiter.
  * \param string_list Input string list delimited by :
  * \param ret_string_list Returned string array
@@ -138,8 +174,8 @@ bool tle_is_newer_than(char *tle_1[2], char *tle_2[2])
 
 bool tle_entry_is_newer_than(struct tle_db_entry tle_entry_1, struct tle_db_entry tle_entry_2)
 {
-	char *tle_1[2] = {tle_entry_1.line1, tle_entry_2.line2};
-	char *tle_2[2] = {tle_entry_1.line1, tle_entry_2.line2};
+	char *tle_1[2] = {tle_entry_1.line1, tle_entry_1.line2};
+	char *tle_2[2] = {tle_entry_2.line1, tle_entry_2.line2};
 	return tle_is_newer_than(tle_1, tle_2);
 }
 
@@ -236,6 +272,31 @@ int tle_find_entry_in_db(struct tle_db *tle_db, struct tle_db_entry entry)
 	return -1;
 }
 
+char *get_update_tle_filename()
+{
+	create_xdg_dirs();
+
+	//create filepath basis
+	char *ret_string = (char*)malloc(sizeof(char)*MAX_NUM_CHARS);
+	char date_string[MAX_NUM_CHARS];
+	time_t epoch = time(NULL);
+	strftime(date_string, MAX_NUM_CHARS, "tle-updatefile-%F-%H%M%S-", gmtime(&epoch));
+	char *data_home = xdg_data_home();
+
+	//loop through [number] in [basename]-[number].tle until we encounter a file that does not exist yet
+	int index = 0;
+	while (true) {
+		char temp_file[MAX_NUM_CHARS];
+		snprintf(temp_file, MAX_NUM_CHARS, "%s%s%s%d.tle", data_home, TLE_RELATIVE_DIR_PATH, date_string, index);
+		if (access(temp_file, F_OK) == -1) {
+			strncpy(ret_string, temp_file, MAX_NUM_CHARS);
+			break;
+		}
+		index++;
+	}
+	return ret_string;
+}
+
 void tle_update_files_with_filename_match(const char *tle_filename, struct tle_db *tle_db)
 {
 	struct tle_db subset_db = {0};
@@ -277,10 +338,12 @@ void tle_update_with_file(const char *filename, struct tle_db *tle_db)
 
 	int num_unwritable = 0;
 	int *unwritable_tles = (int*)malloc(sizeof(int)*num_tles_to_update); //indices in the internal db that were updated, but cannot be written to the current file.
+
+	//go over tles to update, collect tles belonging to one file in one update, update the file if possible, add to above array if not. Update internal db with new TLE information.
 	for (int i=0; i < num_tles_to_update; i++) {
 		if (newer_tle_indices[i] != -1) {
 			char *tle_filename = tle_db->tles[tle_indices_to_update[i]].filename; //filename to be updated
-			bool file_is_writable = false; //FIXME
+			bool file_is_writable = access(tle_filename, W_OK) == 0;
 
 			//find entries in tle database with corresponding filenames
 			for (int j=i; j < num_tles_to_update; j++) {
@@ -320,14 +383,19 @@ void tle_update_with_file(const char *filename, struct tle_db *tle_db)
 		}
 	}
 
-	//write unwritable TLEs to new file
-	char new_tle_filename[MAX_NUM_CHARS] = "hei"; //FIXME, set according to time and date, check if the file already exists and then append a number
-	struct tle_db unwritable_db = {0};
-	for (int i=0; i < num_unwritable; i++) {
-		tle_db_add_entry(&unwritable_db, &(tle_db->tles[unwritable_tles[i]]));
-		strncpy(tle_db->tles[unwritable_tles[i]].filename, new_tle_filename, MAX_NUM_CHARS);
+	if ((num_unwritable > 0) && (tle_db->read_from_xdg)) {
+		//write unwritable TLEs to new file
+		char *new_tle_filename = get_update_tle_filename();
+
+		struct tle_db unwritable_db = {0};
+		for (int i=0; i < num_unwritable; i++) {
+			tle_db_add_entry(&unwritable_db, &(tle_db->tles[unwritable_tles[i]]));
+			strncpy(tle_db->tles[unwritable_tles[i]].filename, new_tle_filename, MAX_NUM_CHARS);
+		}
+		tle_write_db_to_file(new_tle_filename, &unwritable_db);
+
+		free(new_tle_filename);
 	}
-	tle_write_db_to_file(new_tle_filename, &unwritable_db);
 
 	free(newer_tle_indices);
 	free(tle_indices_to_update);
@@ -391,6 +459,8 @@ void flyby_read_tles_from_xdg(struct tle_db *ret_tle_db)
 	flyby_read_tle_from_directory(home_tle_dir, &temp_db);
 	tle_merge_db(&temp_db, ret_tle_db, TLE_OVERWRITE_ALL);
 	free(data_home);
+
+	ret_tle_db->read_from_xdg = true;
 }
 
 enum qth_file_state flyby_read_qth_from_xdg(predict_observer_t *ret_observer)
@@ -425,40 +495,6 @@ enum qth_file_state flyby_read_qth_from_xdg(predict_observer_t *ret_observer)
 		}
 	}
 	return QTH_FILE_HOME;
-}
-
-/**
- * Create ~/.config/flyby and ./local/share/flyby/tles/ if these do not exist.
- **/
-void create_xdg_dirs()
-{
-	//create ~/.config/flyby
-	char *config_home = xdg_config_home();
-	char config_path[MAX_NUM_CHARS] = {0};
-	snprintf(config_path, MAX_NUM_CHARS, "%s%s", config_home, FLYBY_RELATIVE_ROOT_PATH);
-	free(config_home);
-	struct stat s;
-	int err = stat(config_path, &s);
-	if ((err == -1) && (errno == ENOENT)) {
-		mkdir(config_path, 0777);
-	}
-
-	//create ~/.local/share/flyby
-	char *data_home = xdg_data_home();
-	char data_path[MAX_NUM_CHARS] = {};
-	snprintf(data_path, MAX_NUM_CHARS, "%s%s", data_home, FLYBY_RELATIVE_ROOT_PATH);
-	err = stat(data_path, &s);
-	if ((err == -1) && (errno == ENOENT)) {
-		mkdir(data_path, 0777);
-	}
-
-	//create ~/.local/share/flyby/tles
-	snprintf(data_path, MAX_NUM_CHARS, "%s%s", data_home, TLE_RELATIVE_DIR_PATH);
-	err = stat(data_path, &s);
-	if ((err == -1) && (errno == ENOENT)) {
-		mkdir(data_path, 0777);
-	}
-	free(data_home);
 }
 
 char* flyby_get_xdg_qth_writepath()

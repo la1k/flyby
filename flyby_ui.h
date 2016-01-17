@@ -28,6 +28,8 @@ struct tle_db {
 	int num_tles;
 	///TLE entries
 	struct tle_db_entry tles[MAX_NUM_SATS];
+	///Whether TLE database was read from XDG standard paths or supplied on command line
+	bool read_from_xdg;
 };
 
 /**
