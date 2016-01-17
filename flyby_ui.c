@@ -351,10 +351,10 @@ void AutoUpdate(const char *string, struct tle_db *tle_db, predict_orbital_eleme
 		move(12, 0);
 	}
 
-	//print updated entries
 	int num_updated = 0;
 	for (int i=0; i < tle_db->num_tles; i++) {
 		if (was_updated[i]) {
+			//print updated entries
 			if (interactive_mode) {
 				printw("Updated %s (%ld)", tle_db->tles[i].name, tle_db->tles[i].satellite_number);
 			} else {
@@ -373,6 +373,14 @@ void AutoUpdate(const char *string, struct tle_db *tle_db, predict_orbital_eleme
 				printf("\n");
 			}
 			num_updated++;
+
+			//update orbital elements
+			if (orbits != NULL) {
+				predict_destroy_orbital_elements(orbits[i]);
+
+				char *tle[] = {tle_db->tles[i].line1, tle_db->tles[i].line2};
+				orbits[i] = predict_parse_tle(tle);
+			}
 		}
 	}
 
