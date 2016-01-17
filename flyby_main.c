@@ -148,8 +148,9 @@ int main(int argc, char **argv)
 	int num_update_files = string_array_size(&tle_update_filenames);
 	if (num_update_files > 0) {
 		for (int i=0; i < num_update_files; i++) {
-			printf("Updating TLE database using %s.\n", string_array_get(&tle_update_filenames, i));
+			printf("Updating TLE database using %s:\n\n", string_array_get(&tle_update_filenames, i));
 			AutoUpdate(string_array_get(&tle_update_filenames, i), &tle_db, NULL);
+			printf("\n");
 		}
 		string_array_free(&tle_update_filenames);
 		return 0;

@@ -86,4 +86,20 @@ enum qth_file_state {
  **/
 enum qth_file_state flyby_read_qth_from_xdg(predict_observer_t *ret_observer);
 
+/**
+ * Update internal TLE database with newer TLE entries located within supplied file, and update the corresponding file databases.
+ * Following rules are used:
+ *
+ * - If the original TLE file is at a writable location: Update that file. Each file will be updated once.
+ * - If the original TLE file is at a non-writable location, and the TLE database was read from XDG dirs: Create a new file in XDG_DATA_HOME/flyby/tle/, according to the filename defined in get_update_filename(). All TLEs will be written to the same file.
+ *
+ *  Update file will not be created if TLE database was not read from XDG, as it will be assumed that TLE files have been specified using the command line options, and it will be meaningless to create new files in any location.
+ *
+ * \param filename TLE file database to read
+ * \param tle_db TLE database
+ * \param ret_was_updated Boolean array of at least size tle_db->num_tles. Will contain true at the entry indices that were updated. Set to NULL if this is not to be used
+ * \param ret_in_new_file Boolean array of at least size tle_db->num_tles. Will contain true at the entry indices that were updated and put in a new update file within the TLE folder. Check against tle_db->read_from_xdg_dirs to see whether file actually was created or not
+ **/
+void tle_update_with_file(const char *filename, struct tle_db *tle_db, bool *ret_was_updated, bool *ret_in_new_file);
+
 #endif
