@@ -172,6 +172,13 @@ bool tle_is_newer_than(char *tle_1[2], char *tle_2[2])
 	return epoch_1 > epoch_2;
 }
 
+/**
+ * Check internal TLE lines within tle entries to see whether one is more recent than the other.
+ *
+ * \param tle_entry_1 TLE entry 1
+ * \param tle_entry_2 TLE entry 2
+ * \return True if TLE entry 1 is more recent than TLE entry 2
+ **/
 bool tle_entry_is_newer_than(struct tle_db_entry tle_entry_1, struct tle_db_entry tle_entry_2)
 {
 	char *tle_1[2] = {tle_entry_1.line1, tle_entry_1.line2};
@@ -179,6 +186,13 @@ bool tle_entry_is_newer_than(struct tle_db_entry tle_entry_1, struct tle_db_entr
 	return tle_is_newer_than(tle_1, tle_2);
 }
 
+/**
+ * Overwrite TLE database entry with supplied TLE entry.
+ *
+ * \param entry_index Index in TLE database
+ * \param tle_db TLE database
+ * \param entry TLE entry to overwrite on specified index
+ **/
 void tle_db_overwrite_entry(int entry_index, struct tle_db *tle_db, const struct tle_db_entry *entry)
 {
 	if (entry_index < tle_db->num_tles) {
@@ -190,6 +204,12 @@ void tle_db_overwrite_entry(int entry_index, struct tle_db *tle_db, const struct
 	}
 }
 
+/**
+ * Add TLE entry to database.
+ *
+ * \param tle_db TLE database
+ * \param entry TLE database entry to add
+ **/
 void tle_db_add_entry(struct tle_db *tle_db, const struct tle_db_entry *entry) {
 	if (tle_db->num_tles+1 < MAX_NUM_SATS) {
 		tle_db->num_tles++;
@@ -244,6 +264,12 @@ void tle_merge_db(struct tle_db *new_db, struct tle_db *main_db, enum tle_merge_
 	}
 }
 
+/**
+ * Write contents to TLE database to file.
+ *
+ * \param filename Filename
+ * \param tle_db TLE database to write
+ **/
 void tle_write_db_to_file(const char *filename, struct tle_db *tle_db)
 {
 	int x;
@@ -262,6 +288,13 @@ void tle_write_db_to_file(const char *filename, struct tle_db *tle_db)
 	fclose(fd);
 }
 
+/**
+ * Find TLE entry within TLE database. Searches with respect to the satellite number.
+ *
+ * \param tle_db TLE database
+ * \param entry TLE entry to find (uses only the satellite number, ignores the other fields)
+ * \return Index within TLE database if found, -1 otherwise
+ **/
 int tle_find_entry_in_db(struct tle_db *tle_db, struct tle_db_entry entry)
 {
 	for (int i=0; i < tle_db->num_tles; i++) {
@@ -272,6 +305,11 @@ int tle_find_entry_in_db(struct tle_db *tle_db, struct tle_db_entry entry)
 	return -1;
 }
 
+/**
+ * Get filename to put TLE updates in when the TLE to update are located within system-wide, non-writable locations.
+ * Uses XDG_DATA_HOME/flyby/tle/tle-updatefile-[DATE]-[TIME]-[NUMBER].tle, and loops through [NUMBER] until a non-existing
+ * file is found.
+ **/
 char *get_update_tle_filename()
 {
 	create_xdg_dirs();
@@ -297,6 +335,13 @@ char *get_update_tle_filename()
 	return ret_string;
 }
 
+/**
+ * Write the parts of the TLE database that are read from the supplied filename to file again. Used for updating
+ * the TLE files with new information, if any.
+ *
+ * \param tle_filename Filename to which corresponding entries are found and written
+ * \param tle_db TLE database
+ **/
 void tle_update_files_with_filename_match(const char *tle_filename, struct tle_db *tle_db)
 {
 	struct tle_db subset_db = {0};
@@ -308,6 +353,20 @@ void tle_update_files_with_filename_match(const char *tle_filename, struct tle_d
 	tle_write_db_to_file(tle_filename, &subset_db);
 }
 
+/**
+ * Update internal TLE database with newer TLE entries located within supplied file, and update the corresponding file databases.
+ * Following rules are used:
+ *
+ * - If the original TLE file is at a writable location: Update that file. Each file will be updated once.
+ * - If the original TLE file is at a non-writable location, and the TLE database was read from XDG dirs: Create a new file in XDG_DATA_HOME/flyby/tle/, according to the filename defined in get_update_filename(). All TLEs will be written to the same file.
+ *
+ *  Update file will not be created if TLE database was not read from XDG, as it will be assumed that TLE files have been specified using the command line options, and it will be meaningless to create new files in any location.
+ *
+ * \param filename TLE file database to read
+ * \param tle_db TLE database
+ * \param ret_was_updated Boolean array of at least size tle_db->num_tles. Will contain true at the entry indices that were updated. Set to NULL if this is not to be used
+ * \param ret_in_new_file Boolean array of at least size tle_db->num_tles. Will contain true at the entry indices that were updated and put in a new update file within the TLE folder. Check against tle_db->read_from_xdg_dirs to see whether file actually was created or not
+ **/
 void tle_update_with_file(const char *filename, struct tle_db *tle_db, bool *ret_was_updated, bool *ret_in_new_file)
 {
 	struct tle_db new_db = {0};
