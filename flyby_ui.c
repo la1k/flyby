@@ -312,26 +312,6 @@ char *destination;
 	return error;
 }
 
-void SaveTLE(struct tle_db *tle_db)
-{
-	int x;
-	FILE *fd;
-
-	/* Save orbital data to tlefile */
-
-	//fd=fopen(tle_db->filename,"w");
-
-	for (x=0; x<tle_db->num_tles; x++) {
-		/* Write name, line1, line2 to flyby.tle */
-
-		fprintf(fd,"%s\n", tle_db->tles[x].name);
-		fprintf(fd,"%s\n", tle_db->tles[x].line1);
-		fprintf(fd,"%s\n", tle_db->tles[x].line2);
-	}
-
-	fclose(fd);
-}
-
 int AutoUpdate(const char *string, struct tle_db *_tle_db, predict_orbital_elements_t **orbits)
 {
 	int num_sats = _tle_db->num_tles;
@@ -518,8 +498,8 @@ int AutoUpdate(const char *string, struct tle_db *_tle_db, predict_orbital_eleme
 			}
 		}
 
-		if (saveflag)
-			SaveTLE(_tle_db);
+//		if (saveflag)
+			//SaveTLE(_tle_db);
 	} while (success==0 && interactive);
 
 	return (saveflag ? 0 : -1);

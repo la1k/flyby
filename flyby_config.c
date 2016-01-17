@@ -136,6 +136,31 @@ bool tle_is_newer_than(char *tle_1[2], char *tle_2[2])
 	return epoch_1 > epoch_2;
 }
 
+bool tle_entry_is_newer_than(struct tle_db_entry tle_entry_1, struct tle_db_entry tle_entry_2)
+{
+	char *tle_1[2] = {tle_entry_1.line1, tle_entry_2.line2};
+	char *tle_2[2] = {tle_entry_1.line1, tle_entry_2.line2};
+	return tle_is_newer_than(tle_1, tle_2);
+}
+
+void tle_db_overwrite_entry(int entry_index, struct tle_db *tle_db, const struct tle_db_entry *entry)
+{
+	if (entry_index < tle_db->num_tles) {
+		tle_db->tles[entry_index].satellite_number = entry->satellite_number;
+		strncpy(tle_db->tles[entry_index].name, entry->name, MAX_NUM_CHARS);
+		strncpy(tle_db->tles[entry_index].line1, entry->line1, MAX_NUM_CHARS);
+		strncpy(tle_db->tles[entry_index].line2, entry->line2, MAX_NUM_CHARS);
+		strncpy(tle_db->tles[entry_index].filename, entry->filename, MAX_NUM_CHARS);
+	}
+}
+
+void tle_db_add_entry(struct tle_db *tle_db, const struct tle_db_entry *entry) {
+	if (tle_db->num_tles+1 < MAX_NUM_SATS) {
+		tle_db->num_tles++;
+		tle_db_overwrite_entry(tle_db->num_tles-1, tle_db, entry);
+	}
+}
+
 /**
  * Defines whether to overwrite only older TLE entries or all existing TLE entries when merging two databases.
  **/
@@ -161,34 +186,152 @@ void tle_merge_db(struct tle_db *new_db, struct tle_db *main_db, enum tle_merge_
 			//check whether TLE already exists in the database
 			if (new_db->tles[i].satellite_number == main_db->tles[j].satellite_number) {
 				tle_exists = true;
-				char *new_tle[2] = {new_db->tles[i].line1, new_db->tles[i].line2};
-				char *old_tle[2] = {main_db->tles[j].line1, main_db->tles[j].line2};
 
 				bool should_overwrite = false;
 
 				if (merge_opt == TLE_OVERWRITE_ALL) {
 					should_overwrite = true;
-				} else if (tle_is_newer_than(new_tle, old_tle)) {
+				} else if (tle_entry_is_newer_than(new_db->tles[i], main_db->tles[i])) {
 					should_overwrite = true;
 				}
 
 				if (should_overwrite) {
-					strncpy(main_db->tles[j].name, new_db->tles[i].name, MAX_NUM_CHARS);
-					strncpy(main_db->tles[j].line1, new_db->tles[i].line1, MAX_NUM_CHARS);
-					strncpy(main_db->tles[j].line2, new_db->tles[i].line2, MAX_NUM_CHARS);
-					strncpy(main_db->tles[j].filename, new_db->tles[i].filename, MAX_NUM_CHARS);
+					tle_db_overwrite_entry(j, main_db, &(new_db->tles[i]));
 				}
 			}
 		}
 
 		//append TLE entry to main TLE database
 		if (!tle_exists) {
-			if (main_db->num_tles+1 < MAX_NUM_SATS) {
-				main_db->tles[main_db->num_tles] = new_db->tles[i];
-				main_db->num_tles++;
+			tle_db_add_entry(main_db, &(new_db->tles[i]));
+		}
+	}
+}
+
+void tle_write_db_to_file(const char *filename, struct tle_db *tle_db)
+{
+	int x;
+	FILE *fd;
+
+	/* Save orbital data to tlefile */
+
+	fd=fopen(filename,"w");
+
+	for (x=0; x<tle_db->num_tles; x++) {
+		fprintf(fd,"%s\n", tle_db->tles[x].name);
+		fprintf(fd,"%s\n", tle_db->tles[x].line1);
+		fprintf(fd,"%s\n", tle_db->tles[x].line2);
+	}
+
+	fclose(fd);
+}
+
+int tle_find_entry_in_db(struct tle_db *tle_db, struct tle_db_entry entry)
+{
+	for (int i=0; i < tle_db->num_tles; i++) {
+		if (tle_db->tles[i].satellite_number == entry.satellite_number) {
+			return i;
+		}
+	}
+	return -1;
+}
+
+void tle_update_files_with_filename_match(const char *tle_filename, struct tle_db *tle_db)
+{
+	struct tle_db subset_db = {0};
+	for (int i=0; i < tle_db->num_tles; i++) {
+		if (strcmp(tle_db->tles[i].filename, tle_filename) == 0) {
+			tle_db_add_entry(&subset_db, &(tle_db->tles[i]));
+		}
+	}
+	tle_write_db_to_file(tle_filename, &subset_db);
+}
+
+void tle_update_with_file(const char *filename, struct tle_db *tle_db)
+{
+	struct tle_db new_db = {0};
+	int retval = flyby_read_tle_file(filename, &new_db);
+	if (retval != 0) {
+		return;
+	}
+
+	int num_tles_to_update = 0;
+	int *newer_tle_indices = (int*)malloc(sizeof(int)*new_db.num_tles); //indices in new TLE db that should be used to update internal db
+	int *tle_indices_to_update = (int*)malloc(sizeof(int)*new_db.num_tles); //indices in internal db that should be updated
+
+	//find more recent entries
+	for (int i=0; i < new_db.num_tles; i++) {
+		int index = tle_find_entry_in_db(tle_db, new_db.tles[i]);
+		if (index != -1) {
+			if (tle_entry_is_newer_than(new_db.tles[i], tle_db->tles[index])) {
+				newer_tle_indices[num_tles_to_update] = i;
+				tle_indices_to_update[num_tles_to_update] = index;
+				num_tles_to_update++;
 			}
 		}
 	}
+
+	if (num_tles_to_update <= 0) {
+		return;
+	}
+
+	int num_unwritable = 0;
+	int *unwritable_tles = (int*)malloc(sizeof(int)*num_tles_to_update); //indices in the internal db that were updated, but cannot be written to the current file.
+	for (int i=0; i < num_tles_to_update; i++) {
+		if (newer_tle_indices[i] != -1) {
+			char *tle_filename = tle_db->tles[tle_indices_to_update[i]].filename; //filename to be updated
+			bool file_is_writable = false; //FIXME
+
+			//find entries in tle database with corresponding filenames
+			for (int j=i; j < num_tles_to_update; j++) {
+				if (newer_tle_indices[j] != -1) {
+					int tle_index = tle_indices_to_update[j];
+					struct tle_db_entry *tle_update_entry = &(new_db.tles[newer_tle_indices[j]]);
+					struct tle_db_entry *tle_entry = &(tle_db->tles[tle_index]);
+					if (strcmp(tle_filename, tle_entry->filename) == 0) {
+						//update tle db entry with new entry
+						char keep_filename[MAX_NUM_CHARS];
+						char keep_name[MAX_NUM_CHARS];
+						strncpy(keep_filename, tle_entry->filename, MAX_NUM_CHARS);
+						strncpy(keep_name, tle_entry->name, MAX_NUM_CHARS);
+
+						tle_db_overwrite_entry(tle_index, tle_db, tle_update_entry);
+
+						//keep old filename and name
+						strncpy(tle_entry->filename, keep_filename, MAX_NUM_CHARS);
+						strncpy(tle_entry->name, keep_name, MAX_NUM_CHARS);
+
+						//set db indices to update to -1 in order to ignore them on the next update
+						newer_tle_indices[j] = -1;
+
+						if (!file_is_writable) {
+							//add to list over unwritable TLE filenames
+							unwritable_tles[num_unwritable] = tle_index;
+							num_unwritable++;
+						}
+					}
+				}
+			}
+
+			//write updated TLE entries to file
+			if (file_is_writable) {
+				tle_update_files_with_filename_match(tle_filename, tle_db);
+			}
+		}
+	}
+
+	//write unwritable TLEs to new file
+	char new_tle_filename[MAX_NUM_CHARS] = "hei"; //FIXME, set according to time and date, check if the file already exists and then append a number
+	struct tle_db unwritable_db = {0};
+	for (int i=0; i < num_unwritable; i++) {
+		tle_db_add_entry(&unwritable_db, &(tle_db->tles[unwritable_tles[i]]));
+		strncpy(tle_db->tles[unwritable_tles[i]].filename, new_tle_filename, MAX_NUM_CHARS);
+	}
+	tle_write_db_to_file(new_tle_filename, &unwritable_db);
+
+	free(newer_tle_indices);
+	free(tle_indices_to_update);
+	free(unwritable_tles);
 }
 
 /**
