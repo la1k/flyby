@@ -217,23 +217,6 @@ void tle_db_add_entry(struct tle_db *tle_db, const struct tle_db_entry *entry) {
 	}
 }
 
-/**
- * Defines whether to overwrite only older TLE entries or all existing TLE entries when merging two databases.
- **/
-enum tle_merge_behavior {
-	///Overwrite only old existing TLE entries
-	TLE_OVERWRITE_OLD,
-	///Overwrite all existing TLE entries
-	TLE_OVERWRITE_ALL
-};
-
-/**
- * Merge two TLE databases.
- *
- * \param new_db New TLE database to merge into an existing one
- * \param main_db Existing TLE database into which new TLE database is to be merged
- * \param merge_opt Merge options
- **/
 void tle_merge_db(struct tle_db *new_db, struct tle_db *main_db, enum tle_merge_behavior merge_opt)
 {
 	for (int i=0; i < new_db->num_tles; i++) {

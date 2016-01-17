@@ -312,7 +312,7 @@ char *destination;
 	return error;
 }
 
-int AutoUpdate(const char *string, struct tle_db *tle_db, predict_orbital_elements_t **orbits)
+void AutoUpdate(const char *string, struct tle_db *tle_db, predict_orbital_elements_t **orbits)
 {
 	bool interactive_mode = (string[0] == '\0');
 	char filename[MAX_NUM_CHARS] = {0};

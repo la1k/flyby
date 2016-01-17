@@ -51,9 +51,7 @@ int main(int argc, char **argv)
 
 	//config files
 	string_array_t tle_update_filenames = {0}; //TLE files to be used to update the TLE databases
-
-	char tle_cmd_filename[MAX_NUM_CHARS] = {0};
-	bool tle_cmd_filename_set = false;
+	string_array_t tle_cmd_filenames = {0}; //TLE files supplied on the command line
 
 	char qth_filename[MAX_NUM_CHARS] = {0};
 	bool qth_cmd_filename_set = false;
@@ -89,8 +87,7 @@ int main(int argc, char **argv)
 				string_array_add(&tle_update_filenames, optarg);
 				break;
 			case 't': //tlefile
-				strncpy(tle_cmd_filename, optarg, MAX_NUM_CHARS);
-				tle_cmd_filename_set = true;
+				string_array_add(&tle_cmd_filenames, optarg);
 				break;
 			case 'q': //qth
 				strncpy(qth_filename, optarg, MAX_NUM_CHARS);
@@ -138,9 +135,18 @@ int main(int argc, char **argv)
 
 	//read TLE database
 	struct tle_db tle_db = {0};
-	if (tle_cmd_filename_set) {
-		flyby_read_tle_file(tle_cmd_filename, &tle_db);
+	int num_cmd_tle_files = string_array_size(&tle_cmd_filenames);
+	if (num_cmd_tle_files > 0) {
+		//TLEs are read from files specified on the command line
+		for (int i=0; i < num_cmd_tle_files; i++) {
+			struct tle_db temp_db = {0};
+			int retval = flyby_read_tle_file(string_array_get(&tle_cmd_filenames, i), &temp_db);
+			if (retval != -1) {
+				tle_merge_db(&temp_db, &tle_db, TLE_OVERWRITE_OLD);
+			}
+		}
 	} else {
+		//TLEs are read from XDG dirs
 		flyby_read_tles_from_xdg(&tle_db);
 	}
 
@@ -241,7 +247,7 @@ void show_help(const char *name, struct option long_options[], const char *short
 				printf("=FILE\t\tupdate TLE database with TLE file FILE. Multiple files can be specified using the same option multiple times (e.g. -u file1 -u file2 ...). %s will exit afterwards", name);
 				break;
 			case 't':
-				printf("=FILE\t\t\tuse FILE as TLE database file. Overrides user and system TLE database files. Only a single file is supported.");
+				printf("=FILE\t\t\tuse FILE as TLE database file. Overrides user and system TLE database files. Multiple files can be specified using this option multiple times (e.g. -t file1 -t file2 ...).");
 				break;
 			case 'q':
 				printf("=FILE\t\t\tuse FILE as QTH config file. Overrides existing QTH config file");

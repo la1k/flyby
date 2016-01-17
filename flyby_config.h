@@ -102,4 +102,23 @@ enum qth_file_state flyby_read_qth_from_xdg(predict_observer_t *ret_observer);
  **/
 void tle_update_with_file(const char *filename, struct tle_db *tle_db, bool *ret_was_updated, bool *ret_in_new_file);
 
+/**
+ * Defines whether to overwrite only older TLE entries or all existing TLE entries when merging two databases.
+ **/
+enum tle_merge_behavior {
+	///Overwrite only old existing TLE entries
+	TLE_OVERWRITE_OLD,
+	///Overwrite all existing TLE entries
+	TLE_OVERWRITE_ALL
+};
+
+/**
+ * Merge two TLE databases.
+ *
+ * \param new_db New TLE database to merge into an existing one
+ * \param main_db Existing TLE database into which new TLE database is to be merged
+ * \param merge_opt Merge options
+ **/
+void tle_merge_db(struct tle_db *new_db, struct tle_db *main_db, enum tle_merge_behavior merge_opt);
+
 #endif
