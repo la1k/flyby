@@ -143,6 +143,9 @@ int main(int argc, char **argv)
 			int retval = flyby_read_tle_file(string_array_get(&tle_cmd_filenames, i), &temp_db);
 			if (retval != -1) {
 				tle_merge_db(&temp_db, &tle_db, TLE_OVERWRITE_OLD);
+			} else {
+				fprintf(stderr, "TLE file %s could not be loaded, exiting.\n", string_array_get(&tle_cmd_filenames, i));
+				return 1;
 			}
 		}
 	} else {
@@ -183,7 +186,11 @@ int main(int argc, char **argv)
 	bool is_new_user = false;
 
 	if (qth_cmd_filename_set) {
-		flyby_read_qth_file(qth_filename, observer);
+		int retval = flyby_read_qth_file(qth_filename, observer);
+		if (retval != 0) {
+			fprintf(stderr, "QTH file %s could not be loaded.\n", qth_filename);
+			return 1;
+		}
 	} else {
 		is_new_user = flyby_read_qth_from_xdg(observer) != QTH_FILE_HOME;
 		char *temp = flyby_get_xdg_qth_writepath();
