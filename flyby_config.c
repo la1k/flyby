@@ -210,7 +210,8 @@ void tle_db_overwrite_entry(int entry_index, struct tle_db *tle_db, const struct
  * \param tle_db TLE database
  * \param entry TLE database entry to add
  **/
-void tle_db_add_entry(struct tle_db *tle_db, const struct tle_db_entry *entry) {
+void tle_db_add_entry(struct tle_db *tle_db, const struct tle_db_entry *entry)
+{
 	if (tle_db->num_tles+1 < MAX_NUM_SATS) {
 		tle_db->num_tles++;
 		tle_db_overwrite_entry(tle_db->num_tles-1, tle_db, entry);
@@ -613,14 +614,12 @@ int flyby_read_tle_file(const char *tle_file, struct tle_db *ret_db)
 	//copied from ReadDataFiles().
 
 	ret_db->num_tles = 0;
-	int x = 0, y = 0;
+	int y = 0;
 	char name[80], line1[80], line2[80];
-
-	struct tle_db_entry *sats = ret_db->tles;
 
 	FILE *fd=fopen(tle_file,"r");
 	if (fd!=NULL) {
-		while (x<MAX_NUM_SATS && feof(fd)==0) {
+		while (feof(fd)==0) {
 			/* Initialize variables */
 
 			name[0]=0;
@@ -651,26 +650,26 @@ int flyby_read_tle_file(const char *tle_file, struct tle_db *ret_db)
 
 				/* Copy TLE data into the sat data structure */
 
-				strncpy(sats[x].name,name,24);
-				strncpy(sats[x].line1,line1,69);
-				strncpy(sats[x].line2,line2,69);
+				struct tle_db_entry entry = {0};
+
+				strncpy(entry.name,name,24);
+				strncpy(entry.line1,line1,69);
+				strncpy(entry.line2,line2,69);
 
 				/* Get satellite number, so that the satellite database can be parsed. */
 
-				char *tle[2] = {sats[x].line1, sats[x].line2};
+				char *tle[2] = {entry.line1, entry.line2};
 				predict_orbital_elements_t *temp_elements = predict_parse_tle(tle);
-				sats[x].satellite_number = temp_elements->satellite_number;
+				entry.satellite_number = temp_elements->satellite_number;
 				predict_destroy_orbital_elements(temp_elements);
 
-				strncpy(sats[x].filename, tle_file, MAX_NUM_CHARS);
+				strncpy(entry.filename, tle_file, MAX_NUM_CHARS);
 
-				x++;
-
+				tle_db_add_entry(ret_db, &entry);
 			}
 		}
 
 		fclose(fd);
-		ret_db->num_tles=x;
 	} else {
 		return -1;
 	}
