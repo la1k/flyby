@@ -140,9 +140,9 @@ int main(int argc, char **argv)
 		//TLEs are read from files specified on the command line
 		for (int i=0; i < num_cmd_tle_files; i++) {
 			struct tle_db temp_db = {0};
-			int retval = flyby_read_tle_file(string_array_get(&tle_cmd_filenames, i), &temp_db);
+			int retval = tle_db_from_file(string_array_get(&tle_cmd_filenames, i), &temp_db);
 			if (retval != -1) {
-				tle_merge_db(&temp_db, &tle_db, TLE_OVERWRITE_OLD);
+				tle_db_merge(&temp_db, &tle_db, TLE_OVERWRITE_OLD);
 			} else {
 				fprintf(stderr, "TLE file %s could not be loaded, exiting.\n", string_array_get(&tle_cmd_filenames, i));
 				return 1;
@@ -150,7 +150,7 @@ int main(int argc, char **argv)
 		}
 	} else {
 		//TLEs are read from XDG dirs
-		flyby_read_tles_from_xdg(&tle_db);
+		tle_db_from_search_paths(&tle_db);
 	}
 
 	//use tle update files to update the TLE database, if present
@@ -186,20 +186,20 @@ int main(int argc, char **argv)
 	bool is_new_user = false;
 
 	if (qth_cmd_filename_set) {
-		int retval = flyby_read_qth_file(qth_filename, observer);
+		int retval = qth_from_file(qth_filename, observer);
 		if (retval != 0) {
 			fprintf(stderr, "QTH file %s could not be loaded.\n", qth_filename);
 			return 1;
 		}
 	} else {
-		is_new_user = flyby_read_qth_from_xdg(observer) != QTH_FILE_HOME;
-		char *temp = flyby_get_xdg_qth_writepath();
+		is_new_user = qth_from_search_paths(observer) != QTH_FILE_HOME;
+		char *temp = qth_default_writepath();
 		strncpy(qth_filename, temp, MAX_NUM_CHARS);
 		free(temp);
 	}
 
 	struct transponder_db transponder_db = {0};
-	flyby_read_transponder_db_from_xdg(&tle_db, &transponder_db);
+	transponder_db_from_search_paths(&tle_db, &transponder_db);
 
 	RunFlybyUI(is_new_user, qth_filename, observer, &tle_db, &transponder_db, &rotctld, &downlink, &uplink);
 

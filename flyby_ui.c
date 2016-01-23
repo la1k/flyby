@@ -345,7 +345,7 @@ void AutoUpdate(const char *string, struct tle_db *tle_db, predict_orbital_eleme
 	//update TLE database with file
 	bool was_updated[MAX_NUM_SATS] = {0};
 	bool in_new_file[MAX_NUM_SATS] = {0};
-	tle_update_with_file(filename, tle_db, was_updated, in_new_file);
+	tle_db_update(filename, tle_db, was_updated, in_new_file);
 
 	if (interactive_mode) {
 		move(12, 0);
@@ -1248,7 +1248,7 @@ void QthEdit(const char *qthfile, predict_observer_t *qth)
 	}
 
 	if (should_save) {
-		flyby_write_qth_to_file(qthfile, qth);
+		qth_to_file(qthfile, qth);
 	}
 }
 

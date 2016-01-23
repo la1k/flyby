@@ -21,17 +21,24 @@
 #define XDG_CONFIG_HOME "XDG_CONFIG_HOME"
 #define XDG_CONFIG_HOME_DEFAULT ".config/"
 
-//default relative TLE data directory
-#define TLE_RELATIVE_DIR_PATH "flyby/tles/"
-
-//default relative qth config filename
-#define QTH_RELATIVE_FILE_PATH "flyby/flyby.qth"
-
-#define DB_RELATIVE_FILE_PATH "flyby/flyby.db"
-
 //default relative subdir
 #define FLYBY_RELATIVE_ROOT_PATH "flyby/"
 
+//default relative TLE data directory
+#define TLE_RELATIVE_DIR_PATH FLYBY_RELATIVE_ROOT_PATH "tles/"
+
+//default relative qth config filename
+#define QTH_RELATIVE_FILE_PATH FLYBY_RELATIVE_ROOT_PATH "flyby.qth"
+
+//default relative transponder database filename
+#define DB_RELATIVE_FILE_PATH FLYBY_RELATIVE_ROOT_PATH "flyby.db"
+
+/**
+ * Helper function for creating an XDG_DIRS-variable. Use the value contained within environment variable varname, if empty use default_val.
+ *
+ * \param varname Environment variable name
+ * \param default_val Default value
+ **/
 char *xdg_dirs(const char *varname, const char *default_val)
 {
 	char *default_copy = strdup(default_val);
@@ -51,6 +58,13 @@ char *xdg_dirs(const char *varname, const char *default_val)
 	return data_dirs;
 }
 
+/**
+ * Helper function for constructing a XDG_HOME-variable. Use the value
+ * contained within environment variable varname, if empty use $HOME/default_val.
+ *
+ * \param varname Environment variable name
+ * \param default_val Default value
+ **/
 char *xdg_home(const char *varname, const char *default_val)
 {
 	char *data_dirs = getenv(varname);
@@ -133,7 +147,6 @@ void create_xdg_dirs()
 	free(data_home);
 }
 
-
 /**
  * Split string at ':'-delimiter.
  * \param string_list Input string list delimited by :
@@ -152,7 +165,7 @@ void stringsplit(const char *string_list, string_array_t *ret_string_list)
 }
 
 /**
- * Check if tle_1 is newer than tle_2.
+ * Check if tle_1 is more recent than tle_2.
  *
  * \param tle_1 First NORAD TLE
  * \param tle_2 Second NORAD TLE
@@ -179,7 +192,7 @@ bool tle_is_newer_than(char *tle_1[2], char *tle_2[2])
  * \param tle_entry_2 TLE entry 2
  * \return True if TLE entry 1 is more recent than TLE entry 2
  **/
-bool tle_entry_is_newer_than(struct tle_db_entry tle_entry_1, struct tle_db_entry tle_entry_2)
+bool tle_db_entry_is_newer_than(struct tle_db_entry tle_entry_1, struct tle_db_entry tle_entry_2)
 {
 	char *tle_1[2] = {tle_entry_1.line1, tle_entry_1.line2};
 	char *tle_2[2] = {tle_entry_2.line1, tle_entry_2.line2};
@@ -191,16 +204,16 @@ bool tle_entry_is_newer_than(struct tle_db_entry tle_entry_1, struct tle_db_entr
  *
  * \param entry_index Index in TLE database
  * \param tle_db TLE database
- * \param entry TLE entry to overwrite on specified index
+ * \param new_entry TLE entry to overwrite on specified index
  **/
-void tle_db_overwrite_entry(int entry_index, struct tle_db *tle_db, const struct tle_db_entry *entry)
+void tle_db_overwrite_entry(int entry_index, struct tle_db *tle_db, const struct tle_db_entry *new_entry)
 {
 	if (entry_index < tle_db->num_tles) {
-		tle_db->tles[entry_index].satellite_number = entry->satellite_number;
-		strncpy(tle_db->tles[entry_index].name, entry->name, MAX_NUM_CHARS);
-		strncpy(tle_db->tles[entry_index].line1, entry->line1, MAX_NUM_CHARS);
-		strncpy(tle_db->tles[entry_index].line2, entry->line2, MAX_NUM_CHARS);
-		strncpy(tle_db->tles[entry_index].filename, entry->filename, MAX_NUM_CHARS);
+		tle_db->tles[entry_index].satellite_number = new_entry->satellite_number;
+		strncpy(tle_db->tles[entry_index].name, new_entry->name, MAX_NUM_CHARS);
+		strncpy(tle_db->tles[entry_index].line1, new_entry->line1, MAX_NUM_CHARS);
+		strncpy(tle_db->tles[entry_index].line2, new_entry->line2, MAX_NUM_CHARS);
+		strncpy(tle_db->tles[entry_index].filename, new_entry->filename, MAX_NUM_CHARS);
 	}
 }
 
@@ -218,7 +231,7 @@ void tle_db_add_entry(struct tle_db *tle_db, const struct tle_db_entry *entry)
 	}
 }
 
-void tle_merge_db(struct tle_db *new_db, struct tle_db *main_db, enum tle_merge_behavior merge_opt)
+void tle_db_merge(struct tle_db *new_db, struct tle_db *main_db, enum tle_merge_behavior merge_opt)
 {
 	for (int i=0; i < new_db->num_tles; i++) {
 		bool tle_exists = false;
@@ -231,7 +244,7 @@ void tle_merge_db(struct tle_db *new_db, struct tle_db *main_db, enum tle_merge_
 
 				if (merge_opt == TLE_OVERWRITE_ALL) {
 					should_overwrite = true;
-				} else if (tle_entry_is_newer_than(new_db->tles[i], main_db->tles[i])) {
+				} else if (tle_db_entry_is_newer_than(new_db->tles[i], main_db->tles[i])) {
 					should_overwrite = true;
 				}
 
@@ -254,7 +267,7 @@ void tle_merge_db(struct tle_db *new_db, struct tle_db *main_db, enum tle_merge_
  * \param filename Filename
  * \param tle_db TLE database to write
  **/
-void tle_write_db_to_file(const char *filename, struct tle_db *tle_db)
+void tle_db_to_file(const char *filename, struct tle_db *tle_db)
 {
 	int x;
 	FILE *fd;
@@ -279,7 +292,7 @@ void tle_write_db_to_file(const char *filename, struct tle_db *tle_db)
  * \param entry TLE entry to find (uses only the satellite number, ignores the other fields)
  * \return Index within TLE database if found, -1 otherwise
  **/
-int tle_find_entry_in_db(struct tle_db *tle_db, struct tle_db_entry entry)
+int tle_db_find_entry(struct tle_db *tle_db, struct tle_db_entry entry)
 {
 	for (int i=0; i < tle_db->num_tles; i++) {
 		if (tle_db->tles[i].satellite_number == entry.satellite_number) {
@@ -294,7 +307,7 @@ int tle_find_entry_in_db(struct tle_db *tle_db, struct tle_db_entry entry)
  * Uses XDG_DATA_HOME/flyby/tle/tle-updatefile-[DATE]-[TIME]-[NUMBER].tle, and loops through [NUMBER] until a non-existing
  * file is found.
  **/
-char *get_update_tle_filename()
+char *tle_db_updatefile_writepath()
 {
 	create_xdg_dirs();
 
@@ -326,7 +339,7 @@ char *get_update_tle_filename()
  * \param tle_filename Filename to which corresponding entries are found and written
  * \param tle_db TLE database
  **/
-void tle_update_files_with_filename_match(const char *tle_filename, struct tle_db *tle_db)
+void tle_db_update_file(const char *tle_filename, struct tle_db *tle_db)
 {
 	struct tle_db subset_db = {0};
 	for (int i=0; i < tle_db->num_tles; i++) {
@@ -334,13 +347,13 @@ void tle_update_files_with_filename_match(const char *tle_filename, struct tle_d
 			tle_db_add_entry(&subset_db, &(tle_db->tles[i]));
 		}
 	}
-	tle_write_db_to_file(tle_filename, &subset_db);
+	tle_db_to_file(tle_filename, &subset_db);
 }
 
-void tle_update_with_file(const char *filename, struct tle_db *tle_db, bool *ret_was_updated, bool *ret_in_new_file)
+void tle_db_update(const char *filename, struct tle_db *tle_db, bool *ret_was_updated, bool *ret_in_new_file)
 {
 	struct tle_db new_db = {0};
-	int retval = flyby_read_tle_file(filename, &new_db);
+	int retval = tle_db_from_file(filename, &new_db);
 	if (retval != 0) {
 		return;
 	}
@@ -351,9 +364,9 @@ void tle_update_with_file(const char *filename, struct tle_db *tle_db, bool *ret
 
 	//find more recent entries
 	for (int i=0; i < new_db.num_tles; i++) {
-		int index = tle_find_entry_in_db(tle_db, new_db.tles[i]);
+		int index = tle_db_find_entry(tle_db, new_db.tles[i]);
 		if (index != -1) {
-			if (tle_entry_is_newer_than(new_db.tles[i], tle_db->tles[index])) {
+			if (tle_db_entry_is_newer_than(new_db.tles[i], tle_db->tles[index])) {
 				newer_tle_indices[num_tles_to_update] = i;
 				tle_indices_to_update[num_tles_to_update] = index;
 				num_tles_to_update++;
@@ -415,21 +428,21 @@ void tle_update_with_file(const char *filename, struct tle_db *tle_db, bool *ret
 
 			//write updated TLE entries to file
 			if (file_is_writable) {
-				tle_update_files_with_filename_match(tle_filename, tle_db);
+				tle_db_update_file(tle_filename, tle_db);
 			}
 		}
 	}
 
 	if ((num_unwritable > 0) && (tle_db->read_from_xdg)) {
 		//write unwritable TLEs to new file
-		char *new_tle_filename = get_update_tle_filename();
+		char *new_tle_filename = tle_db_updatefile_writepath();
 
 		struct tle_db unwritable_db = {0};
 		for (int i=0; i < num_unwritable; i++) {
 			tle_db_add_entry(&unwritable_db, &(tle_db->tles[unwritable_tles[i]]));
 			strncpy(tle_db->tles[unwritable_tles[i]].filename, new_tle_filename, MAX_NUM_CHARS);
 		}
-		tle_write_db_to_file(new_tle_filename, &unwritable_db);
+		tle_db_to_file(new_tle_filename, &unwritable_db);
 
 		free(new_tle_filename);
 	}
@@ -446,7 +459,8 @@ void tle_update_with_file(const char *filename, struct tle_db *tle_db, bool *ret
  * \param dirpath Directory from which files are to be read
  * \param ret_tle_db Returned TLE database
  **/
-void flyby_read_tle_from_directory(const char *dirpath, struct tle_db *ret_tle_db) {
+void tle_db_from_directory(const char *dirpath, struct tle_db *ret_tle_db)
+{
 	DIR *d;
 	struct dirent *file;
 	d = opendir(dirpath);
@@ -459,18 +473,18 @@ void flyby_read_tle_from_directory(const char *dirpath, struct tle_db *ret_tle_d
 
 				//read into empty TLE db
 				struct tle_db temp_db = {0};
-				flyby_read_tle_file(full_path, &temp_db);
+				tle_db_from_file(full_path, &temp_db);
 				free(full_path);
 
 				//merge with existing TLE db
-				tle_merge_db(&temp_db, ret_tle_db, TLE_OVERWRITE_OLD); //overwrite only entries with older epochs
+				tle_db_merge(&temp_db, ret_tle_db, TLE_OVERWRITE_OLD); //overwrite only entries with older epochs
 			}
 		}
 		closedir(d);
 	}
 }
 
-void flyby_read_tles_from_xdg(struct tle_db *ret_tle_db)
+void tle_db_from_search_paths(struct tle_db *ret_tle_db)
 {
 	char *data_dirs_str = xdg_data_dirs();
 	string_array_t data_dirs = {0};
@@ -482,8 +496,8 @@ void flyby_read_tles_from_xdg(struct tle_db *ret_tle_db)
 		snprintf(dir, MAX_NUM_CHARS, "%s%s", string_array_get(&data_dirs, i), TLE_RELATIVE_DIR_PATH);
 
 		struct tle_db temp_db = {0};
-		flyby_read_tle_from_directory(dir, &temp_db);
-		tle_merge_db(&temp_db, ret_tle_db, TLE_OVERWRITE_ALL); //overwrite existing TLEs on multiple entries
+		tle_db_from_directory(dir, &temp_db);
+		tle_db_merge(&temp_db, ret_tle_db, TLE_OVERWRITE_ALL); //overwrite existing TLEs on multiple entries
 	}
 	string_array_free(&data_dirs);
 	free(data_dirs_str);
@@ -493,20 +507,20 @@ void flyby_read_tles_from_xdg(struct tle_db *ret_tle_db)
 	char home_tle_dir[MAX_NUM_CHARS] = {0};
 	snprintf(home_tle_dir, MAX_NUM_CHARS, "%s%s", data_home, TLE_RELATIVE_DIR_PATH);
 	struct tle_db temp_db = {0};
-	flyby_read_tle_from_directory(home_tle_dir, &temp_db);
-	tle_merge_db(&temp_db, ret_tle_db, TLE_OVERWRITE_ALL);
+	tle_db_from_directory(home_tle_dir, &temp_db);
+	tle_db_merge(&temp_db, ret_tle_db, TLE_OVERWRITE_ALL);
 	free(data_home);
 
 	ret_tle_db->read_from_xdg = true;
 }
 
-enum qth_file_state flyby_read_qth_from_xdg(predict_observer_t *ret_observer)
+enum qth_file_state qth_from_search_paths(predict_observer_t *ret_observer)
 {
 	//try to read QTH file from user home
 	char *config_home = xdg_config_home();
 	char qth_path[MAX_NUM_CHARS] = {0};
 	snprintf(qth_path, MAX_NUM_CHARS, "%s%s", config_home, QTH_RELATIVE_FILE_PATH);
-	int readval = flyby_read_qth_file(qth_path, ret_observer);
+	int readval = qth_from_file(qth_path, ret_observer);
 	free(config_home);
 
 	if (readval != 0) {
@@ -518,7 +532,7 @@ enum qth_file_state flyby_read_qth_from_xdg(predict_observer_t *ret_observer)
 
 		for (int i=0; i < string_array_size(&dirs); i++) {
 			snprintf(qth_path, MAX_NUM_CHARS, "%s%s", string_array_get(&dirs, i), QTH_RELATIVE_FILE_PATH);
-			if (flyby_read_qth_file(qth_path, ret_observer) == 0) {
+			if (qth_from_file(qth_path, ret_observer) == 0) {
 				qth_file_found = true;
 				break;
 			}
@@ -534,7 +548,7 @@ enum qth_file_state flyby_read_qth_from_xdg(predict_observer_t *ret_observer)
 	return QTH_FILE_HOME;
 }
 
-char* flyby_get_xdg_qth_writepath()
+char* qth_default_writepath()
 {
 	create_xdg_dirs();
 
@@ -546,7 +560,7 @@ char* flyby_get_xdg_qth_writepath()
 	return qth_path;
 }
 
-void flyby_write_qth_to_file(const char *qth_path, predict_observer_t *qth)
+void qth_to_file(const char *qth_path, predict_observer_t *qth)
 {
 	FILE *fd;
 
@@ -560,7 +574,7 @@ void flyby_write_qth_to_file(const char *qth_path, predict_observer_t *qth)
 	fclose(fd);
 }
 
-void flyby_read_transponder_db_from_xdg(const struct tle_db *tle_db, struct transponder_db *transponder_db)
+void transponder_db_from_search_paths(const struct tle_db *tle_db, struct transponder_db *transponder_db)
 {
 	string_array_t data_dirs = {0};
 	char *data_home = xdg_data_home();
@@ -577,12 +591,12 @@ void flyby_read_transponder_db_from_xdg(const struct tle_db *tle_db, struct tran
 		snprintf(db_path, MAX_NUM_CHARS, "%s%s", string_array_get(&data_dirs, i), DB_RELATIVE_FILE_PATH);
 
 		//will overwrite existing entries at their correct positions automatically, and ignore everything else
-		flyby_read_transponder_db(db_path, tle_db, transponder_db);
+		transponder_db_from_file(db_path, tle_db, transponder_db);
 	}
 	string_array_free(&data_dirs);
 }
 
-int flyby_read_qth_file(const char *qthfile, predict_observer_t *observer)
+int qth_from_file(const char *qthfile, predict_observer_t *observer)
 {
 	//copied from ReadDataFiles().
 
@@ -609,7 +623,7 @@ int flyby_read_qth_file(const char *qthfile, predict_observer_t *observer)
 	return 0;
 }
 
-int flyby_read_tle_file(const char *tle_file, struct tle_db *ret_db)
+int tle_db_from_file(const char *tle_file, struct tle_db *ret_db)
 {
 	//copied from ReadDataFiles().
 
@@ -676,7 +690,7 @@ int flyby_read_tle_file(const char *tle_file, struct tle_db *ret_db)
 	return 0;
 }
 
-int flyby_read_transponder_db(const char *dbfile, const struct tle_db *tle_db, struct transponder_db *ret_db)
+int transponder_db_from_file(const char *dbfile, const struct tle_db *tle_db, struct transponder_db *ret_db)
 {
 	//copied from ReadDataFiles().
 

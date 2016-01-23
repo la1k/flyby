@@ -13,7 +13,7 @@
  *
  * \param ret_tle_db Returned TLE database
  **/
-void flyby_read_tles_from_xdg(struct tle_db *ret_tle_db);
+void tle_db_from_search_paths(struct tle_db *ret_tle_db);
 
 /**
  * Read transponder database from folders defined using the XDG file specification.
@@ -26,7 +26,7 @@ void flyby_read_tles_from_xdg(struct tle_db *ret_tle_db);
  * \param tle_db Full TLE database for which transponder database entries are matched
  * \param transponder_db Returned transponder database
  **/
-void flyby_read_transponder_db_from_xdg(const struct tle_db *tle_db, struct transponder_db *transponder_db);
+void transponder_db_from_search_paths(const struct tle_db *tle_db, struct transponder_db *transponder_db);
 
 /**
  * Read TLE database from file.
@@ -35,7 +35,7 @@ void flyby_read_transponder_db_from_xdg(const struct tle_db *tle_db, struct tran
  * \param ret_db Returned TLE database
  * \return 0 on success, -1 otherwise
  **/
-int flyby_read_tle_file(const char *tle_file, struct tle_db *ret_db);
+int tle_db_from_file(const char *tle_file, struct tle_db *ret_db);
 
 /**
  * Read QTH information from file.
@@ -44,7 +44,7 @@ int flyby_read_tle_file(const char *tle_file, struct tle_db *ret_db);
  * \param ret_observer Returned observer structure
  * \return 0 on success, -1 otherwise
  **/
-int flyby_read_qth_file(const char *qth_file, predict_observer_t *ret_observer);
+int qth_from_file(const char *qth_file, predict_observer_t *ret_observer);
 
 /**
  * Write QTH information to specified file.
@@ -52,12 +52,12 @@ int flyby_read_qth_file(const char *qth_file, predict_observer_t *ret_observer);
  * \param qth_path File path
  * \param qth Qth information to write
  **/
-void flyby_write_qth_to_file(const char *qth_path, predict_observer_t *qth);
+void qth_to_file(const char *qth_path, predict_observer_t *qth);
 
 /**
  * Get local user qth filepath (~/.config/flyby/flyby.qth).
  **/
-char* flyby_get_xdg_qth_writepath();
+char* qth_default_writepath();
 
 /**
  * Read transponder database from file. Only fields matching the TLE database fields are modified.
@@ -67,7 +67,7 @@ char* flyby_get_xdg_qth_writepath();
  * \param ret_db Returned transponder database
  * \return 0 on success, -1 otherwise
  **/
-int flyby_read_transponder_db(const char *db_file, const struct tle_db *tle_db, struct transponder_db *ret_db);
+int transponder_db_from_file(const char *db_file, const struct tle_db *tle_db, struct transponder_db *ret_db);
 
 /**
  * Used for determining from where the QTH file was read.
@@ -84,7 +84,7 @@ enum qth_file_state {
  * \param ret_observer Returned QTH information
  * \return Where the QTH file was read from, user home, system dir or not found at all
  **/
-enum qth_file_state flyby_read_qth_from_xdg(predict_observer_t *ret_observer);
+enum qth_file_state qth_from_search_paths(predict_observer_t *ret_observer);
 
 /**
  * Update internal TLE database with newer TLE entries located within supplied file, and update the corresponding file databases.
@@ -100,7 +100,7 @@ enum qth_file_state flyby_read_qth_from_xdg(predict_observer_t *ret_observer);
  * \param ret_was_updated Boolean array of at least size tle_db->num_tles. Will contain true at the entry indices that were updated. Set to NULL if this is not to be used
  * \param ret_in_new_file Boolean array of at least size tle_db->num_tles. Will contain true at the entry indices that were updated and put in a new update file within the TLE folder. Check against tle_db->read_from_xdg_dirs to see whether file actually was created or not
  **/
-void tle_update_with_file(const char *filename, struct tle_db *tle_db, bool *ret_was_updated, bool *ret_in_new_file);
+void tle_db_update(const char *filename, struct tle_db *tle_db, bool *ret_was_updated, bool *ret_in_new_file);
 
 /**
  * Defines whether to overwrite only older TLE entries or all existing TLE entries when merging two databases.
@@ -119,6 +119,6 @@ enum tle_merge_behavior {
  * \param main_db Existing TLE database into which new TLE database is to be merged
  * \param merge_opt Merge options
  **/
-void tle_merge_db(struct tle_db *new_db, struct tle_db *main_db, enum tle_merge_behavior merge_opt);
+void tle_db_merge(struct tle_db *new_db, struct tle_db *main_db, enum tle_merge_behavior merge_opt);
 
 #endif
