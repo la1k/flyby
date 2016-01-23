@@ -46,8 +46,8 @@ void tle_db_update(const char *filename, struct tle_db *tle_db, bool *ret_was_up
 enum tle_merge_behavior {
 	///Overwrite only old existing TLE entries
 	TLE_OVERWRITE_OLD,
-	///Overwrite all existing TLE entries
-	TLE_OVERWRITE_ALL
+	///Overwrite none of the existing TLE entries
+	TLE_OVERWRITE_NONE
 };
 
 /**

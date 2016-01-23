@@ -240,15 +240,7 @@ void tle_db_merge(struct tle_db *new_db, struct tle_db *main_db, enum tle_merge_
 			if (new_db->tles[i].satellite_number == main_db->tles[j].satellite_number) {
 				tle_exists = true;
 
-				bool should_overwrite = false;
-
-				if (merge_opt == TLE_OVERWRITE_ALL) {
-					should_overwrite = true;
-				} else if (tle_db_entry_is_newer_than(new_db->tles[i], main_db->tles[i])) {
-					should_overwrite = true;
-				}
-
-				if (should_overwrite) {
+				if ((merge_opt == TLE_OVERWRITE_OLD) && tle_db_entry_is_newer_than(new_db->tles[i], main_db->tles[i])) {
 					tle_db_overwrite_entry(j, main_db, &(new_db->tles[i]));
 				}
 			}
@@ -486,30 +478,28 @@ void tle_db_from_directory(const char *dirpath, struct tle_db *ret_tle_db)
 
 void tle_db_from_search_paths(struct tle_db *ret_tle_db)
 {
+	//read tles from user directory
+	char *data_home = xdg_data_home();
+	char home_tle_dir[MAX_NUM_CHARS] = {0};
+	snprintf(home_tle_dir, MAX_NUM_CHARS, "%s%s", data_home, TLE_RELATIVE_DIR_PATH);
+	tle_db_from_directory(home_tle_dir, ret_tle_db);
+	free(data_home);
+
 	char *data_dirs_str = xdg_data_dirs();
 	string_array_t data_dirs = {0};
 	stringsplit(data_dirs_str, &data_dirs);
 
-	//read tles from system-wide data directories in opposide order of precedence
-	for (int i=string_array_size(&data_dirs)-1; i >= 0; i--) {
+	//read tles from system-wide data directories the order of precedence
+	for (int i=0; i < string_array_size(&data_dirs); i++) {
 		char dir[MAX_NUM_CHARS] = {0};
 		snprintf(dir, MAX_NUM_CHARS, "%s%s", string_array_get(&data_dirs, i), TLE_RELATIVE_DIR_PATH);
 
 		struct tle_db temp_db = {0};
 		tle_db_from_directory(dir, &temp_db);
-		tle_db_merge(&temp_db, ret_tle_db, TLE_OVERWRITE_ALL); //overwrite existing TLEs on multiple entries
+		tle_db_merge(&temp_db, ret_tle_db, TLE_OVERWRITE_NONE); //multiply defined TLEs in directories of less precedence are ignored
 	}
 	string_array_free(&data_dirs);
 	free(data_dirs_str);
-
-	//read tles from user directory
-	char *data_home = xdg_data_home();
-	char home_tle_dir[MAX_NUM_CHARS] = {0};
-	snprintf(home_tle_dir, MAX_NUM_CHARS, "%s%s", data_home, TLE_RELATIVE_DIR_PATH);
-	struct tle_db temp_db = {0};
-	tle_db_from_directory(home_tle_dir, &temp_db);
-	tle_db_merge(&temp_db, ret_tle_db, TLE_OVERWRITE_ALL);
-	free(data_home);
 
 	ret_tle_db->read_from_xdg = true;
 }
