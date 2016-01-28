@@ -69,7 +69,7 @@ enum qth_file_state {
 };
 
 /**
- * Read flyby from XDG filepaths. Try XDG_CONFIG_HOME/flyby/flyby.qth first, then the paths in XDG_CONFIG_DIRS/flyby/flyby.qth.
+ * Read flyby.qth from XDG filepaths. Try XDG_CONFIG_HOME/flyby/flyby.qth first, then the paths in XDG_CONFIG_DIRS/flyby/flyby.qth.
  *
  * \param ret_observer Returned QTH information
  * \return Where the QTH file was read from: user home, system dir or not found at all
@@ -94,7 +94,7 @@ int qth_from_file(const char *qth_file, predict_observer_t *ret_observer);
 void qth_to_file(const char *qth_path, predict_observer_t *qth);
 
 /**
- * Get local user qth filepath (~/.config/flyby/flyby.qth).
+ * Get local user qth filepath (XDG_CONFIG_HOME/flyby/flyby.qth, AKA ~/.config/flyby/flyby.qth).
  **/
 char* qth_default_writepath();
 
