@@ -1,0 +1,281 @@
+#include <form.h>
+
+enum tristate {UNCHECKED = 0, CHECKED = 1, HALF_CHECKED = 2};
+
+struct nested_tle_menu {
+	enum tristate *checked_filenames;
+	enum tristate **checked_tles;
+
+	ITEM **filename_items;
+	ITEM ***tle_items;
+};
+
+typedef struct {
+	int length;
+	int x_position;
+	int y_position;
+
+	char *string;
+	int position;
+} pattern_field_t;
+
+void pattern_field_refresh(pattern_field_t *pattern_field)
+{
+	//print current string in field
+	attrset(COLOR_PAIR(1));
+	mvprintw(pattern_field->y_position, pattern_field->x_position, pattern_field->string);
+	
+	//print cursor
+	attrset(COLOR_PAIR(6)|A_REVERSE|A_BOLD);
+	mvprintw(pattern_field->y_position, pattern_field->x_position + pattern_field->position, " ");
+}
+
+pattern_field_t* pattern_field_new(int ypos, int xpos, int length)
+{
+	pattern_field_t *ret = (pattern_field_t*)malloc(sizeof(pattern_field_t));
+
+	ret->length = length;
+	ret->x_position = xpos;
+	ret->y_position = ypos;
+	ret->position = 0;
+
+	ret->string = (char*)malloc(sizeof(char)*(length + 1));
+	for (int i=0; i < length; i++) {
+		ret->string[i] = ' ';
+	}
+	ret->string[length-5] = '\0';
+	pattern_field_refresh(ret);
+
+	return ret;
+}
+
+void pattern_field_in(pattern_field_t *pattern_field, char c)
+{
+	if (c == 8) { //backspace
+		pattern_field->position--;
+		pattern_field->string[pattern_field->position] = ' ';
+	} else if ((pattern_field->position < pattern_field->length) && (isalpha(c) || isdigit(c))) {
+		pattern_field->string[pattern_field->position] = c;
+		pattern_field->position++;
+	}
+	pattern_field_refresh(pattern_field);
+}
+	
+
+void navigate_files()
+{
+	
+}
+
+void navigate_tles()
+{
+}
+
+void remove_menu()
+{
+}
+
+ITEM** prepare_menu_items(const struct tle_db *tle_db, const char *pattern)
+{
+	int n_choices = tle_db->num_tles;
+	ITEM **my_items = (ITEM **)calloc(n_choices + 1, sizeof(ITEM *));
+	for (int i = 0; i < n_choices; ++i) {
+		my_items[i] = new_item(tle_db->tles[i].name, "");
+	}
+	my_items[n_choices] = NULL; //terminate the menu list
+	return my_items;
+}
+
+void free_menu_items(ITEM ***items)
+{
+	bool found_end = false;
+	int i = 0;
+	while (!found_end) {
+		if ((*items)[i] == NULL) {
+			found_end = true;
+		} else {
+			free_item((*items)[i]);
+			(*items)[i] = NULL;
+			i++;
+		}
+	}
+	
+	free(*items);
+	
+}
+
+int formtest()
+{	FIELD *field[3];
+	FORM  *my_form;
+	int ch;
+	
+	/* Initialize the fields */
+	field[0] = new_field(1, 10, 4, 18, 0, 0);
+	field[1] = new_field(1, 10, 6, 18, 0, 0);
+	field[2] = NULL;
+
+	/* Set field options */
+	set_field_back(field[0], A_UNDERLINE); 	/* Print a line for the option 	*/
+	field_opts_off(field[0], O_AUTOSKIP);  	/* Don't go to next field when this */
+						/* Field is filled up 		*/
+	set_field_back(field[1], A_UNDERLINE); 
+	field_opts_off(field[1], O_AUTOSKIP);
+
+	/* Create the form and post it */
+	my_form = new_form(field);
+	post_form(my_form);
+	refresh();
+	
+	mvprintw(4, 10, "Value 1:");
+	mvprintw(6, 10, "Value 2:");
+	refresh();
+
+	/* Loop through to get user requests */
+	while((ch = getch()) != KEY_F(1))
+	{	switch(ch)
+		{	case KEY_DOWN:
+				/* Go to next field */
+				form_driver(my_form, REQ_NEXT_FIELD);
+				/* Go to the end of the present buffer */
+				/* Leaves nicely at the last character */
+				form_driver(my_form, REQ_END_LINE);
+				break;
+			case KEY_UP:
+				/* Go to previous field */
+				form_driver(my_form, REQ_PREV_FIELD);
+				form_driver(my_form, REQ_END_LINE);
+				break;
+			default:
+				/* If this is a normal character, it gets */
+				/* Printed				  */	
+				form_driver(my_form, ch);
+				break;
+		}
+	}
+
+	/* Un post form and free the memory */
+	unpost_form(my_form);
+	free_form(my_form);
+	free_field(field[0]);
+	free_field(field[1]); 
+}
+
+void whitelist(struct tle_db *tle_db)
+{
+
+	int c;
+	MENU *my_menu;
+	WINDOW *my_menu_win;
+	int n_choices, i, j;
+
+	/* Header printing */
+	attrset(COLOR_PAIR(6)|A_REVERSE|A_BOLD);
+	clear();
+
+	mvprintw(0,0,"                                                                                ");
+	mvprintw(1,0,"  flyby TLE whitelister                                                         ");
+	mvprintw(2,0,"                                                                                ");
+	
+	attrset(COLOR_PAIR(3)|A_BOLD);
+	mvprintw( 6,46,"Use cursor keys to move up/down");
+	mvprintw( 7,46,"the list and then select with ");
+	mvprintw( 8,46,"the 'Enter' key.");
+	mvprintw( 10,46,"Press 'q' to return to menu.");
+
+	if (tle_db->num_tles >= MAX_NUM_SATS)
+		mvprintw(LINES-3,46,"Truncated to %d satellites",MAX_NUM_SATS);
+	else
+		mvprintw(LINES-3,46,"%d satellites",tle_db->num_tles);
+
+	/* Create the window to be associated with the menu */
+	int window_width = 40;
+	int window_ypos = 6;
+	my_menu_win = newwin(LINES-window_ypos-1, window_width, window_ypos, 4);
+	keypad(my_menu_win, TRUE);
+	wattrset(my_menu_win, COLOR_PAIR(4));
+	box(my_menu_win, 0, 0);
+
+	pattern_field_t* pattern_field = pattern_field_new(5, 4, window_width);
+
+	/* Create items */
+	if (tle_db->num_tles > 0) {
+		ITEM **items = prepare_menu_items(tle_db, "");
+
+		/* Create menu */
+		my_menu = new_menu(items);
+
+		set_menu_back(my_menu,COLOR_PAIR(1));
+		set_menu_fore(my_menu,COLOR_PAIR(5)|A_BOLD);
+
+		/* Set main window and sub window */
+		set_menu_win(my_menu, my_menu_win);
+		set_menu_sub(my_menu, derwin(my_menu_win, LINES-(window_ypos + 5), window_width - 2, 2, 1));
+		set_menu_format(my_menu, LINES-9, 1);
+
+		/* Set menu mark to the string " * " */
+		set_menu_mark(my_menu, " * ");
+
+		menu_opts_off(my_menu, O_ONEVALUE);
+
+		/* Post the menu */
+		post_menu(my_menu);
+
+		ITEM *test[2];
+		test[0] = new_item("wut", "jaja");
+		test[1] = NULL;
+		set_menu_items(my_menu, test);
+		
+		refresh();
+		wrefresh(my_menu_win);
+
+		while (true) {
+			c = wgetch(my_menu_win);
+			switch(c) {
+				case 'q':
+					return -1;
+				case KEY_DOWN:
+					menu_driver(my_menu, REQ_DOWN_ITEM);
+					break;
+				case KEY_UP:
+					menu_driver(my_menu, REQ_UP_ITEM);
+					break;
+				case KEY_NPAGE:
+					menu_driver(my_menu, REQ_SCR_DPAGE);
+					break;
+				case KEY_PPAGE:
+					menu_driver(my_menu, REQ_SCR_UPAGE);
+					break;
+				case ' ':
+					pos_menu_cursor(my_menu);
+					menu_driver(my_menu, REQ_TOGGLE_ITEM);
+					break;
+				default:
+					pattern_field_in(pattern_field, c);
+					refresh();
+					break;
+			}
+			wrefresh(my_menu_win);
+		}
+
+		/* Unpost and free all the memory taken up */
+		unpost_menu(my_menu);
+		free_menu(my_menu);
+
+		free_menu_items(&items);
+	} else {
+		refresh();
+		wrefresh(my_menu_win);
+		c = wgetch(my_menu_win);
+		j = -1;
+	}
+
+	return j;
+}
+
+void orbital_elements_from_whitelist()
+{
+}
+
+void whitelist_from_file()
+{
+}
