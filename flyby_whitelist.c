@@ -75,14 +75,44 @@ void remove_menu()
 {
 }
 
+void prepare_pattern(char *string)
+{
+	int length = strlen(string);
+
+	//trim whitespaces from end
+	for (int i=length-1; i >= 0; i--) {
+		if (string[i] == ' ') {
+			string[i] = '\0';
+		} else if (isdigit(string[i]) || isalpha(string[i])) {
+			break;
+		}
+	}
+
+	//lowercase to uppercase
+	for (int i=0; i < length; i++) {
+		string[i] = toupper(string[i]);
+	}
+
+}
+
+bool check_pattern(const char *string, const char *pattern) {
+	return (strlen(pattern) == 0) || (strstr(string, pattern) != NULL);
+}
+
 ITEM** prepare_menu_items(const struct tle_db *tle_db, const char *pattern)
 {
-	int n_choices = tle_db->num_tles;
-	ITEM **my_items = (ITEM **)calloc(n_choices + 1, sizeof(ITEM *));
-	for (int i = 0; i < n_choices; ++i) {
-		my_items[i] = new_item(tle_db->tles[i].name, "");
+	int max_num_choices = tle_db->num_tles;
+	ITEM **my_items = (ITEM **)calloc(max_num_choices + 1, sizeof(ITEM *));
+	int item_ind = 0;
+	
+	//get all TLE names corresponding to the input pattern
+	for (int i = 0; i < max_num_choices; ++i) {
+		if (check_pattern(tle_db->tles[i].name, pattern)) {
+			my_items[item_ind] = new_item(tle_db->tles[i].name, "");
+			item_ind++;
+		}
 	}
-	my_items[n_choices] = NULL; //terminate the menu list
+	my_items[item_ind] = NULL; //terminate the menu list
 	return my_items;
 }
 
@@ -104,102 +134,83 @@ void free_menu_items(ITEM ***items)
 	
 }
 
-int formtest()
-{	FIELD *field[3];
-	FORM  *my_form;
-	int ch;
-	
-	/* Initialize the fields */
-	field[0] = new_field(1, 10, 4, 18, 0, 0);
-	field[1] = new_field(1, 10, 6, 18, 0, 0);
-	field[2] = NULL;
-
-	/* Set field options */
-	set_field_back(field[0], A_UNDERLINE); 	/* Print a line for the option 	*/
-	field_opts_off(field[0], O_AUTOSKIP);  	/* Don't go to next field when this */
-						/* Field is filled up 		*/
-	set_field_back(field[1], A_UNDERLINE); 
-	field_opts_off(field[1], O_AUTOSKIP);
-
-	/* Create the form and post it */
-	my_form = new_form(field);
-	post_form(my_form);
-	refresh();
-	
-	mvprintw(4, 10, "Value 1:");
-	mvprintw(6, 10, "Value 2:");
-	refresh();
-
-	/* Loop through to get user requests */
-	while((ch = getch()) != KEY_F(1))
-	{	switch(ch)
-		{	case KEY_DOWN:
-				/* Go to next field */
-				form_driver(my_form, REQ_NEXT_FIELD);
-				/* Go to the end of the present buffer */
-				/* Leaves nicely at the last character */
-				form_driver(my_form, REQ_END_LINE);
-				break;
-			case KEY_UP:
-				/* Go to previous field */
-				form_driver(my_form, REQ_PREV_FIELD);
-				form_driver(my_form, REQ_END_LINE);
-				break;
-			default:
-				/* If this is a normal character, it gets */
-				/* Printed				  */	
-				form_driver(my_form, ch);
-				break;
-		}
-	}
-
-	/* Un post form and free the memory */
-	unpost_form(my_form);
-	free_form(my_form);
-	free_field(field[0]);
-	free_field(field[1]); 
-}
-
 void whitelist(struct tle_db *tle_db)
 {
-
+	int retval;
 	int c;
 	MENU *my_menu;
 	WINDOW *my_menu_win;
 	int n_choices, i, j;
-
-	/* Header printing */
+	
+	/* Print header */
 	attrset(COLOR_PAIR(6)|A_REVERSE|A_BOLD);
 	clear();
 
-	mvprintw(0,0,"                                                                                ");
-	mvprintw(1,0,"  flyby TLE whitelister                                                         ");
-	mvprintw(2,0,"                                                                                ");
+	int row = 0;
+	mvprintw(row++,0,"                                                                                ");
+	mvprintw(row++,0,"  flyby TLE whitelister                                                         ");
+	mvprintw(row++,0,"                                                                                ");
 	
-	attrset(COLOR_PAIR(3)|A_BOLD);
-	mvprintw( 6,46,"Use cursor keys to move up/down");
-	mvprintw( 7,46,"the list and then select with ");
-	mvprintw( 8,46,"the 'Enter' key.");
-	mvprintw( 10,46,"Press 'q' to return to menu.");
-
 	if (tle_db->num_tles >= MAX_NUM_SATS)
 		mvprintw(LINES-3,46,"Truncated to %d satellites",MAX_NUM_SATS);
 	else
 		mvprintw(LINES-3,46,"%d satellites",tle_db->num_tles);
+	
+	/* Create form for query input */
+	FIELD *field[2];
+	FORM  *form;
+	
+	field[0] = new_field(1, 10, 1, 1, 0, 0);
+	field[1] = NULL;
+
+	set_field_back(field[0], A_UNDERLINE);
+	field_opts_off(field[0], O_AUTOSKIP);
+
+	form = new_form(field);
+	int rows, cols;
+	scale_form(form, &rows, &cols);
+
+	int form_win_height = rows + 4;
+	WINDOW *form_win = newwin(rows + 4, cols + 4, row, 4);
+	row += form_win_height;
+	keypad(form_win, TRUE);
+	wattrset(form_win, COLOR_PAIR(4));
+	box(form_win, 0, 0);
+
+	/* Set main window and sub window */
+	set_form_win(form, form_win);
+	set_form_sub(form, derwin(form_win, rows, cols, 2, 2));
+
+	post_form(form);
+	wrefresh(form_win);
+	
+	mvprintw(4, 10, "yo");
 
 	/* Create the window to be associated with the menu */
 	int window_width = 40;
-	int window_ypos = 6;
+	int window_ypos = row;
 	my_menu_win = newwin(LINES-window_ypos-1, window_width, window_ypos, 4);
 	keypad(my_menu_win, TRUE);
 	wattrset(my_menu_win, COLOR_PAIR(4));
 	box(my_menu_win, 0, 0);
+	
+	attrset(COLOR_PAIR(3)|A_BOLD);
+	mvprintw( row++,46,"Use cursor keys to move up/down");
+	mvprintw( row++,46,"the list and then select with ");
+	mvprintw( row++,46,"the 'Enter' key.");
+	mvprintw( row++,46,"Press 'q' to return to menu.");
 
-	pattern_field_t* pattern_field = pattern_field_new(5, 4, window_width);
+
+	refresh();
 
 	/* Create items */
 	if (tle_db->num_tles > 0) {
 		ITEM **items = prepare_menu_items(tle_db, "");
+		ITEM **temp_items = NULL;
+		char field_contents[MAX_NUM_CHARS] = {0};
+		char curr_item[MAX_NUM_CHARS] = {0};
+
+		bool valid_menu = true;
 
 		/* Create menu */
 		my_menu = new_menu(items);
@@ -220,11 +231,6 @@ void whitelist(struct tle_db *tle_db)
 		/* Post the menu */
 		post_menu(my_menu);
 
-		ITEM *test[2];
-		test[0] = new_item("wut", "jaja");
-		test[1] = NULL;
-		set_menu_items(my_menu, test);
-		
 		refresh();
 		wrefresh(my_menu_win);
 
@@ -234,24 +240,65 @@ void whitelist(struct tle_db *tle_db)
 				case 'q':
 					return -1;
 				case KEY_DOWN:
-					menu_driver(my_menu, REQ_DOWN_ITEM);
+					if (valid_menu) menu_driver(my_menu, REQ_DOWN_ITEM);
 					break;
 				case KEY_UP:
-					menu_driver(my_menu, REQ_UP_ITEM);
+					if (valid_menu) menu_driver(my_menu, REQ_UP_ITEM);
 					break;
 				case KEY_NPAGE:
-					menu_driver(my_menu, REQ_SCR_DPAGE);
+					if (valid_menu) menu_driver(my_menu, REQ_SCR_DPAGE);
 					break;
 				case KEY_PPAGE:
-					menu_driver(my_menu, REQ_SCR_UPAGE);
+					if (valid_menu) menu_driver(my_menu, REQ_SCR_UPAGE);
 					break;
 				case ' ':
-					pos_menu_cursor(my_menu);
-					menu_driver(my_menu, REQ_TOGGLE_ITEM);
+					if (valid_menu) {
+						pos_menu_cursor(my_menu);
+						menu_driver(my_menu, REQ_TOGGLE_ITEM);
+					}
 					break;
+				case KEY_BACKSPACE:
+					form_driver(form, REQ_DEL_PREV);
 				default:
-					pattern_field_in(pattern_field, c);
-					refresh();
+					form_driver(form, c);
+					form_driver(form, REQ_VALIDATION); //update buffer with field contents
+
+					strncpy(field_contents, field_buffer(field[0], 0), MAX_NUM_CHARS);
+					prepare_pattern(field_contents);
+			
+					strncpy(curr_item, item_name(current_item(my_menu)), MAX_NUM_CHARS);
+
+					/* Update menu with new items */
+					temp_items = prepare_menu_items(tle_db, field_contents);
+
+					if (valid_menu) {
+						unpost_menu(my_menu);
+					}
+
+					if (temp_items[0] != NULL) {
+						retval = set_menu_items(my_menu, temp_items);
+					} else {
+						retval = E_BAD_ARGUMENT;
+					}
+
+					if (retval != E_OK) {
+						valid_menu = false;
+					} else {
+						valid_menu = true;
+						post_menu(my_menu);
+					}
+
+					/* remove old items */
+					if (retval == E_OK) {
+						free_menu_items(&items);
+						items = temp_items;
+						set_menu_pattern(my_menu, curr_item);
+					} else {
+						free_menu_items(&temp_items);
+					}
+
+
+					wrefresh(form_win);
 					break;
 			}
 			wrefresh(my_menu_win);
