@@ -151,6 +151,7 @@ void whitelist(struct tle_db *tle_db)
 	mvprintw(row++,0,"  flyby TLE whitelister                                                         ");
 	mvprintw(row++,0,"                                                                                ");
 	
+	attrset(COLOR_PAIR(3)|A_BOLD);
 	if (tle_db->num_tles >= MAX_NUM_SATS)
 		mvprintw(LINES-3,46,"Truncated to %d satellites",MAX_NUM_SATS);
 	else
@@ -160,7 +161,7 @@ void whitelist(struct tle_db *tle_db)
 	FIELD *field[2];
 	FORM  *form;
 	
-	field[0] = new_field(1, 10, 1, 1, 0, 0);
+	field[0] = new_field(1, 24, 1, 1, 0, 0);
 	field[1] = NULL;
 
 	set_field_back(field[0], A_UNDERLINE);
@@ -171,7 +172,7 @@ void whitelist(struct tle_db *tle_db)
 	scale_form(form, &rows, &cols);
 
 	int form_win_height = rows + 4;
-	WINDOW *form_win = newwin(rows + 4, cols + 4, row, 4);
+	WINDOW *form_win = newwin(rows + 4, cols + 4, row, 16);
 	row += form_win_height;
 	keypad(form_win, TRUE);
 	wattrset(form_win, COLOR_PAIR(4));
@@ -184,8 +185,6 @@ void whitelist(struct tle_db *tle_db)
 	post_form(form);
 	wrefresh(form_win);
 	
-	mvprintw(4, 10, "yo");
-
 	/* Create the window to be associated with the menu */
 	int window_width = 40;
 	int window_ypos = row;
@@ -199,7 +198,7 @@ void whitelist(struct tle_db *tle_db)
 	mvprintw( row++,46,"the list and then select with ");
 	mvprintw( row++,46,"the 'Enter' key.");
 	mvprintw( row++,46,"Press 'q' to return to menu.");
-
+	mvprintw(6, 4, "Search query:");
 
 	refresh();
 
@@ -233,6 +232,8 @@ void whitelist(struct tle_db *tle_db)
 
 		refresh();
 		wrefresh(my_menu_win);
+		form_driver(form, REQ_VALIDATION);
+		wrefresh(form_win);
 
 		while (true) {
 			c = wgetch(my_menu_win);
@@ -296,7 +297,6 @@ void whitelist(struct tle_db *tle_db)
 					} else {
 						free_menu_items(&temp_items);
 					}
-
 
 					wrefresh(form_win);
 					break;
