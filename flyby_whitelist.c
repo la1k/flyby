@@ -236,6 +236,7 @@ int Select_(struct tle_db *tle_db, predict_orbital_elements_t **orbital_elements
 		form_driver(form, REQ_VALIDATION);
 		wrefresh(form_win);
 		bool run_menu = true;
+		bool valid_choice = false;
 
 		while (run_menu) {
 			c = wgetch(my_menu_win);
@@ -266,10 +267,11 @@ int Select_(struct tle_db *tle_db, predict_orbital_elements_t **orbital_elements
 						tle_db_entry_set_enabled(tle_db, index, !tle_db_entry_enabled(tle_db, index));
 					}
 					break;
-				case KEY_ENTER:
+				case 10:
 					if (valid_menu && !modify_enabled_tles) {
 						pos_menu_cursor(my_menu);
 						run_menu = false;
+						valid_choice = true;
 					}
 					break;
 				case KEY_BACKSPACE:
@@ -325,7 +327,10 @@ int Select_(struct tle_db *tle_db, predict_orbital_elements_t **orbital_elements
 			wrefresh(my_menu_win);
 		}
 
-		int ret_index = tle_index[item_index(current_item(my_menu))];
+		int ret_index = -1;
+		if (valid_choice) {
+			ret_index = tle_index[item_index(current_item(my_menu))];
+		}
 
 		/* Unpost and free all the memory taken up */
 		unpost_menu(my_menu);
