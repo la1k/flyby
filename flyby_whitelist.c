@@ -119,11 +119,13 @@ void EditWhiteList(struct tle_db *tle_db, predict_orbital_elements_t **orbital_e
 	mvprintw(row++,0,"  flyby TLE whitelister                                                         ");
 	mvprintw(row++,0,"                                                                                ");
 	Select_(tle_db, orbital_elements_array, SELECT_EDIT_TLE_ENABLE_LIST);
+
+	whitelist_write_to_default(tle_db);
 }
 
 int Select_(struct tle_db *tle_db, predict_orbital_elements_t **orbital_elements_array, enum select_menu_opt select_opt)
 {
-	bool modify_enabled_tles = select_opt == SELECT_EDIT_TLE_ENABLE_LIST;
+	bool modify_enabled_tles = (select_opt == SELECT_EDIT_TLE_ENABLE_LIST);
 
 	int retval;
 	int c;
@@ -204,7 +206,7 @@ int Select_(struct tle_db *tle_db, predict_orbital_elements_t **orbital_elements
 		char field_contents[MAX_NUM_CHARS] = {0};
 		char curr_item[MAX_NUM_CHARS] = {0};
 
-		bool valid_menu = true;
+		bool valid_menu = (items[0] != NULL);
 
 		/* Create menu */
 		my_menu = new_menu(items);
@@ -289,7 +291,9 @@ int Select_(struct tle_db *tle_db, predict_orbital_elements_t **orbital_elements
 					strncpy(field_contents, field_buffer(field[0], 0), MAX_NUM_CHARS);
 					pattern_prepare(field_contents);
 
-					strncpy(curr_item, item_name(current_item(my_menu)), MAX_NUM_CHARS);
+					if (valid_menu) {
+						strncpy(curr_item, item_name(current_item(my_menu)), MAX_NUM_CHARS);
+					}
 
 					/* Update menu with new items */
 					temp_items = prepare_menu_items(tle_db, orbital_elements_array, field_contents, tle_index);
