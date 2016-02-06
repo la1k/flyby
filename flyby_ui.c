@@ -426,6 +426,13 @@ void AutoUpdate(const char *string, struct tle_db *tle_db, predict_orbital_eleme
 
 int Select(struct tle_db *tle_db, predict_orbital_elements_t **orbital_elements_array)
 {
+	int num_orbits = tle_db->num_tles;
+	ITEM **my_items;
+	int c;
+	MENU *my_menu;
+	WINDOW *my_menu_win;
+	int n_choices, i, j;
+
 	attrset(COLOR_PAIR(6)|A_REVERSE|A_BOLD);
 	clear();
 
@@ -433,7 +440,98 @@ int Select(struct tle_db *tle_db, predict_orbital_elements_t **orbital_elements_
 	mvprintw(1,0,"  flyby Satellite Selector                                                      ");
 	mvprintw(2,0,"                                                                                ");
 
-	return Select_(tle_db, orbital_elements_array, SELECT_RETURN_SINGLE_INDEX);
+	attrset(COLOR_PAIR(3)|A_BOLD);
+	mvprintw( 5,46,"Use cursor keys to move up/down");
+	mvprintw( 6,46,"the list and then select with ");
+	mvprintw( 7,46,"the 'Enter' key.");
+	mvprintw( 9,46,"Press 'q' to return to menu.");
+
+	if (num_orbits >= MAX_NUM_SATS)
+		mvprintw(LINES-3,46,"Truncated to %d satellites",MAX_NUM_SATS);
+	else
+		mvprintw(LINES-3,46,"%d satellites",num_orbits);
+
+	/* Create the window to be associated with the menu */
+	my_menu_win = newwin(LINES-5, 40, 4, 4);
+	keypad(my_menu_win, TRUE);
+	wattrset(my_menu_win, COLOR_PAIR(4));
+
+	/* Print a border around the main window and print a title */
+#if	!defined (__CYGWIN32__)
+	box(my_menu_win, 0, 0);
+#endif
+
+	/* Create items */
+	if (num_orbits > 0) {
+		n_choices = num_orbits;
+		my_items = (ITEM **)calloc(n_choices + 1, sizeof(ITEM *));
+		for(i = 0; i < n_choices; ++i) {
+			my_items[i] = new_item(tle_db->tles[i].name, orbital_elements_array[i]->designator);
+		}
+		my_items[n_choices] = NULL; //terminate the menu list
+
+		/* Create menu */
+		my_menu = new_menu((ITEM **)my_items);
+
+		set_menu_back(my_menu,COLOR_PAIR(1));
+		set_menu_fore(my_menu,COLOR_PAIR(5)|A_BOLD);
+
+		/* Set main window and sub window */
+		set_menu_win(my_menu, my_menu_win);
+		set_menu_sub(my_menu, derwin(my_menu_win, LINES-7, 38, 2, 1));
+		set_menu_format(my_menu, LINES-9, 1);
+
+		/* Set menu mark to the string " * " */
+		set_menu_mark(my_menu, " * ");
+
+		/* Post the menu */
+		post_menu(my_menu);
+
+		refresh();
+		wrefresh(my_menu_win);
+
+		while((c = wgetch(my_menu_win)) != 10) {
+			switch(c) {
+				case 'q':
+					return -1;
+				case KEY_DOWN:
+					menu_driver(my_menu, REQ_DOWN_ITEM);
+					break;
+				case KEY_UP:
+					menu_driver(my_menu, REQ_UP_ITEM);
+					break;
+				case KEY_NPAGE:
+					menu_driver(my_menu, REQ_SCR_DPAGE);
+					break;
+				case KEY_PPAGE:
+					menu_driver(my_menu, REQ_SCR_UPAGE);
+					break;
+				case 10: /* Enter */
+					pos_menu_cursor(my_menu);
+					break;
+			}
+			wrefresh(my_menu_win);
+		}
+
+		for (i=0, j=0; i<num_orbits; i++)
+			if (strcmp(item_name(current_item(my_menu)),tle_db->tles[i].name)==0)
+				j = i;
+
+		/* Unpost and free all the memory taken up */
+		unpost_menu(my_menu);
+		free_menu(my_menu);
+		for(i = 0; i < n_choices; ++i) {
+			free_item(my_items[i]);
+		}
+		free(my_items);
+	} else {
+		refresh();
+		wrefresh(my_menu_win);
+		c = wgetch(my_menu_win);
+		j = -1;
+	}
+
+	return j;
 }
 
 long DayNum(m,d,y)
