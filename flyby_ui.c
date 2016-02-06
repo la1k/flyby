@@ -462,14 +462,19 @@ int Select(struct tle_db *tle_db, predict_orbital_elements_t **orbital_elements_
 #endif
 
 	/* Create items */
-	if (num_orbits > 0) {
-		n_choices = num_orbits;
-		my_items = (ITEM **)calloc(n_choices + 1, sizeof(ITEM *));
-		for(i = 0; i < n_choices; ++i) {
-			my_items[i] = new_item(tle_db->tles[i].name, orbital_elements_array[i]->designator);
-		}
-		my_items[n_choices] = NULL; //terminate the menu list
+	my_items = (ITEM **)calloc(num_orbits + 1, sizeof(ITEM *));
 
+	int item_ind = 0;
+	for(i = 0; i < num_orbits; ++i) {
+		if (tle_db_entry_enabled(tle_db, i)) {
+			my_items[item_ind] = new_item(tle_db->tles[i].name, orbital_elements_array[i]->designator);
+			item_ind++;
+		}
+	}
+	n_choices = item_ind;
+	my_items[item_ind] = NULL; //terminate the menu list
+
+	if (n_choices > 0) {
 		/* Create menu */
 		my_menu = new_menu((ITEM **)my_items);
 
@@ -520,16 +525,17 @@ int Select(struct tle_db *tle_db, predict_orbital_elements_t **orbital_elements_
 		/* Unpost and free all the memory taken up */
 		unpost_menu(my_menu);
 		free_menu(my_menu);
-		for(i = 0; i < n_choices; ++i) {
-			free_item(my_items[i]);
-		}
-		free(my_items);
 	} else {
 		refresh();
 		wrefresh(my_menu_win);
 		c = wgetch(my_menu_win);
 		j = -1;
 	}
+
+	for(i = 0; i < n_choices; ++i) {
+		free_item(my_items[i]);
+	}
+	free(my_items);
 
 	return j;
 }
