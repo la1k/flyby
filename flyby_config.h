@@ -59,6 +59,9 @@ enum tle_merge_behavior {
  **/
 void tle_db_merge(struct tle_db *new_db, struct tle_db *main_db, enum tle_merge_behavior merge_opt);
 
+void tle_db_entry_set_enabled(struct tle_db *db, int tle_index, bool enabled);
+bool tle_db_entry_enabled(struct tle_db *db, int tle_index);
+
 /**
  * Used for determining from where the QTH file was read.
  **/

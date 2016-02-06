@@ -504,6 +504,21 @@ void tle_db_from_search_paths(struct tle_db *ret_tle_db)
 	ret_tle_db->read_from_xdg = true;
 }
 
+void tle_db_entry_set_enabled(struct tle_db *db, int tle_index, bool enabled)
+{
+	if (tle_index < db->num_tles) {
+		db->tles[tle_index].enabled = enabled;
+	}
+}
+
+bool tle_db_entry_enabled(struct tle_db *db, int tle_index)
+{
+	if (tle_index < db->num_tles) {
+		return db->tles[tle_index].enabled;
+	}
+	return false;
+}
+
 enum qth_file_state qth_from_search_paths(predict_observer_t *ret_observer)
 {
 	//try to read QTH file from user home
