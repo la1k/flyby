@@ -2018,20 +2018,26 @@ void MultiTrack(predict_observer_t *qth, predict_orbital_elements_t **orbital_el
 		//display satellites
 		int line = 5;
 		for (int i=0; i < above_horizon_counter; i++) {
-			attrset(attributes[satindex[i]]);
-			mvprintw((line++), 1, "%s", string_lines[satindex[i]]);
+			if (tle_db_entry_enabled(tle_db, satindex[i])) {
+				attrset(attributes[satindex[i]]);
+				mvprintw((line++), 1, "%s", string_lines[satindex[i]]);
+			}
 		}
 		attrset(0);
 		mvprintw((line++), 1, "                                                                   ");
 		for (int i=above_horizon_counter; i < (below_horizon_counter + above_horizon_counter + nevervisible_counter); i++) {
-			attrset(attributes[satindex[i]]);
-			mvprintw((line++), 1, "%s", string_lines[satindex[i]]);
+			if (tle_db_entry_enabled(tle_db, satindex[i])) {
+				attrset(attributes[satindex[i]]);
+				mvprintw((line++), 1, "%s", string_lines[satindex[i]]);
+			}
 		}
 		attrset(0);
 		mvprintw((line++), 1, "                                                                   ");
 		for (int i=above_horizon_counter + below_horizon_counter + nevervisible_counter; i < num_orbits; i++) {
-			attrset(attributes[satindex[i]]);
-			mvprintw((line++), 1, "%s", string_lines[satindex[i]]);
+			if (tle_db_entry_enabled(tle_db, satindex[i])) {
+				attrset(attributes[satindex[i]]);
+				mvprintw((line++), 1, "%s", string_lines[satindex[i]]);
+			}
 		}
 
 		refresh();
