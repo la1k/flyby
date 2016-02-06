@@ -24,7 +24,7 @@ bool check_pattern(const char *string, const char *pattern) {
 	return (strlen(pattern) == 0) || (strstr(string, pattern) != NULL);
 }
 
-ITEM** prepare_menu_items(const struct tle_db *tle_db, bool *enabled_tles, int *tle_index, const char *pattern)
+ITEM** prepare_menu_items(const struct tle_db *tle_db, const char *pattern, int *tle_index)
 {
 	int max_num_choices = tle_db->num_tles;
 	ITEM **my_items = (ITEM **)calloc(max_num_choices + 1, sizeof(ITEM *));
@@ -73,7 +73,34 @@ void free_menu_items(ITEM ***items)
 	}
 	
 	free(*items);
-	
+}
+
+void toggle_all(int num_tles, ITEM** items, bool *enabled_tles, int *tle_index)
+{
+	//check if all items in menu are enabled
+	bool all_enabled = true;
+	for (int i=0; i < num_tles; i++) {
+		if (items[i] == NULL) {
+			break;
+		}
+		if (item_value(items[i]) == FALSE) {
+			all_enabled = false;
+		}
+	}
+
+	for (int i=0; i < num_tles; i++) {
+		if (items[i] == NULL) {
+			break;
+		}
+
+		if (all_enabled) {
+			set_item_value(items[i], FALSE);
+			enabled_tles[tle_index[i]] = false;
+		} else {
+			set_item_value(items[i], TRUE);
+			enabled_tles[tle_index[i]] = true;
+		}
+	}
 }
 
 void whitelist(struct tle_db *tle_db)
@@ -82,7 +109,6 @@ void whitelist(struct tle_db *tle_db)
 	int c;
 	MENU *my_menu;
 	WINDOW *my_menu_win;
-	int n_choices, i, j;
 
 	bool *enabled_tles = (bool*)calloc(tle_db->num_tles, sizeof(bool));
 	int *tle_index = (int*)calloc(tle_db->num_tles, sizeof(int));
@@ -140,17 +166,24 @@ void whitelist(struct tle_db *tle_db)
 	box(my_menu_win, 0, 0);
 	
 	attrset(COLOR_PAIR(3)|A_BOLD);
-	mvprintw( row++,46,"Use cursor keys to move up/down");
-	mvprintw( row++,46,"the list and then select with ");
-	mvprintw( row++,46,"the 'Enter' key.");
-	mvprintw( row++,46,"Press 'q' to return to menu.");
+	int col = 46;
+	mvprintw( row++,col,"Use cursor keys to move up/down");
+	mvprintw( row++,col,"the list and then select with ");
+	mvprintw( row++,col,"the 'Space' key.");
+	row++;
+	mvprintw( row++,col,"Use lower-case characters to ");
+	mvprintw( row++,col,"filter satellites by name.");
+	row++;
+	mvprintw( row++,col,"Press 'Q' to return to menu.");
+	mvprintw( row++,col,"Press 'A' to toggle all TLES.");
+	mvprintw( row++,col,"Press 'W' to wipe query field.");
 	mvprintw(6, 4, "Filter TLEs:");
 
 	refresh();
 
 	/* Create items */
 	if (tle_db->num_tles > 0) {
-		ITEM **items = prepare_menu_items(tle_db, enabled_tles, tle_index, "");
+		ITEM **items = prepare_menu_items(tle_db, "", tle_index);
 		ITEM **temp_items = NULL;
 		char field_contents[MAX_NUM_CHARS] = {0};
 		char curr_item[MAX_NUM_CHARS] = {0};
@@ -185,8 +218,8 @@ void whitelist(struct tle_db *tle_db)
 		while (true) {
 			c = wgetch(my_menu_win);
 			switch(c) {
-				case 'q':
-					return -1;
+				case 'Q':
+					return;
 				case KEY_DOWN:
 					if (valid_menu) menu_driver(my_menu, REQ_DOWN_ITEM);
 					break;
@@ -199,6 +232,9 @@ void whitelist(struct tle_db *tle_db)
 				case KEY_PPAGE:
 					if (valid_menu) menu_driver(my_menu, REQ_SCR_UPAGE);
 					break;
+				case 'A':
+					if (valid_menu) toggle_all(tle_db->num_tles, items, enabled_tles, tle_index);
+					break;
 				case ' ':
 					if (valid_menu) {
 						pos_menu_cursor(my_menu);
@@ -210,7 +246,13 @@ void whitelist(struct tle_db *tle_db)
 				case KEY_BACKSPACE:
 					form_driver(form, REQ_DEL_PREV);
 				default:
-					form_driver(form, c);
+					if (islower(c) || isdigit(c)) {
+						form_driver(form, c);
+					}
+					if (c == 'W') {
+						form_driver(form, REQ_CLR_FIELD);
+					}
+
 					form_driver(form, REQ_VALIDATION); //update buffer with field contents
 
 					strncpy(field_contents, field_buffer(field[0], 0), MAX_NUM_CHARS);
@@ -219,7 +261,7 @@ void whitelist(struct tle_db *tle_db)
 					strncpy(curr_item, item_name(current_item(my_menu)), MAX_NUM_CHARS);
 
 					/* Update menu with new items */
-					temp_items = prepare_menu_items(tle_db, enabled_tles, tle_index, field_contents);
+					temp_items = prepare_menu_items(tle_db, field_contents, tle_index);
 
 					if (valid_menu) {
 						unpost_menu(my_menu);
@@ -263,12 +305,9 @@ void whitelist(struct tle_db *tle_db)
 		refresh();
 		wrefresh(my_menu_win);
 		c = wgetch(my_menu_win);
-		j = -1;
 	}
 
 	free(enabled_tles);
-
-	return j;
 }
 
 void orbital_elements_from_whitelist()
