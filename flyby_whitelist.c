@@ -99,7 +99,7 @@ bool check_pattern(const char *string, const char *pattern) {
 	return (strlen(pattern) == 0) || (strstr(string, pattern) != NULL);
 }
 
-ITEM** prepare_menu_items(const struct tle_db *tle_db, const char *pattern)
+ITEM** prepare_menu_items(const struct tle_db *tle_db, bool *enabled_tles, int *tle_index, const char *pattern)
 {
 	int max_num_choices = tle_db->num_tles;
 	ITEM **my_items = (ITEM **)calloc(max_num_choices + 1, sizeof(ITEM *));
@@ -109,6 +109,8 @@ ITEM** prepare_menu_items(const struct tle_db *tle_db, const char *pattern)
 	for (int i = 0; i < max_num_choices; ++i) {
 		if (check_pattern(tle_db->tles[i].name, pattern)) {
 			my_items[item_ind] = new_item(tle_db->tles[i].name, "");
+			set_item_value(my_items[item_ind], enabled_tles[i]);
+			tle_index[item_ind] = i;
 			item_ind++;
 		}
 	}
@@ -141,6 +143,10 @@ void whitelist(struct tle_db *tle_db)
 	MENU *my_menu;
 	WINDOW *my_menu_win;
 	int n_choices, i, j;
+
+	bool *enabled_tles = (bool*)calloc(tle_db->num_tles, sizeof(bool));
+	int *tle_index = (int*)calloc(tle_db->num_tles, sizeof(int));
+	//FIXME: Read from file, read from settings, read from whatever.
 	
 	/* Print header */
 	attrset(COLOR_PAIR(6)|A_REVERSE|A_BOLD);
@@ -198,13 +204,13 @@ void whitelist(struct tle_db *tle_db)
 	mvprintw( row++,46,"the list and then select with ");
 	mvprintw( row++,46,"the 'Enter' key.");
 	mvprintw( row++,46,"Press 'q' to return to menu.");
-	mvprintw(6, 4, "Search query:");
+	mvprintw(6, 4, "Filter TLEs:");
 
 	refresh();
 
 	/* Create items */
 	if (tle_db->num_tles > 0) {
-		ITEM **items = prepare_menu_items(tle_db, "");
+		ITEM **items = prepare_menu_items(tle_db, enabled_tles, tle_index, "");
 		ITEM **temp_items = NULL;
 		char field_contents[MAX_NUM_CHARS] = {0};
 		char curr_item[MAX_NUM_CHARS] = {0};
@@ -220,7 +226,7 @@ void whitelist(struct tle_db *tle_db)
 		/* Set main window and sub window */
 		set_menu_win(my_menu, my_menu_win);
 		set_menu_sub(my_menu, derwin(my_menu_win, LINES-(window_ypos + 5), window_width - 2, 2, 1));
-		set_menu_format(my_menu, LINES-9, 1);
+		set_menu_format(my_menu, LINES-14, 1);
 
 		/* Set menu mark to the string " * " */
 		set_menu_mark(my_menu, " * ");
@@ -256,6 +262,8 @@ void whitelist(struct tle_db *tle_db)
 					if (valid_menu) {
 						pos_menu_cursor(my_menu);
 						menu_driver(my_menu, REQ_TOGGLE_ITEM);
+						int index = tle_index[item_index(current_item(my_menu))];
+						enabled_tles[index] = !enabled_tles[index];
 					}
 					break;
 				case KEY_BACKSPACE:
@@ -270,7 +278,7 @@ void whitelist(struct tle_db *tle_db)
 					strncpy(curr_item, item_name(current_item(my_menu)), MAX_NUM_CHARS);
 
 					/* Update menu with new items */
-					temp_items = prepare_menu_items(tle_db, field_contents);
+					temp_items = prepare_menu_items(tle_db, enabled_tles, tle_index, field_contents);
 
 					if (valid_menu) {
 						unpost_menu(my_menu);
@@ -315,6 +323,8 @@ void whitelist(struct tle_db *tle_db)
 		c = wgetch(my_menu_win);
 		j = -1;
 	}
+
+	free(enabled_tles);
 
 	return j;
 }
