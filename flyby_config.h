@@ -62,6 +62,9 @@ void tle_db_merge(struct tle_db *new_db, struct tle_db *main_db, enum tle_merge_
 void tle_db_entry_set_enabled(struct tle_db *db, int tle_index, bool enabled);
 bool tle_db_entry_enabled(struct tle_db *db, int tle_index);
 
+void whitelist_from_search_paths(struct tle_db *db);
+void whitelist_write_to_default(struct tle_db *db);
+
 /**
  * Used for determining from where the QTH file was read.
  **/

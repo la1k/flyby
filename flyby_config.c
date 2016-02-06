@@ -33,6 +33,9 @@
 //default relative transponder database filename
 #define DB_RELATIVE_FILE_PATH FLYBY_RELATIVE_ROOT_PATH "flyby.db"
 
+//default relative whitelist filename
+#define WHITELIST_RELATIVE_FILE_PATH FLYBY_RELATIVE_ROOT_PATH "flyby.whitelist"
+
 /**
  * Helper function for creating an XDG_DIRS-variable. Use the value contained within environment variable varname, if empty use default_val.
  *
@@ -284,10 +287,10 @@ void tle_db_to_file(const char *filename, struct tle_db *tle_db)
  * \param entry TLE entry to find (uses only the satellite number, ignores the other fields)
  * \return Index within TLE database if found, -1 otherwise
  **/
-int tle_db_find_entry(struct tle_db *tle_db, struct tle_db_entry entry)
+int tle_db_find_entry(struct tle_db *tle_db, long satellite_number)
 {
 	for (int i=0; i < tle_db->num_tles; i++) {
-		if (tle_db->tles[i].satellite_number == entry.satellite_number) {
+		if (tle_db->tles[i].satellite_number == satellite_number) {
 			return i;
 		}
 	}
@@ -356,7 +359,7 @@ void tle_db_update(const char *filename, struct tle_db *tle_db, bool *ret_was_up
 
 	//find more recent entries
 	for (int i=0; i < new_db.num_tles; i++) {
-		int index = tle_db_find_entry(tle_db, new_db.tles[i]);
+		int index = tle_db_find_entry(tle_db, new_db.tles[i].satellite_number);
 		if (index != -1) {
 			if (tle_db_entry_is_newer_than(new_db.tles[i], tle_db->tles[index])) {
 				newer_tle_indices[num_tles_to_update] = i;
@@ -517,6 +520,53 @@ bool tle_db_entry_enabled(struct tle_db *db, int tle_index)
 		return db->tles[tle_index].enabled;
 	}
 	return false;
+}
+
+void whitelist_from_file(struct tle_db *db, const char *file)
+{
+	for (int i=0; i < db->num_tles; i++) {
+		tle_db_entry_set_enabled(db, i, false);
+	}
+
+	FILE *fd = fopen(file, "r");
+	char temp_str[MAX_NUM_CHARS] = {0};
+	if (fd != NULL) {
+		while (feof(fd) == 0) {
+			fgets(temp_str, MAX_NUM_CHARS, fd);
+			long satellite_number = strtol(temp_str, NULL, 10);
+			tle_db_entry_set_enabled(db, tle_db_find_entry(db, satellite_number), true);
+		}
+	}
+}
+
+void whitelist_from_search_paths(struct tle_db *db)
+{
+	//try to read QTH file from user home
+	char *config_home = xdg_config_home();
+	char whitelist_path[MAX_NUM_CHARS] = {0};
+	snprintf(whitelist_path, MAX_NUM_CHARS, "%s%s", config_home, WHITELIST_RELATIVE_FILE_PATH);
+	free(config_home);
+
+	whitelist_from_file(db, whitelist_path);
+}
+
+void whitelist_write_to_default(struct tle_db *db)
+{
+	//get writepath
+	create_xdg_dirs();
+	char *config_home = xdg_config_home();
+	char writepath[MAX_NUM_CHARS] = {0};
+	snprintf(writepath, MAX_NUM_CHARS, "%s%s", config_home, WHITELIST_RELATIVE_FILE_PATH);
+	free(config_home);
+
+	//write whitelist to writepath
+	FILE* fd = fopen(writepath, "w");
+	for (int i=0; i < db->num_tles; i++) {
+		if (tle_db_entry_enabled(db, i)) {
+			fprintf(fd, "%ld\n", db->tles[i].satellite_number);
+		}
+	}
+	fclose(fd);
 }
 
 enum qth_file_state qth_from_search_paths(predict_observer_t *ret_observer)

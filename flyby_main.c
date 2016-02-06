@@ -153,6 +153,8 @@ int main(int argc, char **argv)
 		tle_db_from_search_paths(&tle_db);
 	}
 
+	whitelist_from_search_paths(&tle_db);
+
 	//use tle update files to update the TLE database, if present
 	int num_update_files = string_array_size(&tle_update_filenames);
 	if (num_update_files > 0) {
