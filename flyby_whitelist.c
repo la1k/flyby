@@ -34,13 +34,28 @@ ITEM** prepare_menu_items(const struct tle_db *tle_db, bool *enabled_tles, int *
 	for (int i = 0; i < max_num_choices; ++i) {
 		if (check_pattern(tle_db->tles[i].name, pattern)) {
 			my_items[item_ind] = new_item(tle_db->tles[i].name, "");
-			set_item_value(my_items[item_ind], enabled_tles[i]);
 			tle_index[item_ind] = i;
 			item_ind++;
 		}
 	}
 	my_items[item_ind] = NULL; //terminate the menu list
 	return my_items;
+}
+
+void mark_checked_tles(int num_tles, bool *enabled_tles, int *tle_index, ITEM** items)
+{
+	for (int i=0; i < num_tles; i++) {
+		if (items[i] == NULL) {
+			break;
+		}
+
+		int index = tle_index[i];
+		if (enabled_tles[index]) {
+			set_item_value(items[i], TRUE);
+		} else {
+			set_item_value(items[i], FALSE);
+		}
+	}
 }
 
 void free_menu_items(ITEM ***items)
@@ -157,6 +172,7 @@ void whitelist(struct tle_db *tle_db)
 		set_menu_mark(my_menu, " * ");
 
 		menu_opts_off(my_menu, O_ONEVALUE);
+		mark_checked_tles(tle_db->num_tles, enabled_tles, tle_index, items);
 
 		/* Post the menu */
 		post_menu(my_menu);
@@ -227,6 +243,7 @@ void whitelist(struct tle_db *tle_db)
 						free_menu_items(&items);
 						items = temp_items;
 						set_menu_pattern(my_menu, curr_item);
+						mark_checked_tles(tle_db->num_tles, enabled_tles, tle_index, items);
 					} else {
 						free_menu_items(&temp_items);
 					}
