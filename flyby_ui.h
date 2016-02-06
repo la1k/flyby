@@ -18,6 +18,8 @@ struct tle_db_entry {
 	char line2[MAX_NUM_CHARS];
 	///Filename from which the TLE has been read
 	char filename[MAX_NUM_CHARS];
+	///Whether TLE entry is enabled for display
+	bool enabled;
 };
 
 /**
