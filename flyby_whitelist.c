@@ -103,11 +103,6 @@ void toggle_all(struct tle_db* tle_db, ITEM** items, int *tle_index)
 	}
 }
 
-enum select_menu_opt {
-	SELECT_EDIT_TLE_ENABLE_LIST,
-	SELECT_RETURN_SINGLE_INDEX
-};
-
 void EditWhiteList(struct tle_db *tle_db, predict_orbital_elements_t **orbital_elements_array)
 {
 	/* Print header */
@@ -118,14 +113,6 @@ void EditWhiteList(struct tle_db *tle_db, predict_orbital_elements_t **orbital_e
 	mvprintw(row++,0,"                                                                                ");
 	mvprintw(row++,0,"  flyby TLE whitelister                                                         ");
 	mvprintw(row++,0,"                                                                                ");
-	Select_(tle_db, orbital_elements_array, SELECT_EDIT_TLE_ENABLE_LIST);
-
-	whitelist_write_to_default(tle_db);
-}
-
-int Select_(struct tle_db *tle_db, predict_orbital_elements_t **orbital_elements_array, enum select_menu_opt select_opt)
-{
-	bool modify_enabled_tles = (select_opt == SELECT_EDIT_TLE_ENABLE_LIST);
 
 	int retval;
 	int c;
@@ -155,7 +142,6 @@ int Select_(struct tle_db *tle_db, predict_orbital_elements_t **orbital_elements
 	scale_form(form, &rows, &cols);
 
 	int form_win_height = rows + 4;
-	int row = 3;
 	WINDOW *form_win = newwin(rows + 4, cols + 4, row, 16);
 	row += form_win_height;
 	keypad(form_win, TRUE);
@@ -181,19 +167,13 @@ int Select_(struct tle_db *tle_db, predict_orbital_elements_t **orbital_elements
 	int col = 46;
 	mvprintw( row++,col,"Use cursor keys to move up/down");
 	mvprintw( row++,col,"the list and then select with ");
-	if (modify_enabled_tles) {
-		mvprintw( row++,col,"the 'Space' key.");
-	} else {
-		mvprintw( row++,col,"the 'Enter' key.");
-	}
+	mvprintw( row++,col,"the 'Space' key.");
 	row++;
 	mvprintw( row++,col,"Use upper-case characters to ");
 	mvprintw( row++,col,"filter satellites by name.");
 	row++;
 	mvprintw( row++,col,"Press 'q' to return to menu.");
-	if (modify_enabled_tles) {
-		mvprintw( row++,col,"Press 'a' to toggle all TLES.");
-	}
+	mvprintw( row++,col,"Press 'a' to toggle all TLES.");
 	mvprintw( row++,col,"Press 'w' to wipe query field.");
 	mvprintw(6, 4, "Filter TLEs:");
 
@@ -222,23 +202,18 @@ int Select_(struct tle_db *tle_db, predict_orbital_elements_t **orbital_elements
 		/* Set menu mark to the string " * " */
 		set_menu_mark(my_menu, " * ");
 
-		if (modify_enabled_tles) {
-			menu_opts_off(my_menu, O_ONEVALUE);
-		}
+		menu_opts_off(my_menu, O_ONEVALUE);
 
 		/* Post the menu */
 		post_menu(my_menu);
 
-		if (modify_enabled_tles) {
-			mark_checked_tles(tle_db, tle_index, items);
-		}
+		mark_checked_tles(tle_db, tle_index, items);
 
 		refresh();
 		wrefresh(my_menu_win);
 		form_driver(form, REQ_VALIDATION);
 		wrefresh(form_win);
 		bool run_menu = true;
-		bool valid_choice = false;
 
 		while (run_menu) {
 			c = wgetch(my_menu_win);
@@ -259,21 +234,14 @@ int Select_(struct tle_db *tle_db, predict_orbital_elements_t **orbital_elements
 					if (valid_menu) menu_driver(my_menu, REQ_SCR_UPAGE);
 					break;
 				case 'a':
-					if (valid_menu && modify_enabled_tles) toggle_all(tle_db, items, tle_index);
+					if (valid_menu) toggle_all(tle_db, items, tle_index);
 					break;
 				case ' ':
-					if (valid_menu && modify_enabled_tles) {
+					if (valid_menu) {
 						pos_menu_cursor(my_menu);
 						menu_driver(my_menu, REQ_TOGGLE_ITEM);
 						int index = tle_index[item_index(current_item(my_menu))];
 						tle_db_entry_set_enabled(tle_db, index, !tle_db_entry_enabled(tle_db, index));
-					}
-					break;
-				case 10:
-					if (valid_menu && !modify_enabled_tles) {
-						pos_menu_cursor(my_menu);
-						run_menu = false;
-						valid_choice = true;
 					}
 					break;
 				case KEY_BACKSPACE:
@@ -320,7 +288,7 @@ int Select_(struct tle_db *tle_db, predict_orbital_elements_t **orbital_elements
 						free_menu_items(&items);
 						items = temp_items;
 						set_menu_pattern(my_menu, curr_item);
-						if (modify_enabled_tles) mark_checked_tles(tle_db, tle_index, items);
+						mark_checked_tles(tle_db, tle_index, items);
 					} else {
 						free_menu_items(&temp_items);
 					}
@@ -331,24 +299,17 @@ int Select_(struct tle_db *tle_db, predict_orbital_elements_t **orbital_elements
 			wrefresh(my_menu_win);
 		}
 
-		int ret_index = -1;
-		if (valid_choice) {
-			ret_index = tle_index[item_index(current_item(my_menu))];
-		}
-
 		/* Unpost and free all the memory taken up */
 		unpost_menu(my_menu);
 		free_menu(my_menu);
 
 		free_menu_items(&items);
 
-		return ret_index;
+		//update file
+		whitelist_write_to_default(tle_db);
 	} else {
 		refresh();
 		wrefresh(my_menu_win);
 		c = wgetch(my_menu_win);
-		return -1;
 	}
-
-	return -1;
 }
