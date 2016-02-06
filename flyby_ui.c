@@ -2406,7 +2406,7 @@ void RunFlybyUI(bool new_user, const char *qthfile, predict_observer_t *observer
 
 			case 'w':
 			case 'W':
-				EditWhiteList(tle_db, orbital_elements_array);
+				EditWhitelist(tle_db);
 				MainMenu();
 				break;
 		}

@@ -24,7 +24,7 @@ bool pattern_match(const char *string, const char *pattern) {
 	return (strlen(pattern) == 0) || (strstr(string, pattern) != NULL);
 }
 
-ITEM** prepare_menu_items(const struct tle_db *tle_db, predict_orbital_elements_t **orbital_elements_array, const char *pattern, int *tle_index)
+ITEM** prepare_menu_items(const struct tle_db *tle_db, const char *pattern, int *tle_index)
 {
 	int max_num_choices = tle_db->num_tles;
 	ITEM **my_items = (ITEM **)calloc(max_num_choices + 1, sizeof(ITEM *));
@@ -33,7 +33,7 @@ ITEM** prepare_menu_items(const struct tle_db *tle_db, predict_orbital_elements_
 	//get all TLE names corresponding to the input pattern
 	for (int i = 0; i < max_num_choices; ++i) {
 		if (pattern_match(tle_db->tles[i].name, pattern)) {
-			my_items[item_ind] = new_item(tle_db->tles[i].name, orbital_elements_array[i]->designator);
+			my_items[item_ind] = new_item(tle_db->tles[i].name, "");
 			tle_index[item_ind] = i;
 			item_ind++;
 		}
@@ -103,7 +103,7 @@ void toggle_all(struct tle_db* tle_db, ITEM** items, int *tle_index)
 	}
 }
 
-void EditWhiteList(struct tle_db *tle_db, predict_orbital_elements_t **orbital_elements_array)
+void EditWhitelist(struct tle_db *tle_db)
 {
 	/* Print header */
 	attrset(COLOR_PAIR(6)|A_REVERSE|A_BOLD);
@@ -181,7 +181,7 @@ void EditWhiteList(struct tle_db *tle_db, predict_orbital_elements_t **orbital_e
 
 	/* Create items */
 	if (tle_db->num_tles > 0) {
-		ITEM **items = prepare_menu_items(tle_db, orbital_elements_array, "", tle_index);
+		ITEM **items = prepare_menu_items(tle_db, "", tle_index);
 		ITEM **temp_items = NULL;
 		char field_contents[MAX_NUM_CHARS] = {0};
 		char curr_item[MAX_NUM_CHARS] = {0};
@@ -264,7 +264,7 @@ void EditWhiteList(struct tle_db *tle_db, predict_orbital_elements_t **orbital_e
 					}
 
 					/* Update menu with new items */
-					temp_items = prepare_menu_items(tle_db, orbital_elements_array, field_contents, tle_index);
+					temp_items = prepare_menu_items(tle_db, field_contents, tle_index);
 
 					if (valid_menu) {
 						unpost_menu(my_menu);
