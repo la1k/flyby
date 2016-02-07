@@ -41,10 +41,13 @@ bool pattern_match(const char *string, const char *pattern) {
 }
 
 struct selectable_list_entry {
+	///displayed name in menu
 	char *displayed_name;
+	///whether entry is enabled (selected/deselected in menu)
 	bool enabled;
-
+	///number of description strings describing the entry, to be used in pattern matching at various levels (e.g: put TLE name in one, international designator in one, filename, ...)
 	int num_descriptors;
+	///descriptor strings
 	char **descriptors;
 };
 
@@ -54,13 +57,19 @@ struct pattern_match {
 };
 
 struct selectable_list {
-	int max_num_items;
-	ITEM** displayed_entries;
-	int num_displayed_entries;
-	MENU* menu;
+	///number of entries in menu
+	int num_entries;
+	///entries in menu
 	struct selectable_list_entry *entries;
+	///number of entries that are currently displayed in menu
+	int num_displayed_entries;
+	///currently displayed items in menu
+	ITEM** displayed_entries;
+	///menu
+	MENU* menu;
+	///mapping between displayed item indices and the actual entries in the menu
 	int *entry_mapping;
-
+	///name of currently/last marked item (used for keeping cursor position)
 	char curr_item[MAX_NUM_CHARS];
 };
 
@@ -73,13 +82,15 @@ void selectable_list_entry_free(struct selectable_list_entry *list_entry) {
 }
 
 void selectable_list_free(struct selectable_list *list) {
+	//free and unpost menu
 	if (list->num_displayed_entries > 0) {
 		unpost_menu(list->menu);
 	}
 	free_menu(list->menu);
-	free_menu_items(&(list->displayed_entries));
 
-	for (int i=0; i < list->max_num_items; i++) {
+	//free menu items and entries
+	free_menu_items(&(list->displayed_entries));
+	for (int i=0; i < list->num_entries; i++) {
 		selectable_list_entry_free(&(list->entries[i]));
 	}
 	free(list->entries);
@@ -89,11 +100,12 @@ void selectable_list_free(struct selectable_list *list) {
 void selectable_list_pattern_match(struct selectable_list *list, const char *pattern);
 
 void selectable_list_from_tle_db(struct selectable_list *list, const struct tle_db *db, WINDOW *my_menu_win) {
+	//initialize member variables based on tle database
 	list->num_displayed_entries = 0;
-	list->max_num_items = db->num_tles;
-	list->displayed_entries = (ITEM **)calloc(list->max_num_items + 1, sizeof(ITEM*));
-	list->entry_mapping = (int*)calloc(list->max_num_items, sizeof(int));
-	list->entries = (struct selectable_list_entry*)malloc(sizeof(struct selectable_list_entry)*list->max_num_items);
+	list->num_entries = db->num_tles;
+	list->displayed_entries = (ITEM **)calloc(list->num_entries + 1, sizeof(ITEM*));
+	list->entry_mapping = (int*)calloc(list->num_entries, sizeof(int));
+	list->entries = (struct selectable_list_entry*)malloc(sizeof(struct selectable_list_entry)*list->num_entries);
 	for (int i=0; i < db->num_tles; i++) {
 		list->entries[i].displayed_name = strdup(db->tles[i].name);
 		list->entries[i].num_descriptors = 2;
@@ -107,12 +119,11 @@ void selectable_list_from_tle_db(struct selectable_list *list, const struct tle_
 	list->displayed_entries[db->num_tles] = NULL;
 	list->num_displayed_entries = db->num_tles;
 
+	//create menu, format menu
 	MENU *my_menu = new_menu(list->displayed_entries);
 	list->menu = my_menu;
-
 	set_menu_back(my_menu,COLOR_PAIR(1));
 	set_menu_fore(my_menu,COLOR_PAIR(5)|A_BOLD);
-
 	set_menu_win(my_menu, my_menu_win);
 
 	int max_width, max_height;
@@ -124,24 +135,27 @@ void selectable_list_from_tle_db(struct selectable_list *list, const struct tle_
 	menu_opts_off(my_menu, O_ONEVALUE);
 	post_menu(my_menu);
 
+	//display all items, ensure the rest of the variables are correctly set
 	selectable_list_pattern_match(list, "");
 }
 
 void selectable_list_pattern_match(struct selectable_list *list, const char *pattern) {
+	//keep currently selected item for later cursor jumping
 	if (list->num_displayed_entries > 0) {
 		strncpy(list->curr_item, item_name(current_item(list->menu)), MAX_NUM_CHARS);
 	}
 
+	//remove menu from display
 	if (list->num_displayed_entries > 0) {
 		unpost_menu(list->menu);
 		list->num_displayed_entries = 0;
 	}
 
-	ITEM **temp_items = (ITEM **)calloc(list->max_num_items + 1, sizeof(ITEM *));
+	ITEM **temp_items = (ITEM **)calloc(list->num_entries + 1, sizeof(ITEM *));
 	int item_ind = 0;
 
-	//get all TLE names corresponding to the input pattern
-	for (int i = 0; i < list->max_num_items; ++i) {
+	//put all items corresponding to input pattern into current list of displayed items, update entry mapping
+	for (int i = 0; i < list->num_entries; ++i) {
 		if (pattern_match(list->entries[i].descriptors[0], pattern)) {
 			temp_items[item_ind] = new_item(list->entries[i].displayed_name, "");
 			list->entry_mapping[item_ind] = i;
@@ -151,6 +165,7 @@ void selectable_list_pattern_match(struct selectable_list *list, const char *pat
 	temp_items[item_ind] = NULL; //terminate the menu list
 
 	if (temp_items[0] != NULL) {
+		//we got a list of items. Updating menu and posting it again
 		set_menu_items(list->menu, temp_items);
 		list->num_displayed_entries = item_ind;
 		free_menu_items(&(list->displayed_entries));
@@ -158,14 +173,12 @@ void selectable_list_pattern_match(struct selectable_list *list, const char *pat
 		post_menu(list->menu);
 		set_menu_pattern(list->menu, list->curr_item);
 	} else {
+		//no valid list of entries, not doing anything. Menu is kept unposted.
 		free(temp_items);
 	}
 
-	for (int i=0; i < list->max_num_items; i++) {
-		if (list->displayed_entries[i] == NULL) {
-			break;
-		}
-
+	//select all displayed entries according to whether the canonical entry is selected or not
+	for (int i=0; i < list->num_displayed_entries; i++) {
 		int index = list->entry_mapping[i];
 		if (list->entries[index].enabled) {
 			set_item_value(list->displayed_entries[i], TRUE);
@@ -176,7 +189,7 @@ void selectable_list_pattern_match(struct selectable_list *list, const char *pat
 }
 
 void selectable_list_to_tle_db(struct selectable_list *list, struct tle_db *db) {
-	for (int i=0; i < list->max_num_items; i++) {
+	for (int i=0; i < list->num_entries; i++) {
 		tle_db_entry_set_enabled(db, i, list->entries[i].enabled);
 	}
 }
@@ -227,6 +240,7 @@ void selectable_list_toggle(struct selectable_list *list) {
 		}
 	}
 
+	//disable all items if all were selected, enable all otherwise
 	for (int i=0; i < list->num_displayed_entries; i++) {
 		if (all_enabled) {
 			set_item_value(list->displayed_entries[i], FALSE);
