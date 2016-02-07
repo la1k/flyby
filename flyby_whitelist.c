@@ -312,4 +312,7 @@ void EditWhitelist(struct tle_db *tle_db)
 		wrefresh(my_menu_win);
 		c = wgetch(my_menu_win);
 	}
+
+	free_field(field[0]);
+	free(tle_index);
 }
