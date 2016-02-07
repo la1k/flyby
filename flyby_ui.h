@@ -3,75 +3,8 @@
 
 #include "flyby_hamlib.h"
 #include <predict/predict.h>
-
-/**
- * Entry in TLE database.
- **/
-struct tle_db_entry {
-	///satellite number, parsed from TLE line 1
-	long satellite_number;
-	///satellite name, defined in TLE file
-	char name[MAX_NUM_CHARS];
-	///line 1 in NORAD TLE
-	char line1[MAX_NUM_CHARS];
-	///line 2 in NORAD TLE
-	char line2[MAX_NUM_CHARS];
-	///Filename from which the TLE has been read
-	char filename[MAX_NUM_CHARS];
-};
-
-/**
- * TLE database.
- **/
-struct tle_db {
-	///Number of contained TLEs
-	int num_tles;
-	///TLE entries
-	struct tle_db_entry tles[MAX_NUM_SATS];
-	///Whether TLE database was read from XDG standard paths or supplied on command line
-	bool read_from_xdg;
-};
-
-/**
- * Entry in transponder database.
- **/
-struct sat_db_entry {
-	///satellite number, for relating to TLE database
-	long satellite_number;
-	///whether squint angle can be calculated
-	bool squintflag;
-	///attitude latitude for squint angle calculation
-	double alat;
-	//attitude longitude for squint angle calculation
-	double alon;
-	///number of transponders
-	int num_transponders;
-	///name of each transponder
-	char transponder_name[MAX_NUM_TRANSPONDERS][MAX_NUM_CHARS];
-	///uplink frequencies
-	double uplink_start[MAX_NUM_TRANSPONDERS];
-	double uplink_end[MAX_NUM_TRANSPONDERS];
-	///downlink frequencies
-	double downlink_start[MAX_NUM_TRANSPONDERS];
-	double downlink_end[MAX_NUM_TRANSPONDERS];
-	///at which day of week the transponder is turned on?
-	unsigned char dayofweek[MAX_NUM_TRANSPONDERS];
-	///phase something
-	int phase_start[MAX_NUM_TRANSPONDERS];
-	int phase_end[MAX_NUM_TRANSPONDERS];
-};
-
-/**
- * Transponder database, each entry index corresponding to the same TLE index in the TLE database.
- **/
-struct transponder_db {
-	///number of contained satellites. Corresponds to the number of TLEs in the TLE database
-	int num_sats;
-	///transponder database entries
-	struct sat_db_entry sats[MAX_NUM_SATS];
-	///whether the transponder database is loaded, or empty
-	bool loaded;
-};
+#include "tle_db.h"
+#include "transponder_db.h"
 
 /**
  * Quits ncurses, resets the terminal and displays an error message.

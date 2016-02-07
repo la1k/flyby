@@ -1,6 +1,8 @@
 #ifndef FLYBY_CONFIG_H_DEFINED
 #define FLYBY_CONFIG_H_DEFINED
 
+#include "tle_db.h"
+
 /**
  * Read TLE entries from folders defined using the XDG file specification. TLEs are read
  * from files located in {XDG_DATA_DIRS}/flyby/tles and XDG_DATA_HOME/flyby/tles.
@@ -14,15 +16,6 @@
  * \param ret_tle_db Returned TLE database
  **/
 void tle_db_from_search_paths(struct tle_db *ret_tle_db);
-
-/**
- * Read TLE database from file.
- *
- * \param tle_file TLE database file
- * \param ret_db Returned TLE database
- * \return 0 on success, -1 otherwise
- **/
-int tle_db_from_file(const char *tle_file, struct tle_db *ret_db);
 
 /**
  * Update internal TLE database with newer TLE entries located within supplied file, and update the corresponding file databases.
@@ -39,25 +32,6 @@ int tle_db_from_file(const char *tle_file, struct tle_db *ret_db);
  * \param ret_in_new_file Boolean array of at least size tle_db->num_tles. Will contain true at the entry indices that were updated and put in a new update file within the TLE folder. Check against tle_db->read_from_xdg_dirs to see whether file actually was created or not
  **/
 void tle_db_update(const char *filename, struct tle_db *tle_db, bool *ret_was_updated, bool *ret_in_new_file);
-
-/**
- * Defines whether to overwrite only older TLE entries or all existing TLE entries when merging two databases.
- **/
-enum tle_merge_behavior {
-	///Overwrite only old existing TLE entries
-	TLE_OVERWRITE_OLD,
-	///Overwrite none of the existing TLE entries
-	TLE_OVERWRITE_NONE
-};
-
-/**
- * Merge two TLE databases.
- *
- * \param new_db New TLE database to merge into an existing one
- * \param main_db Existing TLE database into which new TLE database is to be merged
- * \param merge_opt Merge options
- **/
-void tle_db_merge(struct tle_db *new_db, struct tle_db *main_db, enum tle_merge_behavior merge_opt);
 
 /**
  * Used for determining from where the QTH file was read.
@@ -110,15 +84,5 @@ char* qth_default_writepath();
  * \param transponder_db Returned transponder database
  **/
 void transponder_db_from_search_paths(const struct tle_db *tle_db, struct transponder_db *transponder_db);
-
-/**
- * Read transponder database from file. Only fields matching the TLE database fields are modified.
- *
- * \param db_file .db file
- * \param tle_db Previously read TLE database, for which fields from transponder database are matched
- * \param ret_db Returned transponder database
- * \return 0 on success, -1 otherwise
- **/
-int transponder_db_from_file(const char *db_file, const struct tle_db *tle_db, struct transponder_db *ret_db);
 
 #endif
