@@ -80,7 +80,7 @@ void tle_db_merge(struct tle_db *new_db, struct tle_db *main_db, enum tle_merge_
 	}
 }
 
-int tle_db_find_entry(struct tle_db *tle_db, long satellite_number)
+int tle_db_find_entry(const struct tle_db *tle_db, long satellite_number)
 {
 	for (int i=0; i < tle_db->num_tles; i++) {
 		if (tle_db->tles[i].satellite_number == satellite_number) {
@@ -380,14 +380,14 @@ void tle_db_from_search_paths(struct tle_db *ret_tle_db)
 
 void tle_db_entry_set_enabled(struct tle_db *db, int tle_index, bool enabled)
 {
-	if (tle_index < db->num_tles) {
+	if ((tle_index < db->num_tles) && (tle_index >= 0)) {
 		db->tles[tle_index].enabled = enabled;
 	}
 }
 
 bool tle_db_entry_enabled(const struct tle_db *db, int tle_index)
 {
-	if (tle_index < db->num_tles) {
+	if ((tle_index < db->num_tles) && (tle_index >= 0)) {
 		return db->tles[tle_index].enabled;
 	}
 	return false;

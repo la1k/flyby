@@ -148,7 +148,7 @@ void tle_db_add_entry(struct tle_db *tle_db, const struct tle_db_entry *entry);
  * \param satellite_number Lookup satellite number
  * \return Index within TLE database if found, -1 otherwise
  **/
-int tle_db_find_entry(struct tle_db *tle_db, long satellite_number);
+int tle_db_find_entry(const struct tle_db *tle_db, long satellite_number);
 
 
 #endif
