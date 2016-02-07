@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "flyby_config.h"
+#include "xdg_basedirs.h"
 #include "flyby_defines.h"
 #include "string_array.h"
 #include <math.h>

@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "flyby_config.h"
+#include "xdg_basedirs.h"
 #include "string_array.h"
 
 int transponder_db_from_file(const char *dbfile, const struct tle_db *tle_db, struct transponder_db *ret_db)

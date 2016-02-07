@@ -5,7 +5,7 @@
 #include <dirent.h>
 #include <string.h>
 #include "flyby_ui.h"
-#include "flyby_config.h"
+#include "xdg_basedirs.h"
 #include <errno.h>
 #include <sys/stat.h>
 #include <unistd.h>
