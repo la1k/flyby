@@ -60,6 +60,8 @@ struct selectable_list {
 	MENU* menu;
 	struct selectable_list_entry *entries;
 	int *entry_mapping;
+
+	char curr_item[MAX_NUM_CHARS];
 };
 
 void selectable_list_entry_free(struct selectable_list_entry *list_entry) {
@@ -126,10 +128,9 @@ void selectable_list_from_tle_db(struct selectable_list *list, const struct tle_
 }
 
 void selectable_list_pattern_match(struct selectable_list *list, const char *pattern) {
-	/*
-	if (valid_menu) {
-		strncpy(curr_item, item_name(current_item(my_menu)), MAX_NUM_CHARS);
-	}*/
+	if (list->num_displayed_entries > 0) {
+		strncpy(list->curr_item, item_name(current_item(list->menu)), MAX_NUM_CHARS);
+	}
 
 	if (list->num_displayed_entries > 0) {
 		unpost_menu(list->menu);
@@ -155,20 +156,10 @@ void selectable_list_pattern_match(struct selectable_list *list, const char *pat
 		free_menu_items(&(list->displayed_entries));
 		list->displayed_entries = temp_items;
 		post_menu(list->menu);
+		set_menu_pattern(list->menu, list->curr_item);
 	} else {
 		free(temp_items);
 	}
-
-	/* remove old items
-	if (retval == E_OK) {
-	free_menu_items(&items);
-	items = temp_items;
-	set_menu_pattern(my_menu, curr_item);
-	mark_checked_tles(tle_db, tle_index, items);
-	} else {
-	free_menu_items(&temp_items);
-	}
-	return my_items;*/
 
 	for (int i=0; i < list->max_num_items; i++) {
 		if (list->displayed_entries[i] == NULL) {
