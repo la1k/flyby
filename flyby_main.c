@@ -9,7 +9,9 @@
 #include <math.h>
 #include "flyby_ui.h"
 #include "string_array.h"
-#include "flyby_config.h"
+#include "qth_config.h"
+#include "tle_db.h"
+#include "transponder_db.h"
 
 //longopt value identificators for command line options without shorthand
 #define FLYBY_OPT_ROTCTLD_PORT 201
@@ -209,6 +211,9 @@ int main(int argc, char **argv)
 	rigctld_disconnect(&downlink);
 	rigctld_disconnect(&uplink);
 	rotctld_disconnect(&rotctld);
+
+	//free memory
+	predict_destroy_observer(observer);
 }
 
 /**

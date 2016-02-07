@@ -44,4 +44,11 @@ int string_array_size(string_array_t *string_array);
  **/
 void string_array_free(string_array_t *string_array);
 
+/**
+ * Split string at ':'-delimiter.
+ * \param string_list Input string list delimited by :
+ * \param ret_string_list Returned string array
+ **/
+void stringsplit(const char *string_list, string_array_t *ret_string_list);
+
 #endif

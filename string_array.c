@@ -54,3 +54,15 @@ int string_array_size(string_array_t *string_array)
 	return string_array->num_strings;
 }
 
+void stringsplit(const char *string_list, string_array_t *ret_string_list)
+{
+	char *copy = strdup(string_list);
+	const char *delimiter = ":";
+	char *token = strtok(copy, delimiter);
+	while (token != NULL) {
+		string_array_add(ret_string_list, token);
+		token = strtok(NULL, delimiter);
+	}
+	free(copy);
+}
+
