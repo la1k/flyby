@@ -40,7 +40,7 @@ bool pattern_match(const char *string, const char *pattern) {
 	return (strlen(pattern) == 0) || (strstr(string, pattern) != NULL);
 }
 
-struct selectable_list_entry {
+struct filtered_menu_entry {
 	///displayed name in menu
 	char *displayed_name;
 	///whether entry is enabled (selected/deselected in menu)
@@ -56,11 +56,11 @@ struct pattern_match {
 	char **matches;
 };
 
-struct selectable_list {
+struct filtered_menu {
 	///number of entries in menu
 	int num_entries;
 	///entries in menu
-	struct selectable_list_entry *entries;
+	struct filtered_menu_entry *entries;
 	///number of entries that are currently displayed in menu
 	int num_displayed_entries;
 	///currently displayed items in menu
@@ -73,7 +73,7 @@ struct selectable_list {
 	char curr_item[MAX_NUM_CHARS];
 };
 
-void selectable_list_entry_free(struct selectable_list_entry *list_entry) {
+void filtered_menu_entry_free(struct filtered_menu_entry *list_entry) {
 	free(list_entry->displayed_name);
 	for (int i=0; i < list_entry->num_descriptors; i++) {
 		free(list_entry->descriptors[i]);
@@ -81,7 +81,7 @@ void selectable_list_entry_free(struct selectable_list_entry *list_entry) {
 	free(list_entry->descriptors);
 }
 
-void selectable_list_free(struct selectable_list *list) {
+void filtered_menu_free(struct filtered_menu *list) {
 	//free and unpost menu
 	if (list->num_displayed_entries > 0) {
 		unpost_menu(list->menu);
@@ -91,21 +91,21 @@ void selectable_list_free(struct selectable_list *list) {
 	//free menu items and entries
 	free_menu_items(&(list->displayed_entries));
 	for (int i=0; i < list->num_entries; i++) {
-		selectable_list_entry_free(&(list->entries[i]));
+		filtered_menu_entry_free(&(list->entries[i]));
 	}
 	free(list->entries);
 	free(list->entry_mapping);
 }
 
-void selectable_list_pattern_match(struct selectable_list *list, const char *pattern);
+void filtered_menu_pattern_match(struct filtered_menu *list, const char *pattern);
 
-void selectable_list_from_tle_db(struct selectable_list *list, const struct tle_db *db, WINDOW *my_menu_win) {
+void filtered_menu_from_tle_db(struct filtered_menu *list, const struct tle_db *db, WINDOW *my_menu_win) {
 	//initialize member variables based on tle database
 	list->num_displayed_entries = 0;
 	list->num_entries = db->num_tles;
 	list->displayed_entries = (ITEM **)calloc(list->num_entries + 1, sizeof(ITEM*));
 	list->entry_mapping = (int*)calloc(list->num_entries, sizeof(int));
-	list->entries = (struct selectable_list_entry*)malloc(sizeof(struct selectable_list_entry)*list->num_entries);
+	list->entries = (struct filtered_menu_entry*)malloc(sizeof(struct filtered_menu_entry)*list->num_entries);
 	for (int i=0; i < db->num_tles; i++) {
 		list->entries[i].displayed_name = strdup(db->tles[i].name);
 		list->entries[i].num_descriptors = 2;
@@ -136,10 +136,10 @@ void selectable_list_from_tle_db(struct selectable_list *list, const struct tle_
 	post_menu(my_menu);
 
 	//display all items, ensure the rest of the variables are correctly set
-	selectable_list_pattern_match(list, "");
+	filtered_menu_pattern_match(list, "");
 }
 
-void selectable_list_pattern_match(struct selectable_list *list, const char *pattern) {
+void filtered_menu_pattern_match(struct filtered_menu *list, const char *pattern) {
 	//keep currently selected item for later cursor jumping
 	if (list->num_displayed_entries > 0) {
 		strncpy(list->curr_item, item_name(current_item(list->menu)), MAX_NUM_CHARS);
@@ -188,15 +188,15 @@ void selectable_list_pattern_match(struct selectable_list *list, const char *pat
 	}
 }
 
-void selectable_list_to_tle_db(struct selectable_list *list, struct tle_db *db) {
+void filtered_menu_to_tle_db(struct filtered_menu *list, struct tle_db *db) {
 	for (int i=0; i < list->num_entries; i++) {
 		tle_db_entry_set_enabled(db, i, list->entries[i].enabled);
 	}
 }
 
-void selectable_list_toggle(struct selectable_list *list);
+void filtered_menu_toggle(struct filtered_menu *list);
 
-bool selectable_list_handle(struct selectable_list *list, int c) {
+bool filtered_menu_handle(struct filtered_menu *list, int c) {
 	if (list->num_displayed_entries <= 0) {
 		return false;
 	}
@@ -215,7 +215,7 @@ bool selectable_list_handle(struct selectable_list *list, int c) {
 			menu_driver(list->menu, REQ_SCR_UPAGE);
 			break;
 		case 'a':
-			selectable_list_toggle(list);
+			filtered_menu_toggle(list);
 			break;
 		case ' ':
 			pos_menu_cursor(list->menu);
@@ -231,7 +231,7 @@ bool selectable_list_handle(struct selectable_list *list, int c) {
 	return true;
 }
 
-void selectable_list_toggle(struct selectable_list *list) {
+void filtered_menu_toggle(struct filtered_menu *list) {
 	//check if all items in menu are enabled
 	bool all_enabled = true;
 	for (int i=0; i < list->num_displayed_entries; i++) {
@@ -327,8 +327,8 @@ void EditWhitelist(struct tle_db *tle_db)
 
 	refresh();
 
-	struct selectable_list menu = {0};
-	selectable_list_from_tle_db(&menu, tle_db, my_menu_win);
+	struct filtered_menu menu = {0};
+	filtered_menu_from_tle_db(&menu, tle_db, my_menu_win);
 
 	char field_contents[MAX_NUM_CHARS] = {0};
 
@@ -341,7 +341,7 @@ void EditWhitelist(struct tle_db *tle_db)
 	while (run_menu) {
 		c = wgetch(my_menu_win);
 
-		bool handled = selectable_list_handle(&menu, c);
+		bool handled = filtered_menu_handle(&menu, c);
 		wrefresh(my_menu_win);
 
 		if (!handled) {
@@ -364,7 +364,7 @@ void EditWhitelist(struct tle_db *tle_db)
 					strncpy(field_contents, field_buffer(field[0], 0), MAX_NUM_CHARS);
 					pattern_prepare(field_contents);
 
-					selectable_list_pattern_match(&menu, field_contents);
+					filtered_menu_pattern_match(&menu, field_contents);
 
 					wrefresh(form_win);
 					break;
@@ -372,8 +372,8 @@ void EditWhitelist(struct tle_db *tle_db)
 		}
 	}
 
-	selectable_list_to_tle_db(&menu, tle_db);
-	selectable_list_free(&menu);
+	filtered_menu_to_tle_db(&menu, tle_db);
+	filtered_menu_free(&menu);
 
 	//update file
 	whitelist_write_to_default(tle_db);
