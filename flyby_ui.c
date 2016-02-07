@@ -431,7 +431,7 @@ int Select(struct tle_db *tle_db, predict_orbital_elements_t **orbital_elements_
 	int c;
 	MENU *my_menu;
 	WINDOW *my_menu_win;
-	int n_choices, i, j;
+	int n_choices, i, j = -1;
 
 	attrset(COLOR_PAIR(6)|A_REVERSE|A_BOLD);
 	clear();
@@ -495,10 +495,15 @@ int Select(struct tle_db *tle_db, predict_orbital_elements_t **orbital_elements_
 		refresh();
 		wrefresh(my_menu_win);
 
-		while((c = wgetch(my_menu_win)) != 10) {
+		bool should_run = true;
+		bool should_exit = false;
+		while (should_run) {
+			c = wgetch(my_menu_win);
 			switch(c) {
 				case 'q':
-					return -1;
+					should_run = false;
+					should_exit = true;
+					break;
 				case KEY_DOWN:
 					menu_driver(my_menu, REQ_DOWN_ITEM);
 					break;
@@ -513,14 +518,17 @@ int Select(struct tle_db *tle_db, predict_orbital_elements_t **orbital_elements_
 					break;
 				case 10: /* Enter */
 					pos_menu_cursor(my_menu);
+					should_run = false;
 					break;
 			}
 			wrefresh(my_menu_win);
 		}
 
-		for (i=0, j=0; i<num_orbits; i++)
-			if (strcmp(item_name(current_item(my_menu)),tle_db->tles[i].name)==0)
-				j = i;
+		if (!should_exit) {
+			for (i=0, j=0; i<num_orbits; i++)
+				if (strcmp(item_name(current_item(my_menu)),tle_db->tles[i].name)==0)
+					j = i;
+		}
 
 		/* Unpost and free all the memory taken up */
 		unpost_menu(my_menu);
@@ -1259,12 +1267,32 @@ void QthEdit(const char *qthfile, predict_observer_t *qth)
 	}
 }
 
+/**
+ * Get next enabled entry within the TLE database. Used for navigating between enabled satellites within SingleTrack().
+ *
+ * \param curr_index Current index
+ * \param step Step used for finding next enabled entry (-1 or +1, preferably)
+ * \param tle_db TLE database
+ * \return Next entry in step direction which is enabled, or curr_index if none was found
+ **/
+int get_next_enabled_satellite(int curr_index, int step, struct tle_db *tle_db)
+{
+	int index = curr_index;
+	index += step;
+	while ((index >= 0) && (index < tle_db->num_tles)) {
+		if (tle_db_entry_enabled(tle_db, index)) {
+			return index;
+		}
+		index += step;
+	}
+	return curr_index;
+}
+
 void SingleTrack(int orbit_ind, predict_orbital_elements_t **orbital_elements_array, predict_observer_t *qth, struct transponder_db *sat_db, struct tle_db *tle_db, rotctld_info_t *rotctld, rigctld_info_t *downlink_info, rigctld_info_t *uplink_info)
 {
 	bool once_per_second = rotctld->once_per_second;
 	double horizon = rotctld->tracking_horizon;
 
-	int num_orbits = tle_db->num_tles;
 	struct sat_db_entry *sat_db_entries = sat_db->sats;
 	struct tle_db_entry *tle_db_entries = tle_db->tles;
 
@@ -1719,17 +1747,11 @@ void SingleTrack(int orbit_ind, predict_orbital_elements_t **orbital_elements_ar
 			refresh();
 
 			if ((ans == KEY_LEFT) || (ans == '-')) {
-				orbit_ind -= 1;
-				if (orbit_ind < 0) {
-					orbit_ind = 0;
-				}
+				orbit_ind = get_next_enabled_satellite(orbit_ind, -1, tle_db);
 			}
 
 			if ((ans == KEY_RIGHT) || (ans == '+')) {
-				orbit_ind += 1;
-				if (orbit_ind >= num_orbits) {
-					orbit_ind = num_orbits - 1;
-				}
+				orbit_ind = get_next_enabled_satellite(orbit_ind, +1, tle_db);
 			}
 
 			halfdelay(HALF_DELAY_TIME);
