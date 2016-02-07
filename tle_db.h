@@ -84,7 +84,7 @@ void tle_db_update(const char *filename, struct tle_db *tle_db, bool *ret_was_up
 void tle_db_from_directory(const char *dirpath, struct tle_db *ret_tle_db);
 
 void tle_db_entry_set_enabled(struct tle_db *db, int tle_index, bool enabled);
-bool tle_db_entry_enabled(struct tle_db *db, int tle_index);
+bool tle_db_entry_enabled(const struct tle_db *db, int tle_index);
 
 void whitelist_from_search_paths(struct tle_db *db);
 void whitelist_write_to_default(struct tle_db *db);

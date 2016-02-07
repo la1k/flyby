@@ -385,7 +385,7 @@ void tle_db_entry_set_enabled(struct tle_db *db, int tle_index, bool enabled)
 	}
 }
 
-bool tle_db_entry_enabled(struct tle_db *db, int tle_index)
+bool tle_db_entry_enabled(const struct tle_db *db, int tle_index)
 {
 	if (tle_index < db->num_tles) {
 		return db->tles[tle_index].enabled;
