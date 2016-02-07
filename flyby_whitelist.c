@@ -55,11 +55,6 @@ struct filtered_menu_entry {
 	char **descriptors;
 };
 
-struct pattern_match {
-	int num_matches;
-	char **matches;
-};
-
 /**
  * Menu that can be filtered to display only specific entries.
  **/
