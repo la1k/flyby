@@ -1792,7 +1792,7 @@ double scrk, scel;
 		return (COLOR_PAIR(2)|A_REVERSE); /* reverse */
 }
 
-void MultiTrack(predict_observer_t *qth, predict_orbital_elements_t **orbital_elements_array, struct tle_db *tle_db, char multitype, char disttype)
+void MultiTrack(predict_observer_t *qth, predict_orbital_elements_t **input_orbital_elements_array, struct tle_db *tle_db, char multitype, char disttype)
 {
 	int num_orbits = tle_db->num_tles;
 	int 		*satindex = (int*)malloc(sizeof(int)*num_orbits);
@@ -1808,6 +1808,20 @@ void MultiTrack(predict_observer_t *qth, predict_orbital_elements_t **orbital_el
 	for (int i=0; i < num_orbits; i++) {
 		string_lines[i] = (char*)malloc(sizeof(char)*MAX_NUM_CHARS);
 	}
+	predict_orbital_elements_t **orbital_elements_array = (predict_orbital_elements_t**)malloc(sizeof(predict_orbital_elements_t*)*num_orbits);
+	int *entry_mapping = (int*)calloc(num_orbits, sizeof(int));
+
+	//select only enabled satellites
+	int enabled_ind = 0;
+	for (int i=0; i < num_orbits; i++) {
+		if (tle_db_entry_enabled(tle_db, i)) {
+			orbital_elements_array[enabled_ind] = input_orbital_elements_array[i];
+			entry_mapping[enabled_ind] = i;
+			enabled_ind++;
+		}
+	}
+	num_orbits = enabled_ind;
+
 
 	curs_set(0);
 	attrset(COLOR_PAIR(6)|A_REVERSE|A_BOLD);
@@ -1944,12 +1958,12 @@ void MultiTrack(predict_observer_t *qth, predict_orbital_elements_t **orbital_el
 
 			//set string to display
 			char disp_string[MAX_NUM_CHARS];
-			sprintf(disp_string, " %-13s%5.1f  %5.1f %8s  %6.0f %6.0f %c %c %12s ", Abbreviate(tle_db->tles[i].name, 12), obs.azimuth*180.0/M_PI, obs.elevation*180.0/M_PI, abs_pos_string, disp_altitude, disp_range, sunstat, rangestat, aos_los);
+			sprintf(disp_string, " %-13s%5.1f  %5.1f %8s  %6.0f %6.0f %c %c %12s ", Abbreviate(tle_db->tles[entry_mapping[i]].name, 12), obs.azimuth*180.0/M_PI, obs.elevation*180.0/M_PI, abs_pos_string, disp_altitude, disp_range, sunstat, rangestat, aos_los);
 
 			//overwrite everything if orbit was decayed
 			if (orbit->decayed) {
 				attributes[i] = COLOR_PAIR(2);
-				sprintf(disp_string, " %-10s   ----------------       Decayed        ---------------", Abbreviate(tle_db->tles[i].name,9));
+				sprintf(disp_string, " %-10s   ----------------       Decayed        ---------------", Abbreviate(tle_db->tles[entry_mapping[i]].name,9));
 			}
 
 			memcpy(string_lines[i], disp_string, sizeof(char)*MAX_NUM_CHARS);
@@ -2040,26 +2054,20 @@ void MultiTrack(predict_observer_t *qth, predict_orbital_elements_t **orbital_el
 		//display satellites
 		int line = 5;
 		for (int i=0; i < above_horizon_counter; i++) {
-			if (tle_db_entry_enabled(tle_db, satindex[i])) {
-				attrset(attributes[satindex[i]]);
-				mvprintw((line++), 1, "%s", string_lines[satindex[i]]);
-			}
+			attrset(attributes[satindex[i]]);
+			mvprintw((line++), 1, "%s", string_lines[satindex[i]]);
 		}
 		attrset(0);
 		mvprintw((line++), 1, "                                                                   ");
 		for (int i=above_horizon_counter; i < (below_horizon_counter + above_horizon_counter + nevervisible_counter); i++) {
-			if (tle_db_entry_enabled(tle_db, satindex[i])) {
-				attrset(attributes[satindex[i]]);
-				mvprintw((line++), 1, "%s", string_lines[satindex[i]]);
-			}
+			attrset(attributes[satindex[i]]);
+			mvprintw((line++), 1, "%s", string_lines[satindex[i]]);
 		}
 		attrset(0);
 		mvprintw((line++), 1, "                                                                   ");
 		for (int i=above_horizon_counter + below_horizon_counter + nevervisible_counter; i < num_orbits; i++) {
-			if (tle_db_entry_enabled(tle_db, satindex[i])) {
-				attrset(attributes[satindex[i]]);
-				mvprintw((line++), 1, "%s", string_lines[satindex[i]]);
-			}
+			attrset(attributes[satindex[i]]);
+			mvprintw((line++), 1, "%s", string_lines[satindex[i]]);
 		}
 
 		refresh();
@@ -2080,10 +2088,13 @@ void MultiTrack(predict_observer_t *qth, predict_orbital_elements_t **orbital_el
 	free(los);
 	free(observations);
 	free(attributes);
-	for (int i=0; i < num_orbits; i++) {
+	for (int i=0; i < tle_db->num_tles; i++) {
 		free(string_lines[i]);
 	}
+	free(orbits);
 	free(string_lines);
+	free(orbital_elements_array);
+	free(entry_mapping);
 }
 
 void Illumination(const char *name, predict_orbital_elements_t *orbital_elements)
