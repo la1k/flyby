@@ -385,9 +385,12 @@ void EditWhitelist(struct tle_db *tle_db)
 	filtered_menu_to_tle_db(&menu, tle_db);
 	filtered_menu_free(&menu);
 
-	//update file
 	whitelist_write_to_default(tle_db);
 
-	free_field(field[0]);
+	unpost_form(form);
+
 	free(tle_index);
+	free_form(form);
+
+	free_field(field[0]);
 }
