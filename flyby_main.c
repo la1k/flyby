@@ -207,6 +207,9 @@ int main(int argc, char **argv)
 	rigctld_disconnect(&downlink);
 	rigctld_disconnect(&uplink);
 	rotctld_disconnect(&rotctld);
+
+	//free memory
+	predict_destroy_observer(observer);
 }
 
 /**
