@@ -25,7 +25,7 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall")
 
 configure_file(config.h.in config.h @ONLY)
 include_directories(${CMAKE_BINARY_DIR})
-add_executable(flyby flyby_ui.c flyby_hamlib.c flyby_main.c string_array.c flyby_config.c tle_db.c transponder_db.c)
+add_executable(flyby flyby_ui.c flyby_hamlib.c flyby_main.c string_array.c flyby_config.c tle_db.c transponder_db.c qth_config.c)
 install(TARGETS flyby RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 
 add_definitions(-std=gnu99)

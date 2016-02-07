@@ -1,88 +1,41 @@
 #ifndef FLYBY_CONFIG_H_DEFINED
 #define FLYBY_CONFIG_H_DEFINED
 
-#include "tle_db.h"
+//default relative subdir
+#define FLYBY_RELATIVE_ROOT_PATH "flyby/"
+
+//default relative TLE data directory
+#define TLE_RELATIVE_DIR_PATH FLYBY_RELATIVE_ROOT_PATH "tles/"
+
+//default relative qth config filename
+#define QTH_RELATIVE_FILE_PATH FLYBY_RELATIVE_ROOT_PATH "flyby.qth"
+
+//default relative transponder database filename
+#define DB_RELATIVE_FILE_PATH FLYBY_RELATIVE_ROOT_PATH "flyby.db"
 
 /**
- * Read TLE entries from folders defined using the XDG file specification. TLEs are read
- * from files located in {XDG_DATA_DIRS}/flyby/tles and XDG_DATA_HOME/flyby/tles.
- * A union over the files is used.
- *
- * When the same TLE is defined in multiple files, the following behavior is used:
- *  - TLEs from XDG_DATA_HOME take precedence over any other folder, regardless of TLE epoch
- *  - TLEs across XDG_DATA_DIRS take precedence in the order defined within XDG_DATA_DIRS, regardless of TLE epoch
- *  - For multiply defined TLEs within a single folder, the TLE with the most recent epoch is chosen
- *
- * \param ret_tle_db Returned TLE database
+ * \return XDG_DATA_DIRS variable, or the xdg basedir specification default if the environment variable is empty
  **/
-void tle_db_from_search_paths(struct tle_db *ret_tle_db);
+char *xdg_data_dirs();
 
 /**
- * Update internal TLE database with newer TLE entries located within supplied file, and update the corresponding file databases.
- * Following rules are used:
- *
- * - If the original TLE file is at a writable location: Update that file. Each file will be updated once.
- * - If the original TLE file is at a non-writable location, and the TLE database was read from XDG dirs: Create a new file in XDG_DATA_HOME/flyby/tle/, according to the filename defined in get_update_filename(). All TLEs will be written to the same file.
- *
- *  Update file will not be created if TLE database was not read from XDG, as it will be assumed that TLE files have been specified using the command line options, and it will be meaningless to create new files in any location.
- *
- * \param filename TLE file database to read
- * \param tle_db TLE database
- * \param ret_was_updated Boolean array of at least size tle_db->num_tles. Will contain true at the entry indices that were updated. Set to NULL if this is not to be used
- * \param ret_in_new_file Boolean array of at least size tle_db->num_tles. Will contain true at the entry indices that were updated and put in a new update file within the TLE folder. Check against tle_db->read_from_xdg_dirs to see whether file actually was created or not
+ * \return XDG_DATA_HOME variable, or the xdg basedir specification default if the environment variable is empty
  **/
-void tle_db_update(const char *filename, struct tle_db *tle_db, bool *ret_was_updated, bool *ret_in_new_file);
+char *xdg_data_home();
 
 /**
- * Used for determining from where the QTH file was read.
+ * \return XDG_CONFIG_DIRS variable, or the xdg basedir specification default if XDG_CONFIG_DIRS is empty
  **/
-enum qth_file_state {
-	QTH_FILE_HOME, //read from XDG_CONFIG_HOME
-	QTH_FILE_SYSTEMWIDE, //read from XDG_CONFIG_DIRS
-	QTH_FILE_NOTFOUND //not found
-};
+char *xdg_config_dirs();
 
 /**
- * Read flyby.qth from XDG filepaths. Try XDG_CONFIG_HOME/flyby/flyby.qth first, then the paths in XDG_CONFIG_DIRS/flyby/flyby.qth.
- *
- * \param ret_observer Returned QTH information
- * \return Where the QTH file was read from: user home, system dir or not found at all
+ * \return XDG_CONFIG_HOME variable, or the xdg basedir specification default if XDG_CONFIG_HOME is empty
  **/
-enum qth_file_state qth_from_search_paths(predict_observer_t *ret_observer);
+char *xdg_config_home();
 
 /**
- * Read QTH information from file.
- *
- * \param qth_file QTH config file
- * \param ret_observer Returned observer structure
- * \return 0 on success, -1 otherwise
+ * Create ~/.config/flyby and ./local/share/flyby/tles/ if these do not exist.
  **/
-int qth_from_file(const char *qth_file, predict_observer_t *ret_observer);
-
-/**
- * Write QTH information to specified file.
- *
- * \param qth_path File path
- * \param qth QTH information to write
- **/
-void qth_to_file(const char *qth_path, predict_observer_t *qth);
-
-/**
- * Get local user qth filepath (XDG_CONFIG_HOME/flyby/flyby.qth, AKA ~/.config/flyby/flyby.qth).
- **/
-char* qth_default_writepath();
-
-/**
- * Read transponder database from folders defined using the XDG file specification.
- * Database file is assumed to be located in {XDG_DATA_DIRS}/flyby/flyby.db and XDG_DATA_HOME/flyby/flyby.db.
- * A union over the files is used.
- *
- * Transponder entries defined in XDG_DATA_HOME take precedence over XDG_DATA_DIRS. XDG_DATA_DIRS
- * ordering decides precedence of entries defined across XDG_DATA_DIRS directories.
- *
- * \param tle_db Full TLE database for which transponder database entries are matched
- * \param transponder_db Returned transponder database
- **/
-void transponder_db_from_search_paths(const struct tle_db *tle_db, struct transponder_db *transponder_db);
+void create_xdg_dirs();
 
 #endif

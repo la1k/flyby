@@ -43,6 +43,62 @@ enum tle_merge_behavior {
 };
 
 /**
+ * Read TLE entries from folders defined using the XDG file specification. TLEs are read
+ * from files located in {XDG_DATA_DIRS}/flyby/tles and XDG_DATA_HOME/flyby/tles.
+ * A union over the files is used.
+ *
+ * When the same TLE is defined in multiple files, the following behavior is used:
+ *  - TLEs from XDG_DATA_HOME take precedence over any other folder, regardless of TLE epoch
+ *  - TLEs across XDG_DATA_DIRS take precedence in the order defined within XDG_DATA_DIRS, regardless of TLE epoch
+ *  - For multiply defined TLEs within a single folder, the TLE with the most recent epoch is chosen
+ *
+ * \param ret_tle_db Returned TLE database
+ **/
+void tle_db_from_search_paths(struct tle_db *ret_tle_db);
+
+/**
+ * Update internal TLE database with newer TLE entries located within supplied file, and update the corresponding file databases.
+ * Following rules are used:
+ *
+ * - If the original TLE file is at a writable location: Update that file. Each file will be updated once.
+ * - If the original TLE file is at a non-writable location, and the TLE database was read from XDG dirs: Create a new file in XDG_DATA_HOME/flyby/tle/, according to the filename defined in get_update_filename(). All TLEs will be written to the same file.
+ *
+ *  Update file will not be created if TLE database was not read from XDG, as it will be assumed that TLE files have been specified using the command line options, and it will be meaningless to create new files in any location.
+ *
+ * \param filename TLE file database to read
+ * \param tle_db TLE database
+ * \param ret_was_updated Boolean array of at least size tle_db->num_tles. Will contain true at the entry indices that were updated. Set to NULL if this is not to be used
+ * \param ret_in_new_file Boolean array of at least size tle_db->num_tles. Will contain true at the entry indices that were updated and put in a new update file within the TLE folder. Check against tle_db->read_from_xdg_dirs to see whether file actually was created or not
+ **/
+void tle_db_update(const char *filename, struct tle_db *tle_db, bool *ret_was_updated, bool *ret_in_new_file);
+
+/**
+ * Read TLEs from files in specified directory. When TLE entries are multiply defined
+ * across TLE files, the TLE entry with the most recent epoch is chosen.
+ *
+ * \param dirpath Directory from which files are to be read
+ * \param ret_tle_db Returned TLE database
+ **/
+void tle_db_from_directory(const char *dirpath, struct tle_db *ret_tle_db);
+
+/**
+ * Read TLE database from file.
+ *
+ * \param tle_file TLE database file
+ * \param ret_db Returned TLE database
+ * \return 0 on success, -1 otherwise
+ **/
+int tle_db_from_file(const char *tle_file, struct tle_db *ret_db);
+
+/**
+ * Write contents of TLE database to file.
+ *
+ * \param filename Filename
+ * \param tle_db TLE database to write
+ **/
+void tle_db_to_file(const char *filename, struct tle_db *tle_db);
+
+/**
  * Merge two TLE databases.
  *
  * \param new_db New TLE database to merge into an existing one
@@ -85,32 +141,6 @@ void tle_db_add_entry(struct tle_db *tle_db, const struct tle_db_entry *entry);
  * \return Index within TLE database if found, -1 otherwise
  **/
 int tle_db_find_entry(struct tle_db *tle_db, long satellite_number);
-
-/**
- * Read TLEs from files in specified directory. When TLE entries are multiply defined
- * across TLE files, the TLE entry with the most recent epoch is chosen.
- *
- * \param dirpath Directory from which files are to be read
- * \param ret_tle_db Returned TLE database
- **/
-void tle_db_from_directory(const char *dirpath, struct tle_db *ret_tle_db);
-
-/**
- * Read TLE database from file.
- *
- * \param tle_file TLE database file
- * \param ret_db Returned TLE database
- * \return 0 on success, -1 otherwise
- **/
-int tle_db_from_file(const char *tle_file, struct tle_db *ret_db);
-
-/**
- * Write contents of TLE database to file.
- *
- * \param filename Filename
- * \param tle_db TLE database to write
- **/
-void tle_db_to_file(const char *filename, struct tle_db *tle_db);
 
 
 #endif

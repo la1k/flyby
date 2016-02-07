@@ -2,7 +2,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
+#include "flyby_config.h"
+#include "string_array.h"
 
 int transponder_db_from_file(const char *dbfile, const struct tle_db *tle_db, struct transponder_db *ret_db)
 {
@@ -116,4 +117,26 @@ int transponder_db_from_file(const char *dbfile, const struct tle_db *tle_db, st
 		return -1;
 	}
 	return 0;
+}
+
+void transponder_db_from_search_paths(const struct tle_db *tle_db, struct transponder_db *transponder_db)
+{
+	string_array_t data_dirs = {0};
+	char *data_home = xdg_data_home();
+	string_array_add(&data_dirs, data_home);
+	free(data_home);
+
+	char *data_dirs_str = xdg_data_dirs();
+	stringsplit(data_dirs_str, &data_dirs);
+	free(data_dirs_str);
+
+	//read transponder databases from system-wide data directories in opposide order of precedence, and then the home directory
+	for (int i=string_array_size(&data_dirs)-1; i >= 0; i--) {
+		char db_path[MAX_NUM_CHARS] = {0};
+		snprintf(db_path, MAX_NUM_CHARS, "%s%s", string_array_get(&data_dirs, i), DB_RELATIVE_FILE_PATH);
+
+		//will overwrite existing entries at their correct positions automatically, and ignore everything else
+		transponder_db_from_file(db_path, tle_db, transponder_db);
+	}
+	string_array_free(&data_dirs);
 }

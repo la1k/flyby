@@ -46,6 +46,19 @@ struct transponder_db {
 };
 
 /**
+ * Read transponder database from folders defined using the XDG file specification.
+ * Database file is assumed to be located in {XDG_DATA_DIRS}/flyby/flyby.db and XDG_DATA_HOME/flyby/flyby.db.
+ * A union over the files is used.
+ *
+ * Transponder entries defined in XDG_DATA_HOME take precedence over XDG_DATA_DIRS. XDG_DATA_DIRS
+ * ordering decides precedence of entries defined across XDG_DATA_DIRS directories.
+ *
+ * \param tle_db Full TLE database for which transponder database entries are matched
+ * \param transponder_db Returned transponder database
+ **/
+void transponder_db_from_search_paths(const struct tle_db *tle_db, struct transponder_db *transponder_db);
+
+/**
  * Read transponder database from file. Only fields matching the TLE database fields are modified.
  *
  * \param db_file .db file
