@@ -41,19 +41,13 @@
  **/
 char *xdg_dirs(const char *varname, const char *default_val)
 {
-	char *default_copy = strdup(default_val);
 	char *data_dirs = getenv(varname);
 	if (data_dirs == NULL) {
-		default_copy = strdup(default_val);
-		data_dirs = default_copy;
+		data_dirs = (char*)default_val;
 	}
-	char *temp = data_dirs;
-	data_dirs = (char*)malloc(sizeof(char)*(strlen(data_dirs) + 1));
-	strcpy(data_dirs, temp);
 
-	if (default_copy != NULL) {
-		free(default_copy);
-	}
+	//duplicate string (string from getenv is static)
+	data_dirs = strdup(data_dirs);
 
 	return data_dirs;
 }
