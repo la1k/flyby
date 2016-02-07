@@ -36,10 +36,14 @@ void free_menu_items(ITEM ***items)
 	free(*items);
 }
 
-bool pattern_match(const char *string, const char *pattern) {
+bool pattern_match(const char *string, const char *pattern)
+{
 	return (strlen(pattern) == 0) || (strstr(string, pattern) != NULL);
 }
 
+/**
+ * Entry in filter-enabled menu.
+ **/
 struct filtered_menu_entry {
 	///displayed name in menu
 	char *displayed_name;
@@ -56,6 +60,9 @@ struct pattern_match {
 	char **matches;
 };
 
+/**
+ * Menu that can be filtered to display only specific entries.
+ **/
 struct filtered_menu {
 	///number of entries in menu
 	int num_entries;
@@ -73,7 +80,8 @@ struct filtered_menu {
 	char curr_item[MAX_NUM_CHARS];
 };
 
-void filtered_menu_entry_free(struct filtered_menu_entry *list_entry) {
+void filtered_menu_entry_free(struct filtered_menu_entry *list_entry)
+{
 	free(list_entry->displayed_name);
 	for (int i=0; i < list_entry->num_descriptors; i++) {
 		free(list_entry->descriptors[i]);
@@ -81,7 +89,8 @@ void filtered_menu_entry_free(struct filtered_menu_entry *list_entry) {
 	free(list_entry->descriptors);
 }
 
-void filtered_menu_free(struct filtered_menu *list) {
+void filtered_menu_free(struct filtered_menu *list)
+{
 	//free and unpost menu
 	if (list->num_displayed_entries > 0) {
 		unpost_menu(list->menu);
@@ -97,49 +106,8 @@ void filtered_menu_free(struct filtered_menu *list) {
 	free(list->entry_mapping);
 }
 
-void filtered_menu_pattern_match(struct filtered_menu *list, const char *pattern);
-
-void filtered_menu_from_tle_db(struct filtered_menu *list, const struct tle_db *db, WINDOW *my_menu_win) {
-	//initialize member variables based on tle database
-	list->num_displayed_entries = 0;
-	list->num_entries = db->num_tles;
-	list->displayed_entries = (ITEM **)calloc(list->num_entries + 1, sizeof(ITEM*));
-	list->entry_mapping = (int*)calloc(list->num_entries, sizeof(int));
-	list->entries = (struct filtered_menu_entry*)malloc(sizeof(struct filtered_menu_entry)*list->num_entries);
-	for (int i=0; i < db->num_tles; i++) {
-		list->entries[i].displayed_name = strdup(db->tles[i].name);
-		list->entries[i].num_descriptors = 2;
-		list->entries[i].descriptors = (char**)malloc(sizeof(char*)*list->entries[i].num_descriptors);
-		list->entries[i].descriptors[0] = strdup(db->tles[i].name);
-		list->entries[i].descriptors[1] = strdup(db->tles[i].filename);
-		list->entries[i].enabled = tle_db_entry_enabled(db, i);
-
-		list->displayed_entries[i] = new_item(list->entries[i].displayed_name, "");
-	}
-	list->displayed_entries[db->num_tles] = NULL;
-	list->num_displayed_entries = db->num_tles;
-
-	//create menu, format menu
-	MENU *my_menu = new_menu(list->displayed_entries);
-	list->menu = my_menu;
-	set_menu_back(my_menu,COLOR_PAIR(1));
-	set_menu_fore(my_menu,COLOR_PAIR(5)|A_BOLD);
-	set_menu_win(my_menu, my_menu_win);
-
-	int max_width, max_height;
-	getmaxyx(my_menu_win, max_height, max_width);
-	set_menu_sub(my_menu, derwin(my_menu_win, max_height - 3, max_width - 2, 2, 1));
-	set_menu_format(my_menu, LINES-14, 1);
-
-	set_menu_mark(my_menu, " * ");
-	menu_opts_off(my_menu, O_ONEVALUE);
-	post_menu(my_menu);
-
-	//display all items, ensure the rest of the variables are correctly set
-	filtered_menu_pattern_match(list, "");
-}
-
-void filtered_menu_pattern_match(struct filtered_menu *list, const char *pattern) {
+void filtered_menu_pattern_match(struct filtered_menu *list, const char *pattern)
+{
 	//keep currently selected item for later cursor jumping
 	if (list->num_displayed_entries > 0) {
 		strncpy(list->curr_item, item_name(current_item(list->menu)), MAX_NUM_CHARS);
@@ -188,15 +156,78 @@ void filtered_menu_pattern_match(struct filtered_menu *list, const char *pattern
 	}
 }
 
-void filtered_menu_to_tle_db(struct filtered_menu *list, struct tle_db *db) {
+void filtered_menu_from_tle_db(struct filtered_menu *list, const struct tle_db *db, WINDOW *my_menu_win)
+{
+	//initialize member variables based on tle database
+	list->num_displayed_entries = 0;
+	list->num_entries = db->num_tles;
+	list->displayed_entries = (ITEM **)calloc(list->num_entries + 1, sizeof(ITEM*));
+	list->entry_mapping = (int*)calloc(list->num_entries, sizeof(int));
+	list->entries = (struct filtered_menu_entry*)malloc(sizeof(struct filtered_menu_entry)*list->num_entries);
+	for (int i=0; i < db->num_tles; i++) {
+		list->entries[i].displayed_name = strdup(db->tles[i].name);
+		list->entries[i].num_descriptors = 2;
+		list->entries[i].descriptors = (char**)malloc(sizeof(char*)*list->entries[i].num_descriptors);
+		list->entries[i].descriptors[0] = strdup(db->tles[i].name);
+		list->entries[i].descriptors[1] = strdup(db->tles[i].filename);
+		list->entries[i].enabled = tle_db_entry_enabled(db, i);
+
+		list->displayed_entries[i] = new_item(list->entries[i].displayed_name, "");
+	}
+	list->displayed_entries[db->num_tles] = NULL;
+	list->num_displayed_entries = db->num_tles;
+
+	//create menu, format menu
+	MENU *my_menu = new_menu(list->displayed_entries);
+	list->menu = my_menu;
+	set_menu_back(my_menu,COLOR_PAIR(1));
+	set_menu_fore(my_menu,COLOR_PAIR(5)|A_BOLD);
+	set_menu_win(my_menu, my_menu_win);
+
+	int max_width, max_height;
+	getmaxyx(my_menu_win, max_height, max_width);
+	set_menu_sub(my_menu, derwin(my_menu_win, max_height - 3, max_width - 2, 2, 1));
+	set_menu_format(my_menu, LINES-14, 1);
+
+	set_menu_mark(my_menu, " * ");
+	menu_opts_off(my_menu, O_ONEVALUE);
+	post_menu(my_menu);
+
+	//display all items, ensure the rest of the variables are correctly set
+	filtered_menu_pattern_match(list, "");
+}
+
+void filtered_menu_to_tle_db(struct filtered_menu *list, struct tle_db *db)
+{
 	for (int i=0; i < list->num_entries; i++) {
 		tle_db_entry_set_enabled(db, i, list->entries[i].enabled);
 	}
 }
 
-void filtered_menu_toggle(struct filtered_menu *list);
+void filtered_menu_toggle(struct filtered_menu *list)
+{
+	//check if all items in menu are enabled
+	bool all_enabled = true;
+	for (int i=0; i < list->num_displayed_entries; i++) {
+		if (item_value(list->displayed_entries[i]) == FALSE) {
+			all_enabled = false;
+		}
+	}
 
-bool filtered_menu_handle(struct filtered_menu *list, int c) {
+	//disable all items if all were selected, enable all otherwise
+	for (int i=0; i < list->num_displayed_entries; i++) {
+		if (all_enabled) {
+			set_item_value(list->displayed_entries[i], FALSE);
+			list->entries[list->entry_mapping[i]].enabled = false;
+		} else {
+			set_item_value(list->displayed_entries[i], TRUE);
+			list->entries[list->entry_mapping[i]].enabled = true;
+		}
+	}
+}
+
+bool filtered_menu_handle(struct filtered_menu *list, int c)
+{
 	if (list->num_displayed_entries <= 0) {
 		return false;
 	}
@@ -229,27 +260,6 @@ bool filtered_menu_handle(struct filtered_menu *list, int c) {
 			break;
 	}
 	return true;
-}
-
-void filtered_menu_toggle(struct filtered_menu *list) {
-	//check if all items in menu are enabled
-	bool all_enabled = true;
-	for (int i=0; i < list->num_displayed_entries; i++) {
-		if (item_value(list->displayed_entries[i]) == FALSE) {
-			all_enabled = false;
-		}
-	}
-
-	//disable all items if all were selected, enable all otherwise
-	for (int i=0; i < list->num_displayed_entries; i++) {
-		if (all_enabled) {
-			set_item_value(list->displayed_entries[i], FALSE);
-			list->entries[list->entry_mapping[i]].enabled = false;
-		} else {
-			set_item_value(list->displayed_entries[i], TRUE);
-			list->entries[list->entry_mapping[i]].enabled = true;
-		}
-	}
 }
 
 void EditWhitelist(struct tle_db *tle_db)
