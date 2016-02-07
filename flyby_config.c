@@ -281,13 +281,13 @@ void tle_db_to_file(const char *filename, struct tle_db *tle_db)
  * Find TLE entry within TLE database. Searches with respect to the satellite number.
  *
  * \param tle_db TLE database
- * \param entry TLE entry to find (uses only the satellite number, ignores the other fields)
+ * \param satellite_number Lookup satellite number
  * \return Index within TLE database if found, -1 otherwise
  **/
-int tle_db_find_entry(struct tle_db *tle_db, struct tle_db_entry entry)
+int tle_db_find_entry(struct tle_db *tle_db, long satellite_number)
 {
 	for (int i=0; i < tle_db->num_tles; i++) {
-		if (tle_db->tles[i].satellite_number == entry.satellite_number) {
+		if (tle_db->tles[i].satellite_number == satellite_number) {
 			return i;
 		}
 	}
@@ -356,7 +356,7 @@ void tle_db_update(const char *filename, struct tle_db *tle_db, bool *ret_was_up
 
 	//find more recent entries
 	for (int i=0; i < new_db.num_tles; i++) {
-		int index = tle_db_find_entry(tle_db, new_db.tles[i]);
+		int index = tle_db_find_entry(tle_db, new_db.tles[i].satellite_number);
 		if (index != -1) {
 			if (tle_db_entry_is_newer_than(new_db.tles[i], tle_db->tles[index])) {
 				newer_tle_indices[num_tles_to_update] = i;
