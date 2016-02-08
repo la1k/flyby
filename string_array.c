@@ -66,3 +66,12 @@ void stringsplit(const char *string_list, string_array_t *ret_string_list)
 	free(copy);
 }
 
+int string_array_find(string_array_t *string_array, const char *string)
+{
+	for (int i=0; i < string_array_size(string_array); i++) {
+		if (strcmp(string_array_get(string_array, i), string) == 0) {
+			return i;
+		}
+	}
+	return -1;
+}

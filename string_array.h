@@ -45,6 +45,15 @@ int string_array_size(string_array_t *string_array);
 void string_array_free(string_array_t *string_array);
 
 /**
+ * Find string in string array.
+ *
+ * \param string_array String array
+ * \param string String to find
+ * \return Index in string array, -1 if string is not found
+ **/
+int string_array_find(string_array_t *string_array, const char *string);
+
+/**
  * Split string at ':'-delimiter.
  * \param string_list Input string list delimited by :
  * \param ret_string_list Returned string array

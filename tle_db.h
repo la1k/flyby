@@ -3,6 +3,7 @@
 
 #include <stdbool.h>
 #include "flyby_defines.h"
+#include "string_array.h"
 
 /**
  * Entry in TLE database.
@@ -88,6 +89,14 @@ bool tle_db_entry_enabled(const struct tle_db *db, int tle_index);
 
 void whitelist_from_search_paths(struct tle_db *db);
 void whitelist_write_to_default(struct tle_db *db);
+
+/**
+ * Get list of filenames from which TLE database is generated.
+ *
+ * \param tle_db TLE database
+ * \return List of filenames
+ **/
+string_array_t tle_db_filenames(const struct tle_db *db);
 
 /**
  * Read TLE database from file.

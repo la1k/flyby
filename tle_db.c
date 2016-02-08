@@ -410,6 +410,17 @@ void whitelist_from_file(struct tle_db *db, const char *file)
 	}
 }
 
+string_array_t tle_db_filenames(const struct tle_db *db)
+{
+	string_array_t returned_list = {0};
+	for (int i=0; i < db->num_tles; i++) {
+		if (string_array_find(&returned_list, db->tles[i].filename) == -1) {
+			string_array_add(&returned_list, db->tles[i].filename);
+		}
+	}
+	return returned_list;
+}
+
 void whitelist_from_search_paths(struct tle_db *db)
 {
 	//try to read QTH file from user home
