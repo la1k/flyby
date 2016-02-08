@@ -151,26 +151,27 @@ void filtered_menu_pattern_match(struct filtered_menu *list, const char *pattern
 	}
 }
 
-void filtered_menu_from_tle_db(struct filtered_menu *list, const struct tle_db *db, WINDOW *my_menu_win)
+void filtered_menu_from_stringarray(struct filtered_menu *list, int num_descriptors, string_array_t *descriptors, WINDOW *my_menu_win)
 {
 	//initialize member variables based on tle database
 	list->num_displayed_entries = 0;
-	list->num_entries = db->num_tles;
+	list->num_entries = string_array_size(&(descriptors[0]));
 	list->displayed_entries = (ITEM **)calloc(list->num_entries + 1, sizeof(ITEM*));
 	list->entry_mapping = (int*)calloc(list->num_entries, sizeof(int));
 	list->entries = (struct filtered_menu_entry*)malloc(sizeof(struct filtered_menu_entry)*list->num_entries);
-	for (int i=0; i < db->num_tles; i++) {
-		list->entries[i].displayed_name = strdup(db->tles[i].name);
-		list->entries[i].num_descriptors = 2;
+	for (int i=0; i < list->num_entries; i++) {
+		list->entries[i].displayed_name = strdup(string_array_get(&(descriptors[0]), i));
+		list->entries[i].num_descriptors = num_descriptors;
 		list->entries[i].descriptors = (char**)malloc(sizeof(char*)*list->entries[i].num_descriptors);
-		list->entries[i].descriptors[0] = strdup(db->tles[i].name);
-		list->entries[i].descriptors[1] = strdup(db->tles[i].filename);
-		list->entries[i].enabled = tle_db_entry_enabled(db, i);
+		for (int j=0; j < num_descriptors; j++) {
+			list->entries[i].descriptors[j] = strdup(string_array_get(&(descriptors[j]), i));
+		}
+		list->entries[i].enabled = true;
 
 		list->displayed_entries[i] = new_item(list->entries[i].displayed_name, "");
 	}
-	list->displayed_entries[db->num_tles] = NULL;
-	list->num_displayed_entries = db->num_tles;
+	list->displayed_entries[list->num_entries] = NULL;
+	list->num_displayed_entries = list->num_entries;
 
 	//create menu, format menu
 	MENU *my_menu = new_menu(list->displayed_entries);
@@ -190,6 +191,27 @@ void filtered_menu_from_tle_db(struct filtered_menu *list, const struct tle_db *
 
 	//display all items, ensure the rest of the variables are correctly set
 	filtered_menu_pattern_match(list, "");
+}
+
+void filtered_menu_from_tle_db(struct filtered_menu *list, const struct tle_db *db, WINDOW *my_menu_win)
+{
+	int num_descriptors = 2;
+	string_array_t *string_list = (string_array_t*)malloc(sizeof(string_array_t)*num_descriptors);
+	for (int i=0; i < db->num_tles; i++) {
+		string_array_add(&(string_list[0]), db->tles[i].name);
+		string_array_add(&(string_list[1]), db->tles[i].filename);
+	}
+
+	filtered_menu_from_stringarray(list, num_descriptors, string_list, my_menu_win);
+
+	for (int i=0; i < db->num_tles; i++) {
+		list->entries[i].enabled = tle_db_entry_enabled(db, i);
+	}
+	filtered_menu_pattern_match(list, "");
+
+	string_array_free(&(string_list[0]));
+	string_array_free(&(string_list[1]));
+	free(string_list);
 }
 
 void filtered_menu_to_tle_db(struct filtered_menu *list, struct tle_db *db)
