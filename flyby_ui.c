@@ -1722,7 +1722,7 @@ void SingleTrack(int orbit_ind, predict_orbital_elements_t **orbital_elements_ar
 				int azimuth = (int)round(obs.azimuth*180.0/M_PI);
 
 				if ((elevation != prev_elevation) || (azimuth != prev_azimuth) || (once_per_second && (curr_time > prev_time))) {
-					if (rotctld->connected) rotctld_track(rotctld, obs.elevation*180.0/M_PI, obs.azimuth*180.0/M_PI);
+					if (rotctld->connected) rotctld_track(rotctld, obs.azimuth*180.0/M_PI, obs.elevation*180.0/M_PI);
 					prev_elevation = elevation;
 					prev_azimuth = azimuth;
 					prev_time = curr_time;
