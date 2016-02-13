@@ -51,48 +51,11 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <predict/predict.h>
+#include "flyby_ui.h"
 
-#define MAX_NUM_SATS		250
 #define EARTH_RADIUS_KM		6.378137E3		/* WGS 84 Earth radius km */
-#define MAX_NUM_CHARS 80
 #define HALF_DELAY_TIME	5
 #define	KM_TO_MI		0.621371		/* km to miles */
-
-char *flybypath={"/etc/flyby/"};
-
-struct	tle_db_entry {  char line1[70];
-	   char line2[70];
-	   char name[25];
-	   int catnum;
-	};
-
-
-struct sat_db_entry {
-	   long catnum;
-	   char squintflag;
-	   double alat;
-	   double alon;
-	   unsigned char transponders;
-	   char transponder_name[10][80];
-	   double uplink_start[10];
-	   double uplink_end[10];
-	   double downlink_start[10];
-	   double downlink_end[10];
-	   unsigned char dayofweek[10];
-	   int phase_start[10];
-	   int phase_end[10];
-	};
-
-/* Global variables for sharing data among functions... */
-
-
-char	qthfile[50], tlefile[50], dbfile[50], temp[80],
-	rotctld_host[256], rotctld_port[6]="4533\0\0",
-	uplink_host[256], uplink_port[6]="4532\0\0", uplink_vfo[30],
-	downlink_host[256], downlink_port[6]="4532\0\0", downlink_vfo[30],
-	database=0;
-
-int	rotctld_socket, uplink_socket, downlink_socket;
 
 double reduce(value,rangeMin,rangeMax)
 double value, rangeMin, rangeMax;
@@ -149,10 +112,6 @@ char   *mStr;
 void bailout(string)
 char *string;
 {
-	/* This function quits ncurses, resets and "beeps"
-	   the terminal, and displays an error message (string)
-	   when we need to bail out of the program in a hurry. */
-
 	beep();
 	curs_set(1);
 	bkgdset(COLOR_PAIR(1));
@@ -160,124 +119,6 @@ char *string;
 	refresh();
 	endwin();
 	fprintf(stderr,"*** flyby: %s!\n",string);
-}
-
-int sock_readline(int sockd, char *message, size_t bufsize)
-{
-	int len=0, pos=0;
-	char c='\0';
-
-	if (message!=NULL)
-		message[bufsize-1]='\0';
-	do
-	{
-		if ((len=recv(sockd, &c, 1, 0)) < 0)
-			return len;
-		if (message!=NULL)
-		{
-			message[pos]=c;
-			message[pos+1]='\0';
-		}
-		pos+=len;
-	} while (c!='\n' && pos<bufsize-2);
-
-	return pos;
-}
-
-void TrackDataNet(int sockd, double elevation, double azimuth)
-{
-	char message[30];
-
-	/* If positions are sent too often, rotctld will queue
-	   them and the antenna will lag behind. Therefore, we wait
-	   for confirmation from last command before sending the
-	   next. */
-	sock_readline(sockd, message, sizeof(message));
-
-	sprintf(message, "P %.2f %.2f\n", azimuth, elevation);
-	int len = strlen(message);
-	if (send(sockd, message, len, 0) != len)
-	{
-		bailout("Failed to send to rotctld");
-		exit(-1);
-	}
-}
-
-void FreqDataNet(int sockd, char *vfo, double freq)
-{
-	char message[256];
-	int len;
-
-	/* If frequencies is sent too often, rigctld will queue
-	   them and the radio will lag behind. Therefore, we wait
-	   for confirmation from last command before sending the
-	   next. */
-	sock_readline(sockd, message, sizeof(message));
-
-	if (strlen(vfo) > 0)
-	{
-		sprintf(message, "V %s\n", vfo);
-		len = strlen(message);
-    usleep(100); // hack: avoid VFO selection racing
-		if (send(sockd, message, len, 0) != len)
-		{
-			bailout("Failed to send to rigctld");
-			exit(-1);
-		}
-		sock_readline(sockd, message, sizeof(message));
-	}
-
-	sprintf(message, "F %.0f\n", freq*1000000);
-	len = strlen(message);
-	if (send(sockd, message, len, 0) != len)
-	{
-		bailout("Failed to send to rigctld");
-		exit(-1);
-	}
-}
-
-double ReadFreqDataNet(int sockd, char *vfo)
-{
-	char message[256];
-	int len;
-	double freq;
-
-	/* Read pending return message */
-	sock_readline(sockd, message, sizeof(message));
-
-	if (strlen(vfo) > 0)
-	{
-		sprintf(message, "V %s\n", vfo);
-		len = strlen(message);
-    usleep(100); // hack: avoid VFO selection racing
-		if (send(sockd, message, len, 0) != len)
-		{
-			bailout("Failed to send to rigctld");
-			exit(-1);
-		}
-		sock_readline(sockd, message, sizeof(message));
-	}
-
-	sprintf(message, "f\n");
-	len = strlen(message);
-	if (send(sockd, message, len, 0) != len)
-	{
-		bailout("Failed to send to rigctld");
-		exit(-1);
-	}
-
-	sock_readline(sockd, message, sizeof(message));
-	freq=atof(message)/1.0e6;
-
-	sprintf(message, "f\n");
-	len = strlen(message);
-	if (send(sockd, message, len, 0) != len)
-	{
-		bailout("Failed to send to rigctld");
-		exit(-1);
-	}
-
-	return freq;
 }
 
 void Banner()
@@ -303,6 +144,7 @@ void AnyKey()
 	getch();
 }
 
+char	temp[80];
 char *Abbreviate(string,n)
 char *string;
 int n;
@@ -327,13 +169,6 @@ int n;
 char KepCheck(line1,line2)
 char *line1, *line2;
 {
-	/* This function scans line 1 and line 2 of a NASA 2-Line element
-	   set and returns a 1 if the element set appears to be valid or
-	   a 0 if it does not.  If the data survives this torture test,
-	   it's a pretty safe bet we're looking at a valid 2-line
-	   element set and not just some random text that might pass
-	   as orbital data based on a simple checksum calculation alone. */
-
 	int x;
 	unsigned sum1, sum2;
 
@@ -433,209 +268,6 @@ char *input;
 	return bearing;
 }
 
-char ReadDataFiles(int *num_sats, struct sat_db_entry *sat_db, struct tle_db_entry *sats, predict_observer_t *observer)
-{
-	/* This function reads "flyby.qth" and "flyby.tle"
-	   files into memory.  Return values are as follows:
-
-	   0 : No files were loaded
-	   1 : Only the qth file was loaded
-	   2 : Only the tle file was loaded
-	   3 : Both files were loaded successfully */
-
-	FILE *fd;
-	long catnum;
-	unsigned char dayofweek;
-	int x=0, y, entry=0, max_entries=10, transponders=0;
-	char flag=0, match, name[80], line1[80], line2[80];
-	char callsign[MAX_NUM_CHARS];
-
-	fd=fopen(qthfile,"r");
-
-	if (fd!=NULL) {
-
-		fgets(callsign,16,fd);
-		callsign[strlen(callsign)-1]=0;
-
-		double latitude, longitude;
-		int altitude;
-		fscanf(fd,"%lf", &latitude);
-		fscanf(fd,"%lf", &longitude);
-		fscanf(fd,"%d", &altitude);
-		fclose(fd);
-
-		strncpy(observer->name, callsign, 16);
-		observer->latitude = latitude*M_PI/180.0;
-		observer->longitude = -longitude*M_PI/180.0; //convert from N/W to N/E
-		observer->altitude = altitude*M_PI/180.0;
-
-		flag=1;
-	}
-
-	fd=fopen(tlefile,"r");
-
-	if (fd!=NULL) {
-		while (x<MAX_NUM_SATS && feof(fd)==0) {
-			/* Initialize variables */
-
-			name[0]=0;
-			line1[0]=0;
-			line2[0]=0;
-
-			/* Read element set */
-
-			fgets(name,75,fd);
-			fgets(line1,75,fd);
-			fgets(line2,75,fd);
-
-			if (KepCheck(line1,line2) && (feof(fd)==0)) {
-				/* We found a valid TLE! */
-
-				/* Some TLE sources left justify the sat
-				   name in a 24-byte field that is padded
-				   with blanks.  The following lines cut
-				   out the blanks as well as the line feed
-				   character read by the fgets() function. */
-
-				y=strlen(name);
-
-				while (name[y]==32 || name[y]==0 || name[y]==10 || name[y]==13 || y==0) {
-					name[y]=0;
-					y--;
-				}
-
-				/* Copy TLE data into the sat data structure */
-
-				strncpy(sats[x].name,name,24);
-				strncpy(sats[x].line1,line1,69);
-				strncpy(sats[x].line2,line2,69);
-
-				/* Get satellite number, so that the satellite database can be parsed. */
-
-				char *tle[2] = {sats[x].line1, sats[x].line2};
-				predict_orbital_elements_t *temp_elements = predict_parse_tle(tle);
-				sats[x].catnum = temp_elements->satellite_number;
-				predict_destroy_orbital_elements(temp_elements);
-
-				x++;
-
-			}
-		}
-
-		flag+=2;
-		fclose(fd);
-		*num_sats=x;
-
-	}
-
-
-	/* Load satellite database file */
-
-	fd=fopen(dbfile,"r");
-
-	if (fd!=NULL) {
-		database=1;
-
-		fgets(line1,40,fd);
-
-		while (strncmp(line1,"end",3)!=0 && line1[0]!='\n' && feof(fd)==0) {
-			/* The first line is the satellite
-			   name which is ignored here. */
-
-			fgets(line1,40,fd);
-			sscanf(line1,"%ld",&catnum);
-
-			/* Search for match */
-
-				for (y=0, match=0; y<MAX_NUM_SATS && match==0; y++) {
-					if (catnum==sats[y].catnum)
-						match=1;
-				}
-
-				if (match) {
-					transponders=0;
-					entry=0;
-					y--;
-				}
-
-				fgets(line1,40,fd);
-
-				if (match) {
-					if (strncmp(line1,"No",2)!=0) {
-						sscanf(line1,"%lf, %lf",&sat_db[y].alat, &sat_db[y].alon);
-						sat_db[y].squintflag=1;
-					}
-
-					else
-						sat_db[y].squintflag=0;
-				}
-
-				fgets(line1,80,fd);
-
-				while (strncmp(line1,"end",3)!=0 && line1[0]!='\n' && feof(fd)==0) {
-					if (entry<max_entries) {
-						if (match) {
-							if (strncmp(line1,"No",2)!=0) {
-								line1[strlen(line1)-1]=0;
-								strcpy(sat_db[y].transponder_name[entry],line1);
-							} else
-								sat_db[y].transponder_name[entry][0]=0;
-						}
-
-						fgets(line1,40,fd);
-
-						if (match)
-							sscanf(line1,"%lf, %lf", &sat_db[y].uplink_start[entry], &sat_db[y].uplink_end[entry]);
-
-						fgets(line1,40,fd);
-
-						if (match)
-							sscanf(line1,"%lf, %lf", &sat_db[y].downlink_start[entry], &sat_db[y].downlink_end[entry]);
-
-						fgets(line1,40,fd);
-
-						if (match) {
-							if (strncmp(line1,"No",2)!=0) {
-								dayofweek=(unsigned char)atoi(line1);
-								sat_db[y].dayofweek[entry]=dayofweek;
-							} else
-								sat_db[y].dayofweek[entry]=0;
-						}
-
-						fgets(line1,40,fd);
-
-						if (match) {
-							if (strncmp(line1,"No",2)!=0)
-								sscanf(line1,"%d, %d",&sat_db[y].phase_start[entry], &sat_db[y].phase_end[entry]);
-							else {
-								sat_db[y].phase_start[entry]=0;
-								sat_db[y].phase_end[entry]=0;
-							}
-
-							if (sat_db[y].uplink_start[entry]!=0.0 || sat_db[y].downlink_start[entry]!=0.0)
-								transponders++;
-
-							entry++;
-						}
-					}
-					fgets(line1,80,fd);
-				}
-				fgets(line1,80,fd);
-
-				if (match)
-					sat_db[y].transponders=transponders;
-
-				entry=0;
-				transponders=0;
-			}
-
-			fclose(fd);
-		}
-
-
-	return flag;
-}
-
 char CopyFile(source, destination)
 char *source;
 char *destination;
@@ -679,7 +311,7 @@ char *destination;
 	return error;
 }
 
-void SaveQTH(predict_observer_t *qth)
+void SaveQTH(const char *qthfile, predict_observer_t *qth)
 {
 	/* This function saves QTH data file normally
 	   found under ~/.flyby/flyby.qth */
@@ -696,32 +328,30 @@ void SaveQTH(predict_observer_t *qth)
 	fclose(fd);
 }
 
-void SaveTLE(int num_sats, struct tle_db_entry *sats)
+void SaveTLE(struct tle_db *tle_db)
 {
 	int x;
 	FILE *fd;
 
 	/* Save orbital data to tlefile */
 
-	fd=fopen(tlefile,"w");
+	fd=fopen(tle_db->filename,"w");
 
-	for (x=0; x<num_sats; x++) {
+	for (x=0; x<tle_db->num_tles; x++) {
 		/* Write name, line1, line2 to flyby.tle */
 
-		fprintf(fd,"%s\n", sats[x].name);
-		fprintf(fd,"%s\n", sats[x].line1);
-		fprintf(fd,"%s\n", sats[x].line2);
+		fprintf(fd,"%s\n", tle_db->tles[x].name);
+		fprintf(fd,"%s\n", tle_db->tles[x].line1);
+		fprintf(fd,"%s\n", tle_db->tles[x].line2);
 	}
 
 	fclose(fd);
 }
 
-int AutoUpdate(char *string, int num_sats, struct tle_db_entry *tle_db, predict_orbital_elements_t **orbits)
+int AutoUpdate(const char *string, struct tle_db *_tle_db, predict_orbital_elements_t **orbits)
 {
-	/* This function updates PREDICT's orbital datafile from a NASA
-	   2-line element file either through a menu (interactive mode)
-	   or via the command line.  string==filename of 2-line element
-	   set if this function is invoked via the command line. */
+	int num_sats = _tle_db->num_tles;
+	struct tle_db_entry *tle_db = _tle_db->tles;
 
 	char line1[80], line2[80], str0[80], str1[80], str2[80],
 	     filename[50], saveflag=0, interactive=0;
@@ -800,13 +430,15 @@ int AutoUpdate(char *string, int num_sats, struct tle_db_entry *tle_db, predict_
 					/* Scan for object number in datafile to see
 					   if this is something we're interested in */
 
-					for (i=0; (i<num_sats && orbits[i]->satellite_number!=orbital_elements->satellite_number); i++);
+					for (i=0; (i<num_sats && tle_db[i].satellite_number!=orbital_elements->satellite_number); i++);
 
 					if (i!=MAX_NUM_SATS) {
 						/* We found it!  Check to see if it's more
 						   recent than the data we already have. */
+						char *db_tle[2] = {tle_db[i].line1, tle_db[i].line2};
+						predict_orbital_elements_t *orbital_elements_db = predict_parse_tle(db_tle);
 
-						database_epoch = orbits[i]->epoch_year*1000.0 + orbits[i]->epoch_day;
+						database_epoch = orbital_elements_db->epoch_year*1000.0 + orbital_elements_db->epoch_day;
 						tle_epoch = orbital_elements->epoch_year*1000.0 + orbital_elements->epoch_day;
 
 						/* Update only if TLE epoch >= epoch in data file
@@ -845,9 +477,11 @@ int AutoUpdate(char *string, int num_sats, struct tle_db_entry *tle_db, predict_
 							strncpy(tle_db[i].line2,line2,69);
 
 							/* Update orbit struct */
-
-							predict_destroy_orbital_elements(orbits[i]);
-							orbits[i] = orbital_elements;
+							if (orbits != NULL) {
+								predict_destroy_orbital_elements(orbits[i]);
+								orbits[i] = orbital_elements;
+							}
+							predict_destroy_orbital_elements(orbital_elements_db);
 						} else {
 							predict_destroy_orbital_elements(orbital_elements);
 						}
@@ -901,14 +535,15 @@ int AutoUpdate(char *string, int num_sats, struct tle_db_entry *tle_db, predict_
 		}
 
 		if (saveflag)
-			SaveTLE(num_sats, tle_db);
+			SaveTLE(_tle_db);
 	} while (success==0 && interactive);
 
 	return (saveflag ? 0 : -1);
 }
 
-int Select(int num_orbits, struct tle_db_entry *tle_db, predict_orbital_elements_t **orbital_elements_array)
+int Select(struct tle_db *tle_db, predict_orbital_elements_t **orbital_elements_array)
 {
+	int num_orbits = tle_db->num_tles;
 	ITEM **my_items;
 	int c;
 	MENU *my_menu;
@@ -948,7 +583,7 @@ int Select(int num_orbits, struct tle_db_entry *tle_db, predict_orbital_elements
 		n_choices = num_orbits;
 		my_items = (ITEM **)calloc(n_choices + 1, sizeof(ITEM *));
 		for(i = 0; i < n_choices; ++i) {
-			my_items[i] = new_item(tle_db[i].name, orbital_elements_array[i]->designator);
+			my_items[i] = new_item(tle_db->tles[i].name, orbital_elements_array[i]->designator);
 		}
 		my_items[n_choices] = NULL; //terminate the menu list
 
@@ -996,7 +631,7 @@ int Select(int num_orbits, struct tle_db_entry *tle_db, predict_orbital_elements
 		}
 
 		for (i=0, j=0; i<num_orbits; i++)
-			if (strcmp(item_name(current_item(my_menu)),tle_db[i].name)==0)
+			if (strcmp(item_name(current_item(my_menu)),tle_db->tles[i].name)==0)
 				j = i;
 
 		/* Unpost and free all the memory taken up */
@@ -1172,12 +807,8 @@ double GetStartTime(const char* info_str)
 	return ((double)DayNum(mm,dd,yy)+((hr/24.0)+(min/1440.0)+(sec/86400.0)));
 }
 
-int Print(title,string,mode)
-char *title, *string, mode;
+int Print(const char *title, const char *string, char mode)
 {
-	/* This function buffers and displays orbital predictions
-	   and allows screens to be saved to a disk file. */
-
 	char type[20], head2[81];
 	int key, ans=0;
 	static char buffer[5000], lines, quit;
@@ -1277,17 +908,8 @@ char *title, *string, mode;
 	return (quit);
 }
 
-int PrintVisible(title,string)
-char *title, *string;
+int PrintVisible(const char *title, const char *string)
 {
-	/* This function acts as a filter to display passes that could
-	   possibly be visible to the ground station.  It works by first
-	   buffering prediction data generated by the Predict() function
-	   and then checking it to see if at least a part of the pass
-	   is visible.  If it is, then the buffered prediction data
-	   is sent to the Print() function so it can be displayed
-	   to the user and optionally logged to a file. */
-
 	static char buffer[10000];
 	char line[80], plus, asterisk, visible;
 	int x, y, quit=0;
@@ -1342,11 +964,6 @@ char *title, *string;
 
 void Predict(const char *name, predict_orbital_elements_t *orbital_elements, predict_observer_t *qth, char mode)
 {
-	/* This function predicts satellite passes.  It displays
-	   output through the Print() function if mode=='p' (show
-	   all passes), or through the PrintVisible() function if
-	   mode=='v' (show only visible passes). */
-
 	bool should_quit = false;
 	bool should_break = false;
 	char data_string[MAX_NUM_CHARS];
@@ -1460,8 +1077,6 @@ void Predict(const char *name, predict_orbital_elements_t *orbital_elements, pre
 		refresh();
 	}
 }
-
-enum celestial_object{PREDICT_SUN, PREDICT_MOON};
 
 void celestial_predict(enum celestial_object object, predict_observer_t *qth, predict_julian_date_t time, struct predict_observation *obs) {
 	switch (object) {
@@ -1593,16 +1208,13 @@ bool KbEdit(int x, int y, int num_characters, char *output_string)
 	return filled;
 }
 
-void ShowOrbitData(int num_orbits, struct tle_db_entry *tle_db, predict_orbital_elements_t **orbital_elements_array)
+void ShowOrbitData(struct tle_db *tle_db, predict_orbital_elements_t **orbital_elements_array)
 {
-	/* This function permits displays a satellite's orbital
-	   data.  The age of the satellite data is also provided. */
-
 	int c, x, namelength, age;
 	double an_period, no_period, sma, c1, e2, satepoch;
 	char days[5];
 
-	x=Select(num_orbits, tle_db, orbital_elements_array);
+	x=Select(tle_db, orbital_elements_array);
 
 	while (x!=-1) {
 		predict_orbital_elements_t *orbital_elements = orbital_elements_array[x];
@@ -1622,7 +1234,7 @@ void ShowOrbitData(int num_orbits, struct tle_db_entry *tle_db, predict_orbital_
 			else
 				strcpy(days,"days");
 
-			namelength=strlen(tle_db[x].name);
+			namelength=strlen(tle_db->tles[x].name);
 
 			printw("\n");
 
@@ -1637,7 +1249,7 @@ void ShowOrbitData(int num_orbits, struct tle_db_entry *tle_db, predict_orbital_
 			mvprintw(1,0,"  flyby Orbital Data                                                            ");
 			mvprintw(2,0,"                                                                                ");
 
-			mvprintw(1,25,"(%ld) %s", orbital_elements->satellite_number, tle_db[x].name);
+			mvprintw(1,25,"(%ld) %s", orbital_elements->satellite_number, tle_db->tles[x].name);
 
 			attrset(COLOR_PAIR(4)|A_BOLD);
 			mvprintw( 4, 4,"Data Issued        : ");
@@ -1683,11 +1295,11 @@ void ShowOrbitData(int num_orbits, struct tle_db_entry *tle_db, predict_orbital_
 			refresh();
 			AnyKey();
 		}
-		x=Select(num_orbits, tle_db, orbital_elements_array);
+		x=Select(tle_db, orbital_elements_array);
 	 };
 }
 
-void QthEdit(predict_observer_t *qth)
+void QthEdit(const char *qthfile, predict_observer_t *qth)
 {
 	//display current QTH information
 	bkgdset(COLOR_PAIR(3)|A_BOLD);
@@ -1754,14 +1366,18 @@ void QthEdit(predict_observer_t *qth)
 	}
 
 	if (should_save) {
-		SaveQTH(qth);
+		SaveQTH(qthfile, qth);
 	}
 }
 
-void SingleTrack(bool once_per_second, double horizon, int orbit_ind, int num_orbits, predict_orbital_elements_t **orbital_elements_array, predict_observer_t *qth, struct sat_db_entry *sat_db_entries, struct tle_db_entry *tle_db_entries)
+void SingleTrack(int orbit_ind, predict_orbital_elements_t **orbital_elements_array, predict_observer_t *qth, struct transponder_db *sat_db, struct tle_db *tle_db, rotctld_info_t *rotctld, rigctld_info_t *downlink_info, rigctld_info_t *uplink_info)
 {
-	/* This function tracks a single satellite in real-time
-	   until 'Q' or ESC is pressed. */
+	bool once_per_second = rotctld->once_per_second;
+	double horizon = rotctld->tracking_horizon;
+
+	int num_orbits = tle_db->num_tles;
+	struct sat_db_entry *sat_db_entries = sat_db->sats;
+	struct tle_db_entry *tle_db_entries = tle_db->tles;
 
 	int     ans;
 	bool	downlink_update=true, uplink_update=true, readfreq=false;
@@ -1806,7 +1422,7 @@ void SingleTrack(bool once_per_second, double horizon, int orbit_ind, int num_or
 			break;
 		}
 
-		bool comsat = sat_db.transponders > 0;
+		bool comsat = sat_db.num_transponders > 0;
 
 		if (comsat) {
 			downlink_start=sat_db.downlink_start[xponder];
@@ -1875,10 +1491,10 @@ void SingleTrack(bool once_per_second, double horizon, int orbit_ind, int num_or
 		}
 
 		do {
-			if (downlink_socket!=-1 && readfreq)
-				downlink=ReadFreqDataNet(downlink_socket,downlink_vfo)/(1+1.0e-08*doppler100);
-			if (uplink_socket!=-1 && readfreq)
-				uplink=ReadFreqDataNet(uplink_socket,uplink_vfo)/(1-1.0e-08*doppler100);
+			if (downlink_info->connected && readfreq)
+				downlink = rigctld_read_frequency(downlink_info)/(1+1.0e-08*doppler100);
+			if (uplink_info->connected && readfreq)
+				uplink = rigctld_read_frequency(uplink_info)/(1-1.0e-08*doppler100);
 
 
 			//predict and observe satellite orbit
@@ -2042,8 +1658,8 @@ void SingleTrack(bool once_per_second, double horizon, int orbit_ind, int num_or
 						loss=32.4+(20.0*log10(downlink))+(20.0*log10(obs.range));
 						mvprintw(12,67,"%7.3f dB",loss);
 						mvprintw(13,13,"%7.3f   ms",delay);
-						if (downlink_socket!=-1 && downlink_update)
-							FreqDataNet(downlink_socket,downlink_vfo,downlink+dopp);
+						if (downlink_info->connected && downlink_update)
+							rigctld_set_frequency(downlink_info, downlink+dopp);
 					}
 
 					else
@@ -2057,8 +1673,8 @@ void SingleTrack(bool once_per_second, double horizon, int orbit_ind, int num_or
 						mvprintw(11,32,"%11.5f MHz",uplink-dopp);
 						loss=32.4+(20.0*log10(uplink))+(20.0*log10(obs.range));
 						mvprintw(11,67,"%7.3f dB",loss);
-						if (uplink_socket!=-1 && uplink_update)
-							FreqDataNet(uplink_socket,uplink_vfo,uplink-dopp);
+						if (uplink_info->connected && uplink_update)
+							rigctld_set_frequency(uplink_info, uplink-dopp);
 					}
 					else
 					{
@@ -2088,7 +1704,7 @@ void SingleTrack(bool once_per_second, double horizon, int orbit_ind, int num_or
 			}
 
 			//display rotation information
-			if (rotctld_socket!=-1) {
+			if (rotctld->connected) {
 				if (obs.elevation>=horizon)
 					mvprintw(17,67,"   Active   ");
 				else
@@ -2106,7 +1722,7 @@ void SingleTrack(bool once_per_second, double horizon, int orbit_ind, int num_or
 				int azimuth = (int)round(obs.azimuth*180.0/M_PI);
 
 				if ((elevation != prev_elevation) || (azimuth != prev_azimuth) || (once_per_second && (curr_time > prev_time))) {
-					if (rotctld_socket!=-1) TrackDataNet(rotctld_socket, obs.elevation*180.0/M_PI, obs.azimuth*180.0/M_PI);
+					if (rotctld->connected) rotctld_track(rotctld, obs.azimuth*180.0/M_PI, obs.elevation*180.0/M_PI);
 					prev_elevation = elevation;
 					prev_azimuth = azimuth;
 					prev_time = curr_time;
@@ -2118,10 +1734,10 @@ void SingleTrack(bool once_per_second, double horizon, int orbit_ind, int num_or
 			ans=getch();
 
 			if (comsat) {
-				if (ans==' ' && sat_db.transponders>1) {
+				if (ans==' ' && sat_db.num_transponders>1) {
 					xponder++;
 
-					if (xponder>=sat_db.transponders)
+					if (xponder>=sat_db.num_transponders)
 						xponder=0;
 
 					move(9,1);
@@ -2185,10 +1801,10 @@ void SingleTrack(bool once_per_second, double horizon, int orbit_ind, int num_or
 					uplink_update=false;
 				if (ans=='f' || ans=='F')
 				{
-					if (downlink_socket!=-1)
-						downlink=ReadFreqDataNet(downlink_socket,downlink_vfo)/(1+1.0e-08*doppler100);
-					if (uplink_socket!=-1)
-						uplink=ReadFreqDataNet(uplink_socket,uplink_vfo)/(1-1.0e-08*doppler100);
+					if (downlink_info->connected)
+						downlink = rigctld_read_frequency(downlink_info)/(1+1.0e-08*doppler100);
+					if (uplink_info->connected)
+						uplink = rigctld_read_frequency(uplink_info)/(1-1.0e-08*doppler100);
 					if (ans=='f')
 					{
 						downlink_update=true;
@@ -2199,16 +1815,16 @@ void SingleTrack(bool once_per_second, double horizon, int orbit_ind, int num_or
 					readfreq=true;
 				if (ans=='M')
 					readfreq=false;
-        if (ans=='x') // Reverse VFO uplink and downlink names
-        {
-          if (downlink_socket!=-1 && uplink_socket!=-1)
-          {
-            char tmp_vfo[30];
-            strncpy(tmp_vfo,downlink_vfo,sizeof(tmp_vfo));
-            strncpy(downlink_vfo,uplink_vfo,sizeof(downlink_vfo));
-            strncpy(uplink_vfo,tmp_vfo,sizeof(uplink_vfo));
-          }
-        }
+				if (ans=='x') // Reverse VFO uplink and downlink names
+				{
+					if (downlink_info->connected && uplink_info->connected)
+					{
+						char tmp_vfo[MAX_NUM_CHARS];
+						strncpy(tmp_vfo, downlink_info->vfo_name, MAX_NUM_CHARS);
+						strncpy(downlink_info->vfo_name, uplink_info->vfo_name, MAX_NUM_CHARS);
+						strncpy(uplink_info->vfo_name, tmp_vfo, MAX_NUM_CHARS);
+					}
+				}
 			}
 
 			refresh();
@@ -2265,13 +1881,9 @@ double scrk, scel;
 		return (COLOR_PAIR(2)|A_REVERSE); /* reverse */
 }
 
-void MultiTrack(predict_observer_t *qth, int num_orbits, predict_orbital_elements_t **orbital_elements_array, struct tle_db_entry *tle_db, char multitype, char disttype)
+void MultiTrack(predict_observer_t *qth, predict_orbital_elements_t **orbital_elements_array, struct tle_db *tle_db, char multitype, char disttype)
 {
-	/* This function tracks all satellites in the program's
-	   database simultaneously until 'Q' or ESC is pressed.
-	   Satellites in range are HIGHLIGHTED.  Coordinates
-	   for the Sun and Moon are also displayed. */
-
+	int num_orbits = tle_db->num_tles;
 	int 		*satindex = (int*)malloc(sizeof(int)*num_orbits);
 
 	double		*aos = (double*)malloc(sizeof(double)*num_orbits);
@@ -2421,12 +2033,12 @@ void MultiTrack(predict_observer_t *qth, int num_orbits, predict_orbital_element
 
 			//set string to display
 			char disp_string[MAX_NUM_CHARS];
-			sprintf(disp_string, " %-13s%5.1f  %5.1f %8s  %6.0f %6.0f %c %c %12s ", Abbreviate(tle_db[i].name, 12), obs.azimuth*180.0/M_PI, obs.elevation*180.0/M_PI, abs_pos_string, disp_altitude, disp_range, sunstat, rangestat, aos_los);
+			sprintf(disp_string, " %-13s%5.1f  %5.1f %8s  %6.0f %6.0f %c %c %12s ", Abbreviate(tle_db->tles[i].name, 12), obs.azimuth*180.0/M_PI, obs.elevation*180.0/M_PI, abs_pos_string, disp_altitude, disp_range, sunstat, rangestat, aos_los);
 
 			//overwrite everything if orbit was decayed
 			if (orbit->decayed) {
 				attributes[i] = COLOR_PAIR(2);
-				sprintf(disp_string, " %-10s   ----------------       Decayed        ---------------", Abbreviate(tle_db[i].name,9));
+				sprintf(disp_string, " %-10s   ----------------       Decayed        ---------------", Abbreviate(tle_db->tles[i].name,9));
 			}
 
 			memcpy(string_lines[i], disp_string, sizeof(char)*MAX_NUM_CHARS);
@@ -2732,37 +2344,38 @@ void MainMenu()
 
 }
 
-void ProgramInfo(bool once_per_second, double horizon)
+void ProgramInfo(const char *qthfile, struct tle_db *tle_db, struct transponder_db *transponder_db, rotctld_info_t *rotctld)
 {
 	Banner();
 	attrset(COLOR_PAIR(3)|A_BOLD);
 
 	printw("\n\n\n\n\n\t\tflyby version : %s\n",FLYBY_VERSION);
-	printw("\t\tQTH file loaded : %s\n",qthfile);
-	printw("\t\tTLE file loaded : %s\n",tlefile);
-	printw("\t\tDatabase file   : ");
-
-	if (database)
-		printw("Loaded\n");
-	else
+	printw("\t\tQTH file        : %s\n", qthfile);
+	printw("\t\tTLE file        : ");
+	if (tle_db->num_tles > 0) {
+		printw("%s\n", tle_db->filename);
+	} else {
 		printw("Not loaded\n");
+	}
+	printw("\t\tDatabase file   : ");
+	if (transponder_db->loaded) {
+		printw("%s\n", transponder_db->filename);
+	} else {
+		printw("Not loaded\n");
+	}
 
-	if (rotctld_socket!=-1) {
+	if (rotctld->connected) {
 		printw("\t\tAutoTracking    : Enabled\n");
-		if (rotctld_socket!=-1) printw("\t\t - Connected to rotctld: %s:%s\n", rotctld_host, rotctld_port);
+		printw("\t\t - Connected to rotctld: %s:%s\n", rotctld->host, rotctld->port);
 
-		printw("\t\tTracking horizon: %.2f degrees. ", horizon);
+		printw("\t\tTracking horizon: %.2f degrees. ", rotctld->tracking_horizon);
 
-		if (once_per_second)
+		if (rotctld->once_per_second)
 			printw("Update every second");
 
 		printw("\n");
 	} else
 		printw("\t\tAutoTracking    : Not enabled\n");
-
-	printw("\t\tRunning Mode    : ");
-
-	printw("Standalone\n");
 
 	refresh();
 	attrset(COLOR_PAIR(4)|A_BOLD);
@@ -2790,532 +2403,139 @@ void NewUser()
 	sprintf(temp,"%s/.flyby",getenv("HOME"));
 	mkdir(temp,0777);
 
-	/* Copy default files into ~/.flyby directory */
-
-	sprintf(temp,"%sdefault/flyby.tle",flybypath);
-
-	CopyFile(temp,tlefile);
-
-	sprintf(temp,"%sdefault/flyby.db",flybypath);
-
-	CopyFile(temp,dbfile);
-
-	sprintf(temp,"%sdefault/flyby.qth",flybypath);
-
-	CopyFile(temp,qthfile);
-
 	attrset(COLOR_PAIR(4)|A_BOLD);
 	AnyKey();
 }
 
-double GetDayNum ( struct timeval *tv )
+void RunFlybyUI(bool new_user, const char *qthfile, predict_observer_t *observer, struct tle_db *tle_db, struct transponder_db *sat_db, rotctld_info_t *rotctld, rigctld_info_t *downlink, rigctld_info_t *uplink)
 {
-  /* used by PredictAt */
-  return ( ( ( (double) (tv->tv_sec) - 0.000001 * ( (double) (tv->tv_usec) ) ) / 86400.0) - 3651.0 );
-}
+	/* Start ncurses */
+	initscr();
+	keypad(stdscr, TRUE);
+	start_color();
+	cbreak();
+	noecho();
+	scrollok(stdscr,TRUE);
+	curs_set(0);
 
-int main(argc,argv)
-char argc, *argv[];
-{
-	int x, y, z, key=0;
-	char updatefile[80],
-	     outputfile[42],
-	     tle_cli[50], qth_cli[50], interactive=0;
-	char *env=NULL;
-	FILE *db;
-	struct addrinfo hints, *servinfo, *servinfop;
+	init_pair(1,COLOR_WHITE,COLOR_BLACK);
+	init_pair(2,COLOR_YELLOW,COLOR_BLACK);
+	init_pair(3,COLOR_GREEN,COLOR_BLACK);
+	init_pair(4,COLOR_CYAN,COLOR_BLACK);
+	init_pair(5,COLOR_WHITE,COLOR_RED);
+	init_pair(6,COLOR_RED,COLOR_WHITE);
+	init_pair(7,COLOR_CYAN,COLOR_RED);
 
-	struct tle_db_entry tle_db[MAX_NUM_SATS] = {0};
-	struct sat_db_entry sat_db[MAX_NUM_SATS] = {0};
-
-
-	updatefile[0]=0;
-	outputfile[0]=0;
-	temp[0]=0;
-	tle_cli[0]=0;
-	qth_cli[0]=0;
-	dbfile[0]=0;
-	bool once_per_second=false;
-
-	y=argc-1;
-	rotctld_socket=-1;
-	uplink_socket=-1;
-	downlink_socket=-1;
-
-	memset(&hints, 0, sizeof hints);
-	hints.ai_family = AF_UNSPEC;
-	hints.ai_socktype = SOCK_STREAM;
-
-	double horizon = 0;
-
-	for (x=1; x<=y; x++) {
-		if (strcmp(argv[x],"-u")==0) {
-			z=x+1;
-			while (z<=y && argv[z][0] && argv[z][0]!='-') {
-				if ((strlen(updatefile)+strlen(argv[z]))<75) {
-					strncat(updatefile,argv[z],75);
-					strcat(updatefile,"\n");
-					z++;
-				}
-			}
-			z--;
-		}
-
-		if (strcmp(argv[x],"-t")==0) {
-			z=x+1;
-			if (z<=y && argv[z][0] && argv[z][0]!='-')
-				strncpy(tle_cli,argv[z],48);
-		}
-
-		if (strcmp(argv[x],"-q")==0) {
-			z=x+1;
-			if (z<=y && argv[z][0] && argv[z][0]!='-')
-				strncpy(qth_cli,argv[z],48);
-		}
-
-		if (strcmp(argv[x],"-a")==0)
-		{
-			z=x+1;
-			if (z<=y && argv[z][0] && argv[z][0]!='-')
-				strncpy(rotctld_host,argv[z],sizeof(rotctld_host)-1);
-			rotctld_host[sizeof(rotctld_host)-1] = 0;
-		}
-
-		if (strcmp(argv[x],"-a1")==0)
-		{
-			z=x+1;
-			if (z<=y && argv[z][0] && argv[z][0]!='-')
-				strncpy(rotctld_host,argv[z],sizeof(rotctld_host)-1);
-			rotctld_host[sizeof(rotctld_host)-1] = 0;
-			once_per_second=true;
-		}
-
-		if (strcmp(argv[x],"-ap")==0)
-		{
-			z=x+1;
-			if (z<=y && argv[z][0] && argv[z][0]!='-')
-				strncpy(rotctld_port,argv[z],sizeof(rotctld_port)-1);
-			rotctld_port[sizeof(rotctld_port)-1] = 0;
-		}
-
-		if (strcmp(argv[x],"-h")==0)
-		{
-			z=x+1;
-			if (z<=y && argv[z][0])
-				horizon=strtod(argv[z],NULL);
-		}
-
-		if (strcmp(argv[x],"-U")==0)
-		{
-			z=x+1;
-			if (z<=y && argv[z][0] && argv[z][0]!='-')
-				strncpy(uplink_host,argv[z],sizeof(uplink_host)-1);
-			uplink_host[sizeof(uplink_host)-1] = 0;
-		}
-
-		if (strcmp(argv[x],"-UP")==0)
-		{
-			z=x+1;
-			if (z<=y && argv[z][0] && argv[z][0]!='-')
-				strncpy(uplink_port,argv[z],sizeof(uplink_port)-1);
-			uplink_port[sizeof(uplink_port)-1] = 0;
-		}
-
-		if (strcmp(argv[x],"-UV")==0)
-		{
-			z=x+1;
-			if (z<=y && argv[z][0] && argv[z][0]!='-')
-				strncpy(uplink_vfo,argv[z],sizeof(uplink_vfo)-1);
-			uplink_vfo[sizeof(uplink_vfo)-1] = 0;
-		}
-
-		if (strcmp(argv[x],"-D")==0)
-		{
-			z=x+1;
-			if (z<=y && argv[z][0] && argv[z][0]!='-')
-				strncpy(downlink_host,argv[z],sizeof(downlink_host)-1);
-			downlink_host[sizeof(downlink_host)-1] = 0;
-		}
-
-		if (strcmp(argv[x],"-DP")==0)
-		{
-			z=x+1;
-			if (z<=y && argv[z][0] && argv[z][0]!='-')
-				strncpy(downlink_port,argv[z],sizeof(downlink_port)-1);
-			downlink_port[sizeof(downlink_port)-1] = 0;
-		}
-
-		if (strcmp(argv[x],"-DV")==0)
-		{
-			z=x+1;
-			if (z<=y && argv[z][0] && argv[z][0]!='-')
-				strncpy(downlink_vfo,argv[z],sizeof(downlink_vfo)-1);
-			downlink_vfo[sizeof(downlink_vfo)-1] = 0;
-		}
-
-		if (strcmp(argv[x],"-o")==0) {
-			z=x+1;
-			if (z<=y && argv[z][0] && argv[z][0]!='-')
-				strncpy(outputfile,argv[z],40);
-		}
+	if (new_user) {
+		NewUser();
+		QthEdit(qthfile, observer);
 	}
 
-	/* We're done scanning command-line arguments */
-
-	/* If no command-line (-t or -q) arguments have been passed
-	   to PREDICT, create qth and tle filenames based on the
-	   default ($HOME) directory. */
-
-	env=getenv("HOME");
-
-	if (qth_cli[0]==0)
-		sprintf(qthfile,"%s/.flyby/flyby.qth",env);
-	else
-		sprintf(qthfile,"%s%c",qth_cli,0);
-
-	if (tle_cli[0]==0)
-		sprintf(tlefile,"%s/.flyby/flyby.tle",env);
-	else
-		sprintf(tlefile,"%s%c",tle_cli,0);
-
-	/* Test for interactive/non-interactive mode of operation
-	   based on command-line arguments given to PREDICT. */
-
-	if (updatefile[0])
-		interactive=0;
-	else
-		interactive=1;
-
-	if (interactive) {
-		sprintf(dbfile,"%s/.flyby/flyby.db",env);
-
-		/* If the transponder database file doesn't already
-		   exist under $HOME/.flyby, and a working environment
-		   is available, place a default copy from the PREDICT
-		   distribution under $HOME/.flyby. */
-
-		db=fopen(dbfile,"r");
-
-		if (db==NULL) {
-			sprintf(temp,"%sdefault/flyby.db",flybypath);
-			CopyFile(temp,dbfile);
-		} else
-			fclose(db);
+	/* Parse TLEs */
+	int num_sats = tle_db->num_tles;
+	predict_orbital_elements_t **orbital_elements_array = (predict_orbital_elements_t**)malloc(sizeof(predict_orbital_elements_t*)*num_sats);
+	for (int i=0; i < num_sats; i++){
+		char *tle[2] = {tle_db->tles[i].line1, tle_db->tles[i].line2};
+		orbital_elements_array[i] = predict_parse_tle(tle);
 	}
 
-	predict_observer_t *observer = predict_create_observer("", 0, 0, 0);
-	int num_sats = 0;
-	x=ReadDataFiles(&num_sats, sat_db, tle_db, observer);
-	predict_orbital_elements_t **orbital_elements_array;
+	/* Display main menu and handle keyboard input */
+	MainMenu();
+	int indx = 0;
+	char key;
+	do {
+		key=getch();
 
-	if (x>1)  /* TLE file was loaded successfully */ {
-		orbital_elements_array = (predict_orbital_elements_t**)malloc(sizeof(predict_orbital_elements_t*)*num_sats);
-		for (int i=0; i < num_sats; i++){
-			char *tle[2] = {tle_db[i].line1, tle_db[i].line2};
-			orbital_elements_array[i] = predict_parse_tle(tle);
-		}
+		if (key!='T')
+			key=tolower(key);
 
-		if (updatefile[0]) {
-			printf("*** flyby: Updating TLE data using file(s) %s", updatefile);
-			y=0;
-			z=0;
-			temp[0]=0;
+		switch (key) {
+			case 'p':
+			case 'v':
+				Print("","",0);
+				PrintVisible("","");
+				indx=Select(tle_db, orbital_elements_array);
 
-			while (updatefile[y]!=0) {
-				while (updatefile[y]!='\n' && updatefile[y]!=0 && y<79) {
-					temp[z]=updatefile[y];
-					z++;
-					y++;
+				if (indx!=-1) {
+					Predict(tle_db->tles[indx].name, orbital_elements_array[indx], observer, key);
 				}
 
-				temp[z]=0;
-
-				if (temp[0]) {
-					AutoUpdate(temp, num_sats, tle_db, orbital_elements_array);
-					temp[0]=0;
-					z=0;
-					y++;
-				}
-			}
-			exit(0);
-		}
-	}
-
-	if (x != 3) {
-		if (tle_cli[0] || qth_cli[0]) {
-			/* "Houston, we have a problem..." */
-
-			printf("\n%c",7);
-
-			if (x^1)
-				printf("*** ERROR!  Your QTH file \"%s\" could not be loaded!\n",qthfile);
-
-			if (x^2)
-				printf("*** ERROR!  Your TLE file \"%s\" could not be loaded!\n",tlefile);
-
-			printf("\n");
-
-			exit(-1);
-		}
-	}
-
-	if (interactive) {
-		/* We're in interactive mode.  Prepare the screen */
-
-		/* Start ncurses */
-
-		initscr();
-		keypad(stdscr, TRUE);
-		start_color();
-		cbreak();
-		noecho();
-		scrollok(stdscr,TRUE);
-		curs_set(0);
-
-		init_pair(1,COLOR_WHITE,COLOR_BLACK);
-		init_pair(2,COLOR_YELLOW,COLOR_BLACK);
-		init_pair(3,COLOR_GREEN,COLOR_BLACK);
-		init_pair(4,COLOR_CYAN,COLOR_BLACK);
-		init_pair(5,COLOR_WHITE,COLOR_RED);
-		init_pair(6,COLOR_RED,COLOR_WHITE);
-		init_pair(7,COLOR_CYAN,COLOR_RED);
-
-		if (x<3) {
-			NewUser();
-			x=ReadDataFiles(&num_sats, sat_db, tle_db, observer);
-			QthEdit(observer);
-		}
-
-		/* Create socket and connect to rotctld if present. */
-
-		if (rotctld_host[0]!=0)
-		{
-			if (getaddrinfo(rotctld_host, rotctld_port, &hints, &servinfo))
-			{
-				bailout("getaddrinfo error");
-				exit(-1);
-			}
-
-			for(servinfop = servinfo; servinfop != NULL; servinfop = servinfop->ai_next)
-			{
-				if ((rotctld_socket = socket(servinfop->ai_family, servinfop->ai_socktype,
-					servinfop->ai_protocol)) == -1) {
-					continue;
-				}
-				if (connect(rotctld_socket, servinfop->ai_addr, servinfop->ai_addrlen) == -1)
-				{
-					close(rotctld_socket);
-					continue;
-				}
-
+				MainMenu();
 				break;
-			}
-			if (servinfop == NULL)
-			{
-				bailout("Unable to connect to rotctld");
-				exit(-1);
-			}
-			freeaddrinfo(servinfo);
-			/* TrackDataNet() will wait for confirmation of a command before sending
-			   the next so we bootstrap this by asking for the current position */
-			send(rotctld_socket, "p\n", 2, 0);
-			sock_readline(rotctld_socket, NULL, 256);
-		}
 
-		/* Create socket and connect to uplink rigctld. */
-
-		if (uplink_host[0]!=0)
-		{
-			if (getaddrinfo(uplink_host, uplink_port, &hints, &servinfo))
-			{
-				bailout("getaddrinfo error");
-				exit(-1);
-			}
-
-			for(servinfop = servinfo; servinfop != NULL; servinfop = servinfop->ai_next)
-			{
-				if ((uplink_socket = socket(servinfop->ai_family, servinfop->ai_socktype,
-					servinfop->ai_protocol)) == -1)
-				{
-					continue;
-				}
-				if (connect(uplink_socket, servinfop->ai_addr, servinfop->ai_addrlen) == -1)
-				{
-					close(uplink_socket);
-					continue;
-				}
-
+			case 'n':
+				Print("","",0);
+				PredictSunMoon(PREDICT_MOON, observer);
+				MainMenu();
 				break;
-			}
-			if (servinfop == NULL)
-			{
-				bailout("Unable to connect to uplink rigctld");
-				exit(-1);
-			}
-			freeaddrinfo(servinfo);
-			/* FreqDataNet() will wait for confirmation of a command before sending
-			   the next so we bootstrap this by asking for the current frequency */
-			send(uplink_socket, "f\n", 2, 0);
-		}
 
-		/* Create socket and connect to downlink rigctld. */
-
-		if (downlink_host[0]!=0)
-		{
-			if (getaddrinfo(downlink_host, downlink_port, &hints, &servinfo))
-			{
-				bailout("getaddrinfo error");
-				exit(-1);
-			}
-
-			for(servinfop = servinfo; servinfop != NULL; servinfop = servinfop->ai_next)
-			{
-				if ((downlink_socket = socket(servinfop->ai_family, servinfop->ai_socktype,
-					servinfop->ai_protocol)) == -1)
-				{
-					continue;
-				}
-				if (connect(downlink_socket, servinfop->ai_addr, servinfop->ai_addrlen) == -1)
-				{
-					close(downlink_socket);
-					continue;
-				}
-
+			case 'o':
+				Print("","",0);
+				PredictSunMoon(PREDICT_SUN, observer);
+				MainMenu();
 				break;
-			}
-			if (servinfop == NULL)
-			{
-				bailout("Unable to connect to downlink rigctld");
-				exit(-1);
-			}
-			freeaddrinfo(servinfo);
-			/* FreqDataNet() will wait for confirmation of a command before sending
-			   the next so we bootstrap this by asking for the current frequency */
-			send(downlink_socket, "f\n", 2, 0);
-		}
 
-		/* Socket activated here.  Remember that
-		the socket data is updated only when
-		running in the real-time tracking modes. */
+			case 'u':
+				AutoUpdate("", tle_db, orbital_elements_array);
+				MainMenu();
+				break;
 
-		MainMenu();
+			case 'd':
+				ShowOrbitData(tle_db, orbital_elements_array);
+				MainMenu();
+				break;
 
-		int indx = 0;
+			case 'g':
+				QthEdit(qthfile, observer);
+				MainMenu();
+				break;
 
-		do {
-			key=getch();
+			case 't':
+			case 'T':
+				indx=Select(tle_db, orbital_elements_array);
 
-			if (key!='T')
-				key=tolower(key);
+				if (indx!=-1) {
+					SingleTrack(indx, orbital_elements_array, observer, sat_db, tle_db, rotctld, downlink, uplink);
+				}
 
-			switch (key) {
-				case 'p':
-				case 'v':
+				MainMenu();
+				break;
+
+			case 'm':
+			case 'l':
+
+				MultiTrack(observer, orbital_elements_array, tle_db, key, 'k');
+				MainMenu();
+				break;
+
+			case 'i':
+				ProgramInfo(qthfile, tle_db, sat_db, rotctld);
+				MainMenu();
+				break;
+
+			case 's':
+				indx=Select(tle_db, orbital_elements_array);
+
+				if (indx!=-1) {
 					Print("","",0);
-					PrintVisible("","");
-					indx=Select(num_sats, tle_db, orbital_elements_array);
 
-					if (indx!=-1) {
-						Predict(tle_db[indx].name, orbital_elements_array[indx], observer, key);
-					}
+					Illumination(tle_db->tles[indx].name, orbital_elements_array[indx]);
+				}
 
-					MainMenu();
-					break;
-
-				case 'n':
-					Print("","",0);
-					PredictSunMoon(PREDICT_MOON, observer);
-					MainMenu();
-					break;
-
-				case 'o':
-					Print("","",0);
-					PredictSunMoon(PREDICT_SUN, observer);
-					MainMenu();
-					break;
-
-				case 'u':
-					AutoUpdate("", num_sats, tle_db, orbital_elements_array);
-					MainMenu();
-					break;
-
-				case 'd':
-					ShowOrbitData(num_sats, tle_db, orbital_elements_array);
-					MainMenu();
-					break;
-
-				case 'g':
-					QthEdit(observer);
-					MainMenu();
-					break;
-
-				case 't':
-				case 'T':
-					indx=Select(num_sats, tle_db, orbital_elements_array);
-
-					if (indx!=-1) {
-						SingleTrack(once_per_second, horizon, indx, num_sats, orbital_elements_array, observer, sat_db, tle_db);
-					}
-
-					MainMenu();
-					break;
-
-				case 'm':
-				case 'l':
-
-					MultiTrack(observer, num_sats, orbital_elements_array, tle_db, key, 'k');
-					MainMenu();
-					break;
-
-				case 'i':
-					ProgramInfo(once_per_second, horizon);
-					MainMenu();
-					break;
-
-				case 's':
-					indx=Select(num_sats, tle_db, orbital_elements_array);
-
-					if (indx!=-1) {
-						Print("","",0);
-
-						Illumination(tle_db[indx].name, orbital_elements_array[indx]);
-					}
-
-					MainMenu();
-					break;
-			}
-
-		} while (key!='q' && key!=27);
-
-		if (rotctld_socket!=-1)
-		{
-			send(rotctld_socket, "q\n", 2, 0);
-			close(rotctld_socket);
-		}
-		if (uplink_socket!=-1)
-		{
-			send(uplink_socket, "q\n", 2, 0);
-			close(uplink_socket);
-		}
-		if (downlink_socket!=-1)
-		{
-			send(downlink_socket, "q\n", 2, 0);
-			close(downlink_socket);
+				MainMenu();
+				break;
 		}
 
-		curs_set(1);
-		bkgdset(COLOR_PAIR(1));
-		clear();
-		refresh();
-		endwin();
+	} while (key!='q' && key!=27);
 
-		for (int i=0; i < num_sats; i++){
-			predict_destroy_orbital_elements(orbital_elements_array[i]);
-		}
-		free(orbital_elements_array);
-		predict_destroy_observer(observer);
+	curs_set(1);
+	bkgdset(COLOR_PAIR(1));
+	clear();
+	refresh();
+	endwin();
 
+	for (int i=0; i < num_sats; i++){
+		predict_destroy_orbital_elements(orbital_elements_array[i]);
 	}
-
-	exit(0);
+	free(orbital_elements_array);
 }
