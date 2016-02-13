@@ -33,7 +33,6 @@ int sock_readline(int sockd, char *message, size_t bufsize)
 	return pos;
 }
 
-
 void rotctld_connect(const char *rotctld_host, const char *rotctld_port, bool once_per_second, double tracking_horizon, rotctld_info_t *ret_info)
 {
 	struct addrinfo hints, *servinfo, *servinfop;
@@ -205,7 +204,8 @@ double rigctld_read_frequency(const rigctld_info_t *info)
 	return freq;
 }
 
-void rigctld_disconnect(rigctld_info_t *info) {
+void rigctld_disconnect(rigctld_info_t *info)
+{
 	if (info->connected) {
 		send(info->socket, "q\n", 2, 0);
 		close(info->socket);
@@ -213,7 +213,8 @@ void rigctld_disconnect(rigctld_info_t *info) {
 	}
 }
 
-void rotctld_disconnect(rotctld_info_t *info) {
+void rotctld_disconnect(rotctld_info_t *info)
+{
 	if (info->connected) {
 		send(info->socket, "q\n", 2, 0);
 		close(info->socket);

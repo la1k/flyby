@@ -52,6 +52,7 @@
 #include <fcntl.h>
 #include <predict/predict.h>
 #include "flyby_ui.h"
+#include "qth_config.h"
 
 #define EARTH_RADIUS_KM		6.378137E3		/* WGS 84 Earth radius km */
 #define HALF_DELAY_TIME	5
@@ -311,234 +312,115 @@ char *destination;
 	return error;
 }
 
-void SaveQTH(const char *qthfile, predict_observer_t *qth)
+void AutoUpdate(const char *string, struct tle_db *tle_db, predict_orbital_elements_t **orbits)
 {
-	/* This function saves QTH data file normally
-	   found under ~/.flyby/flyby.qth */
+	bool interactive_mode = (string[0] == '\0');
+	char filename[MAX_NUM_CHARS] = {0};
 
-	FILE *fd;
+	if (interactive_mode) {
+		//get filename from user
+		curs_set(1);
+		bkgdset(COLOR_PAIR(3));
+		refresh();
+		clear();
+		echo();
 
-	fd=fopen(qthfile,"w");
+		attrset(COLOR_PAIR(6)|A_REVERSE|A_BOLD);
+		mvprintw(0,0,"                                                                                ");
+		mvprintw(1,0,"  flyby Keplerian Database Auto Update                                          ");
+		mvprintw(2,0,"                                                                                ");
 
-	fprintf(fd,"%s\n",qth->name);
-	fprintf(fd," %g\n",qth->latitude*180.0/M_PI);
-	fprintf(fd," %g\n",-qth->longitude*180.0/M_PI); //convert from N/E to N/W
-	fprintf(fd," %d\n",(int)floor(qth->altitude));
-
-	fclose(fd);
-}
-
-void SaveTLE(struct tle_db *tle_db)
-{
-	int x;
-	FILE *fd;
-
-	/* Save orbital data to tlefile */
-
-	fd=fopen(tle_db->filename,"w");
-
-	for (x=0; x<tle_db->num_tles; x++) {
-		/* Write name, line1, line2 to flyby.tle */
-
-		fprintf(fd,"%s\n", tle_db->tles[x].name);
-		fprintf(fd,"%s\n", tle_db->tles[x].line1);
-		fprintf(fd,"%s\n", tle_db->tles[x].line2);
+		attrset(COLOR_PAIR(4)|A_BOLD);
+		bkgdset(COLOR_PAIR(2));
+		mvprintw(19,18,"Enter NASA Two-Line Element Source File Name");
+		mvprintw(13,18,"-=> ");
+		refresh();
+		wgetnstr(stdscr,filename,49);
+		clear();
+		curs_set(0);
+	} else {
+		strncpy(filename, string, MAX_NUM_CHARS);
 	}
 
-	fclose(fd);
-}
+	//update TLE database with file
+	bool was_updated[MAX_NUM_SATS] = {0};
+	bool in_new_file[MAX_NUM_SATS] = {0};
+	tle_db_update(filename, tle_db, was_updated, in_new_file);
 
-int AutoUpdate(const char *string, struct tle_db *_tle_db, predict_orbital_elements_t **orbits)
-{
-	int num_sats = _tle_db->num_tles;
-	struct tle_db_entry *tle_db = _tle_db->tles;
+	if (interactive_mode) {
+		move(12, 0);
+	}
 
-	char line1[80], line2[80], str0[80], str1[80], str2[80],
-	     filename[50], saveflag=0, interactive=0;
-
-	float database_epoch=0.0, tle_epoch=0.0;
-	int i, success=0, kepcount=0, savecount=0;
-	FILE *fd;
-
-	do {
-		if (string[0]==0) {
-			interactive=1;
-			curs_set(1);
-			bkgdset(COLOR_PAIR(3));
-			refresh();
-			clear();
-			echo();
-
-			attrset(COLOR_PAIR(6)|A_REVERSE|A_BOLD);
-			mvprintw(0,0,"                                                                                ");
-			mvprintw(1,0,"  flyby Keplerian Database Auto Update                                          ");
-			mvprintw(2,0,"                                                                                ");
-
-			attrset(COLOR_PAIR(4)|A_BOLD);
-			bkgdset(COLOR_PAIR(2));
-			mvprintw(19,18,"Enter NASA Two-Line Element Source File Name");
-			mvprintw(13,18,"-=> ");
-			refresh();
-			wgetnstr(stdscr,filename,49);
-			clear();
-			curs_set(0);
-		} else
-			strcpy(filename,string);
-
-		/* Prevent "." and ".." from being used as a
-		   filename otherwise strange things happen. */
-
-		if (strlen(filename)==0 || strncmp(filename,".",1)==0 || strncmp(filename,"..",2)==0)
-			return 0;
-
-		fd=fopen(filename,"r");
-
-		if (interactive && fd==NULL) {
-			bkgdset(COLOR_PAIR(5));
-			clear();
-			move(12,0);
-
-			for (i=47; i>strlen(filename); i-=2)
-				printw(" ");
-
-			printw("*** ERROR: File \"%s\" not found! ***\n",filename);
-			beep();
-			attrset(COLOR_PAIR(7)|A_BOLD);
-			AnyKey();
-		}
-
-		if (fd!=NULL) {
-			success=1;
-
-			fgets(str0,75,fd);
-			fgets(str1,75,fd);
-			fgets(str2,75,fd);
-
-			do {
-				if (KepCheck(str1,str2)) {
-					/* We found a valid TLE!
-					   Copy strings str1 and
-					   str2 into line1 and line2 */
-
-					strncpy(line1,str1,75);
-					strncpy(line2,str2,75);
-					kepcount++;
-
-					char *tle[2] = {line1, line2};
-					predict_orbital_elements_t *orbital_elements = predict_parse_tle(tle);
-
-					/* Scan for object number in datafile to see
-					   if this is something we're interested in */
-
-					for (i=0; (i<num_sats && tle_db[i].satellite_number!=orbital_elements->satellite_number); i++);
-
-					if (i!=MAX_NUM_SATS) {
-						/* We found it!  Check to see if it's more
-						   recent than the data we already have. */
-						char *db_tle[2] = {tle_db[i].line1, tle_db[i].line2};
-						predict_orbital_elements_t *orbital_elements_db = predict_parse_tle(db_tle);
-
-						database_epoch = orbital_elements_db->epoch_year*1000.0 + orbital_elements_db->epoch_day;
-						tle_epoch = orbital_elements->epoch_year*1000.0 + orbital_elements->epoch_day;
-
-						/* Update only if TLE epoch >= epoch in data file
-						   so we don't overwrite current data with older
-						   data. */
-
-						if (tle_epoch>=database_epoch) {
-							if (saveflag==0) {
-								if (interactive) {
-
-									bkgdset(COLOR_PAIR(3)|A_BOLD);
-									attrset(COLOR_PAIR(6)|A_REVERSE|A_BOLD);
-									clear();
-
-									mvprintw(0,0,"                                                                                ");
-									mvprintw(1,0,"  flyby Orbital Data : Updating...                                              ");
-									mvprintw(2,0,"                                                                                ");
-
-									attrset(COLOR_PAIR(2));
-									refresh();
-									move(4,0);
-								}
-								saveflag=1;
-							}
-
-							if (interactive) {
-								bkgdset(COLOR_PAIR(3));
-								printw(" %-8s ",tle_db->name);
-							}
-
-							savecount++;
-
-							/* Copy TLE data into the sat data structure */
-
-							strncpy(tle_db[i].line1,line1,69);
-							strncpy(tle_db[i].line2,line2,69);
-
-							/* Update orbit struct */
-							if (orbits != NULL) {
-								predict_destroy_orbital_elements(orbits[i]);
-								orbits[i] = orbital_elements;
-							}
-							predict_destroy_orbital_elements(orbital_elements_db);
-						} else {
-							predict_destroy_orbital_elements(orbital_elements);
-						}
-					} else {
-						predict_destroy_orbital_elements(orbital_elements);
-					}
-
-					fgets(str0,75,fd);
-					fgets(str1,75,fd);
-					fgets(str2,75,fd);
+	int num_updated = 0;
+	for (int i=0; i < tle_db->num_tles; i++) {
+		if (was_updated[i]) {
+			//print updated entries
+			if (interactive_mode) {
+				printw("Updated %s (%ld)", tle_db->tles[i].name, tle_db->tles[i].satellite_number);
+			} else {
+				printf("Updated %s (%ld)", tle_db->tles[i].name, tle_db->tles[i].satellite_number);
+			}
+			if (in_new_file[i]) {
+				if (interactive_mode) {
+					printw(" (*)");
 				} else {
-					strcpy(str0,str1);
-					strcpy(str1,str2);
-					fgets(str2,75,fd);
+					printf(" (*)");
 				}
+			}
+			if (interactive_mode) {
+				printw("\n");
+			} else {
+				printf("\n");
+			}
+			num_updated++;
 
-			} while (feof(fd)==0);
+			//update orbital elements
+			if (orbits != NULL) {
+				predict_destroy_orbital_elements(orbits[i]);
 
-			fclose(fd);
-
-			if (interactive) {
-				bkgdset(COLOR_PAIR(2));
-
-				if (kepcount==1)
-					mvprintw(LINES-3,2,"Only 1 NASA Two Line Element was found.");
-				else
-					mvprintw(LINES-3,2,"%3u NASA Two Line Elements were read.",kepcount);
-
-				if (saveflag) {
-					if (savecount==1)
-						mvprintw(LINES-2,2,"Only 1 satellite was updated.");
-					else {
-						if (savecount==num_sats)
-							mvprintw(LINES-2,2,"All satellites were updated!");
-						else
-							mvprintw(LINES-2,2,"%3u out of %3u satellites were updated.",savecount,num_sats);
-					}
-				}
-
-				refresh();
+				char *tle[] = {tle_db->tles[i].line1, tle_db->tles[i].line2};
+				orbits[i] = predict_parse_tle(tle);
 			}
 		}
+	}
 
-		if (interactive) {
-			noecho();
-
-			if (strlen(filename) && fd!=NULL) {
-				attrset(COLOR_PAIR(4)|A_BOLD);
-				AnyKey();
+	//print information about new files
+	for (int i=0; i < tle_db->num_tles; i++) {
+		if (in_new_file[i]) {
+			if (interactive_mode) {
+				printw("\nSatellites marked with (*) were ");
+			} else {
+				printf("\nSatellites marked with (*) were ");
 			}
+			if (!tle_db->read_from_xdg) {
+				if (interactive_mode) {
+					printw("located in non-writeable locations and are ignored.\n");
+				} else {
+					printf("located in non-writeable locations and are ignored.\n");
+				}
+			} else {
+				if (interactive_mode) {
+					printw("put in a new file (%s).\n", tle_db->tles[i].filename);
+				} else {
+					printf("put in a new file (%s).\n", tle_db->tles[i].filename);
+				}
+			}
+			break;
 		}
+	}
 
-		if (saveflag)
-			SaveTLE(_tle_db);
-	} while (success==0 && interactive);
+	if (num_updated == 0) {
+		if (interactive_mode) {
+			printw("No TLE updates/file not found.\n");
+		} else {
+			printf("No TLE updates/file not found.\n");
+		}
+	}
 
-	return (saveflag ? 0 : -1);
+	if (interactive_mode) {
+		refresh();
+		AnyKey();
+	}
 }
 
 int Select(struct tle_db *tle_db, predict_orbital_elements_t **orbital_elements_array)
@@ -1366,7 +1248,7 @@ void QthEdit(const char *qthfile, predict_observer_t *qth)
 	}
 
 	if (should_save) {
-		SaveQTH(qthfile, qth);
+		qth_to_file(qthfile, qth);
 	}
 }
 
@@ -2353,13 +2235,13 @@ void ProgramInfo(const char *qthfile, struct tle_db *tle_db, struct transponder_
 	printw("\t\tQTH file        : %s\n", qthfile);
 	printw("\t\tTLE file        : ");
 	if (tle_db->num_tles > 0) {
-		printw("%s\n", tle_db->filename);
+		printw("Loaded\n");
 	} else {
 		printw("Not loaded\n");
 	}
 	printw("\t\tDatabase file   : ");
 	if (transponder_db->loaded) {
-		printw("%s\n", transponder_db->filename);
+		printw("Loaded\n");
 	} else {
 		printw("Not loaded\n");
 	}
@@ -2384,10 +2266,6 @@ void ProgramInfo(const char *qthfile, struct tle_db *tle_db, struct transponder_
 
 void NewUser()
 {
-#if !defined (__CYGWIN32__)
-	int *mkdir();
-#endif
-
 	Banner();
 	attrset(COLOR_PAIR(3)|A_BOLD);
 
@@ -2397,11 +2275,6 @@ void NewUser()
 	printw("  flyby's main menu to edit your ground station information, and update\n");
 	printw("  your orbital database using option [U] or [E].  Enjoy the program!  :-)");
 	refresh();
-
-	/* Make "~/.flyby" subdirectory */
-
-	sprintf(temp,"%s/.flyby",getenv("HOME"));
-	mkdir(temp,0777);
 
 	attrset(COLOR_PAIR(4)|A_BOLD);
 	AnyKey();

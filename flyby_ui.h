@@ -2,75 +2,9 @@
 #define FLYBY_UI_H_DEFINED
 
 #include "flyby_hamlib.h"
-
-/**
- * Entry in TLE database.
- **/
-struct tle_db_entry {
-	///satellite number, parsed from TLE line 1
-	long satellite_number;
-	///satellite name, defined in TLE file
-	char name[MAX_NUM_CHARS];
-	///line 1 in NORAD TLE
-	char line1[MAX_NUM_CHARS];
-	///line 2 in NORAD TLE
-	char line2[MAX_NUM_CHARS];
-};
-
-/**
- * TLE database.
- **/
-struct tle_db {
-	///Number of contained TLEs
-	int num_tles;
-	///TLE entries
-	struct tle_db_entry tles[MAX_NUM_SATS];
-	///Filename from which the TLEs have been read
-	char filename[MAX_NUM_CHARS];
-};
-
-/**
- * Entry in transponder database.
- **/
-struct sat_db_entry {
-	///satellite number, for relating to TLE database
-	long satellite_number;
-	///whether squint angle can be calculated
-	bool squintflag;
-	///attitude latitude for squint angle calculation
-	double alat;
-	//attitude longitude for squint angle calculation
-	double alon;
-	///number of transponders
-	int num_transponders;
-	///name of each transponder
-	char transponder_name[MAX_NUM_TRANSPONDERS][MAX_NUM_CHARS];
-	///uplink frequencies
-	double uplink_start[MAX_NUM_TRANSPONDERS];
-	double uplink_end[MAX_NUM_TRANSPONDERS];
-	///downlink frequencies
-	double downlink_start[MAX_NUM_TRANSPONDERS];
-	double downlink_end[MAX_NUM_TRANSPONDERS];
-	///at which day of week the transponder is turned on?
-	unsigned char dayofweek[MAX_NUM_TRANSPONDERS];
-	///phase something
-	int phase_start[MAX_NUM_TRANSPONDERS];
-	int phase_end[MAX_NUM_TRANSPONDERS];
-};
-
-/**
- * Transponder database, each entry index corresponding to the same TLE index in the TLE database.
- **/
-struct transponder_db {
-	///number of contained satellites. Corresponds to the number of TLEs in the TLE database
-	int num_sats;
-	///transponder database entries
-	struct sat_db_entry sats[MAX_NUM_SATS];
-	///file from which the transponder database was loaded
-	char filename[MAX_NUM_CHARS];
-	///whether the transponder database is loaded, or empty
-	bool loaded;
-};
+#include <predict/predict.h>
+#include "tle_db.h"
+#include "transponder_db.h"
 
 /**
  * Quits ncurses, resets the terminal and displays an error message.
@@ -104,7 +38,7 @@ char KepCheck(char *line1, char *line2);
  * \param orbits Parsed orbital elements to be updated along with updated TLE database. Can be set to NULL
  * \return 0 on success, -1 otherwise
  **/
-int AutoUpdate(const char *string, struct tle_db *tle_db, predict_orbital_elements_t **orbits);
+void AutoUpdate(const char *string, struct tle_db *tle_db, predict_orbital_elements_t **orbits);
 
 /**
  * Displays a menu for selecting a satellite based on their names and international designators.
@@ -229,6 +163,15 @@ void NewUser();
 
 /**
  * Run flyby UI.
+ *
+ * \param new_user Whether NewUser() should be run
+ * \param qthfile Write path for QTH file
+ * \param observer QTH coordinates
+ * \param tle_db TLE database
+ * \param sat_db Transponder database
+ * \param rotctld Rotctld info
+ * \param downlink Downlink info
+ * \param uplink Uplink info
  **/
 void RunFlybyUI(bool new_user, const char *qthfile, predict_observer_t *observer, struct tle_db *tle_db, struct transponder_db *sat_db, rotctld_info_t *rotctld, rigctld_info_t *downlink, rigctld_info_t *uplink);
 
