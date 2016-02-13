@@ -36,7 +36,7 @@ Flyby searches for TLE files in `$BASEDIR/flyby/tles/`. `$BASEDIR` is assumed to
 * Directory defined in `$XDG_DATA_HOME` (or `$HOME/.local/share/`)
 * Directories defined in `$XDG_DATA_DIRS` (or `/usr/local/share/:/usr/share/`)
 
-In other words: As a user, you can put your TLE files in `$HOME/.local/share/tles/`.
+In other words: As a user, you can put your TLE files in `$HOME/.local/share/flyby/tles/`.
 
 All files are
 merged in a single database. User-defined TLEs take precedence over system-wide TLEs. For details, 
@@ -47,4 +47,4 @@ Transponder database
 
 Transponder database is read from `$BASEDIR/flyby/flyby.db`. `$BASEDIR` is assumed to be the same as above. 
 
-As a user, you can put your transponder database in `$HOME/.local/share/flyby.db`. An example can be found in `$SOURCE_DIR/default/flyby.db`.
+As a user, you can put your transponder database in `$HOME/.local/share/flyby/flyby.db`. An example can be found in `$SOURCE_DIR/default/flyby.db`.
