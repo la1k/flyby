@@ -3,11 +3,11 @@
 #include <getopt.h>
 #include <string.h>
 #include <stdbool.h>
-#include "flyby_defines.h"
-#include "flyby_hamlib.h"
+#include "defines.h"
+#include "hamlib.h"
 #include <predict/predict.h>
 #include <math.h>
-#include "flyby_ui.h"
+#include "ui.h"
 #include "string_array.h"
 #include "qth_config.h"
 #include "tle_db.h"

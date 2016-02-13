@@ -51,7 +51,7 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <predict/predict.h>
-#include "flyby_ui.h"
+#include "ui.h"
 #include "qth_config.h"
 
 #define EARTH_RADIUS_KM		6.378137E3		/* WGS 84 Earth radius km */

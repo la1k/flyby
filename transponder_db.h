@@ -1,7 +1,7 @@
 #ifndef TRANSPONDER_DB_H_DEFINED
 #define TRANSPONDER_DB_H_DEFINED
 
-#include "flyby_defines.h"
+#include "defines.h"
 #include "tle_db.h"
 
 /**

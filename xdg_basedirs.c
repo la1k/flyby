@@ -1,7 +1,7 @@
 #include <string.h>
 #include <stdbool.h>
 #include <stdio.h>
-#include "flyby_ui.h"
+#include "ui.h"
 #include <stdlib.h>
 #include "string_array.h"
 #include <dirent.h>

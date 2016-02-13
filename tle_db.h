@@ -2,7 +2,7 @@
 #define TLE_DB_H_DEFINED
 
 #include <stdbool.h>
-#include "flyby_defines.h"
+#include "defines.h"
 
 /**
  * Entry in TLE database.
