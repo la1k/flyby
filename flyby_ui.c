@@ -2070,6 +2070,11 @@ void MultiTrack(predict_observer_t *qth, predict_orbital_elements_t **input_orbi
 			mvprintw((line++), 1, "%s", string_lines[satindex[i]]);
 		}
 
+		if (num_orbits == 0) {
+			mvprintw((line++), 1, "Satellite list is empty. Are any satellites enabled?");
+			mvprintw((line++), 1, "(Go back to main meny and press 'W')");
+		}
+
 		refresh();
 		halfdelay(HALF_DELAY_TIME);  // Increase if CPU load is too high
 		ans=tolower(getch());
