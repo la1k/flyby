@@ -36,8 +36,13 @@ int sock_readline(int sockd, char *message, size_t bufsize)
 void rotctld_connect(const char *rotctld_host, const char *rotctld_port, bool once_per_second, double tracking_horizon, rotctld_info_t *ret_info)
 {
 	struct addrinfo hints, *servinfo, *servinfop;
+	memset(&hints, 0, sizeof(hints));
+	hints.ai_family = AF_UNSPEC;
+	hints.ai_socktype = SOCK_STREAM;
+
 	int rotctld_socket = 0;
-	if (getaddrinfo(rotctld_host, rotctld_port, &hints, &servinfo))	{
+	int retval = getaddrinfo(rotctld_host, rotctld_port, &hints, &servinfo);
+	if (retval != 0) {
 		bailout("getaddrinfo error");
 		exit(-1);
 	}
@@ -93,8 +98,12 @@ void rotctld_track(const rotctld_info_t *info, double azimuth, double elevation)
 void rigctld_connect(const char *rigctld_host, const char *rigctld_port, const char *vfo_name, rigctld_info_t *ret_info)
 {
 	struct addrinfo hints, *servinfo, *servinfop;
+	memset(&hints, 0, sizeof(hints));
+	hints.ai_family = AF_UNSPEC;
+	hints.ai_socktype = SOCK_STREAM;
 	int rigctld_socket = 0;
-	if (getaddrinfo(rigctld_host, rigctld_port, &hints, &servinfo)) {
+	int retval = getaddrinfo(rigctld_host, rigctld_port, &hints, &servinfo);
+	if (retval != 0) {
 		bailout("getaddrinfo error");
 		exit(-1);
 	}
