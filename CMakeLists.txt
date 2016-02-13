@@ -1,7 +1,6 @@
 # The minimum required version hasn't been tested. Feel free to adjust
 # downwards if necessary.
 cmake_minimum_required(VERSION 2.8)
-set (CMAKE_BUILD_TYPE Debug)
 
 project(flyby C)
 
