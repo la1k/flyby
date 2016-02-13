@@ -48,7 +48,7 @@ int main(int argc, char **argv)
 	//rigctl downlink options
 	bool use_rigctld_downlink = false;
 	char rigctld_downlink_host[MAX_NUM_CHARS] = RIGCTLD_DOWNLINK_DEFAULT_HOST;
-	char rigctld_downlink_port[MAX_NUM_CHARS] = RIGCTLD_DOWNLINK_DEFAULT_HOST;
+	char rigctld_downlink_port[MAX_NUM_CHARS] = RIGCTLD_DOWNLINK_DEFAULT_PORT;
 	char rigctld_downlink_vfo[MAX_NUM_CHARS] = {0};
 
 	//config files
