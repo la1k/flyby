@@ -2300,19 +2300,18 @@ void EditWhitelist(struct tle_db *tle_db)
 	mvprintw( 12,col,"with        .");
 
 	mvprintw( 14,col,"Press  q  to return to menu.");
-	mvprintw( 15,col,"Press  a  to toggle all displayed");
-	mvprintw( 16,col,"TLES.");
-	mvprintw( 17,col,"Press  w  or  q  to wipe query field.");
+	mvprintw( 16,col,"Press  a  to toggle visible entries.");
+	mvprintw( 18,col,"Press  w  or  q  to wipe query field.");
 	mvprintw(5, 6, "Filter TLEs by name:");
 	row = 18;
 
 	/* Print keyboard bindings in special format */
 	attrset(COLOR_PAIR(6)|A_REVERSE|A_BOLD);
-	mvprintw( 12,col+6," SPACE ");
+	mvprintw( 12,col+5," SPACE ");
 	mvprintw( 14,col+6," q ");
-	mvprintw( 15,col+6," a ");
-	mvprintw( 17,col+6," w ");
-	mvprintw( 17,col+13," q ");
+	mvprintw( 16,col+6," a ");
+	mvprintw( 18,col+6," w ");
+	mvprintw( 18,col+13," q ");
 
 	refresh();
 
