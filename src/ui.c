@@ -2235,7 +2235,7 @@ void EditWhitelist(struct tle_db *tle_db)
 
 	int row = 0;
 	mvprintw(row++,0,"                                                                                ");
-	mvprintw(row++,0,"  Enable/disable satellites                                                     ");
+	mvprintw(row++,0,"  flyby Enable/Disable Satellites                                               ");
 	mvprintw(row++,0,"                                                                                ");
 
 	int c;
@@ -2287,22 +2287,32 @@ void EditWhitelist(struct tle_db *tle_db)
 	wattrset(my_menu_win, COLOR_PAIR(4));
 	box(my_menu_win, 0, 0);
 
+	/* Print description */
 	attrset(COLOR_PAIR(3)|A_BOLD);
 	int col = 42;
 	row = 5;
-	mvprintw( row++,col,"Use upper-case characters to ");
-	mvprintw( row++,col,"filter satellites by name.");
-	row++;
-	row++;
-	mvprintw( row++,col,"Use cursor keys to move up/down");
-	mvprintw( row++,col,"the list and then select with ");
-	mvprintw( row++,col,"the 'Space' key.");
-	row++;
-	mvprintw( row++,col,"Press 'q' to return to menu.");
-	mvprintw( row++,col,"Press 'a' to toggle all displayed");
-	mvprintw( row++,col,"TLES.");
-	mvprintw( row++,col,"Press 'w' or 'q' to wipe query field.");
+	mvprintw( 6,col,"Use upper-case characters to ");
+	mvprintw( 7,col,"filter satellites by name.");
+
+
+	mvprintw( 10,col,"Use cursor keys to move up/down");
+	mvprintw( 11,col,"the list and then disable/enable");
+	mvprintw( 12,col,"with        .");
+
+	mvprintw( 14,col,"Press  q  to return to menu.");
+	mvprintw( 15,col,"Press  a  to toggle all displayed");
+	mvprintw( 16,col,"TLES.");
+	mvprintw( 17,col,"Press  w  or  q  to wipe query field.");
 	mvprintw(5, 6, "Filter TLEs by name:");
+	row = 18;
+
+	/* Print keyboard bindings in special format */
+	attrset(COLOR_PAIR(6)|A_REVERSE|A_BOLD);
+	mvprintw( 12,col+6," SPACE ");
+	mvprintw( 14,col+6," q ");
+	mvprintw( 15,col+6," a ");
+	mvprintw( 17,col+6," w ");
+	mvprintw( 17,col+13," q ");
 
 	refresh();
 
