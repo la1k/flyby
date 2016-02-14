@@ -25,9 +25,18 @@ int string_array_add(string_array_t *string_array, const char *string)
 
 	//copy string
 	string_array->strings[string_array->num_strings] = (char*)malloc(sizeof(char)*MAX_NUM_CHARS);
-	strncpy(string_array->strings[string_array->num_strings], string, MAX_NUM_CHARS);
 	string_array->num_strings++;
+
+	string_array_set(string_array, string_array->num_strings-1, string);
 	return 0;
+}
+
+void string_array_set(string_array_t *string_array, int i, const char *string)
+{
+	if ((i >= 0) && (i < string_array_size(string_array))) {
+		strncpy(string_array->strings[i], string, MAX_NUM_CHARS);
+	}
+
 }
 
 const char* string_array_get(string_array_t *string_array, int index)

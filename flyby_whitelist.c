@@ -1,4 +1,5 @@
 #include <form.h>
+#include <libgen.h>
 
 void pattern_prepare(char *string)
 {
@@ -317,7 +318,7 @@ void EditWhitelist(struct tle_db *tle_db)
 	scale_form(form, &rows, &cols);
 
 	int form_win_height = rows + 4;
-	WINDOW *form_win = newwin(rows + 4, cols + 4, row, 16);
+	WINDOW *form_win = newwin(rows + 4, cols + 4, row+1, 3);
 	row += form_win_height;
 	keypad(form_win, TRUE);
 	wattrset(form_win, COLOR_PAIR(4));
@@ -331,15 +332,17 @@ void EditWhitelist(struct tle_db *tle_db)
 	wrefresh(form_win);
 
 	/* Create the window to be associated with the menu */
-	int window_width = 40;
+	int window_width = 35;
 	int window_ypos = row;
-	my_menu_win = newwin(LINES-window_ypos-1, window_width, window_ypos, 4);
+	my_menu_win = newwin(LINES-window_ypos-1, window_width, window_ypos, 5);
+
 	keypad(my_menu_win, TRUE);
 	wattrset(my_menu_win, COLOR_PAIR(4));
 	box(my_menu_win, 0, 0);
 
 	attrset(COLOR_PAIR(3)|A_BOLD);
 	int col = 46;
+	row = 5;
 	mvprintw( row++,col,"Use cursor keys to move up/down");
 	mvprintw( row++,col,"the list and then select with ");
 	mvprintw( row++,col,"the 'Space' key.");
@@ -348,9 +351,10 @@ void EditWhitelist(struct tle_db *tle_db)
 	mvprintw( row++,col,"filter satellites by name.");
 	row++;
 	mvprintw( row++,col,"Press 'q' to return to menu.");
-	mvprintw( row++,col,"Press 'a' to toggle all TLES.");
+	mvprintw( row++,col,"Press 'a' to toggle all displayed");
+	mvprintw( row++,col,"TLES.");
 	mvprintw( row++,col,"Press 'w' to wipe query field.");
-	mvprintw(6, 4, "Filter TLEs:");
+	mvprintw(5, 6, "Filter TLEs by name:");
 
 	refresh();
 
@@ -366,9 +370,12 @@ void EditWhitelist(struct tle_db *tle_db)
 	bool run_menu = true;
 
 	while (run_menu) {
+		//handle keyboard
 		c = wgetch(my_menu_win);
+		bool handled = false;
 
-		bool handled = filtered_menu_handle(&menu, c);
+		handled = filtered_menu_handle(&menu, c);
+
 		wrefresh(my_menu_win);
 
 		if (!handled) {

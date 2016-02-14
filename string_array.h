@@ -60,4 +60,13 @@ int string_array_find(string_array_t *string_array, const char *string);
  **/
 void stringsplit(const char *string_list, string_array_t *ret_string_list);
 
+/**
+ * Set string at specified position to supplied string.
+ *
+ * \param string_array String array
+ * \param i String array position to set
+ * \param string String to set
+ **/
+void string_array_set(string_array_t *string_array, int i, const char *string);
+
 #endif
