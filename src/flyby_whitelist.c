@@ -199,7 +199,7 @@ void filtered_menu_from_stringarray(struct filtered_menu *list, int num_descript
 void filtered_menu_from_tle_db(struct filtered_menu *list, const struct tle_db *db, WINDOW *my_menu_win)
 {
 	int num_descriptors = 2;
-	string_array_t *string_list = (string_array_t*)malloc(sizeof(string_array_t)*num_descriptors);
+	string_array_t *string_list = (string_array_t*)calloc(num_descriptors, sizeof(string_array_t));
 	for (int i=0; i < db->num_tles; i++) {
 		string_array_add(&(string_list[0]), db->tles[i].name);
 		string_array_add(&(string_list[1]), db->tles[i].filename);
