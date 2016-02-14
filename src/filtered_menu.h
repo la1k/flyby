@@ -35,19 +35,61 @@ struct filtered_menu {
 	char curr_item[MAX_NUM_CHARS];
 };
 
+/**
+ * Create filtered menu from string array.
+ *
+ * \param list Returned menu struct
+ * \param names List of names to use for the menu items
+ * \param my_menu_win Ncurses window to display the menu in
+ **/
 void filtered_menu_from_stringarray(struct filtered_menu *list, string_array_t *names, WINDOW *my_menu_win);
 
+/**
+ * Create filtered menu from names in TLE database.
+ *
+ * \param list Returned menu struct
+ * \param db TLE database
+ * \param my_menu_win Ncurses window to display the menu inside
+ **/
 void filtered_menu_from_tle_db(struct filtered_menu *list, const struct tle_db *db, WINDOW *my_menu_win);
 
+/**
+ * Free memory allocated in menu struct.
+ *
+ * \param list Menu struct to free
+ **/
 void filtered_menu_free(struct filtered_menu *list);
 
+/**
+ * Filter displayed menu entries based on input pattern.
+ *
+ * \param list Menu struct
+ * \param pattern Pattern string
+ **/
 void filtered_menu_pattern_match(struct filtered_menu *list, const char *pattern);
 
-
+/**
+ * Modify "enabled"-flag in TLE db entries based on the current enabled/disabled flags in the menu.
+ *
+ * \param list Menu struct
+ * \param db TLE db to modify
+ **/
 void filtered_menu_to_tle_db(struct filtered_menu *list, struct tle_db *db);
 
+/**
+ * Toggle all currently _displayed_ menu entries (some/none enabled -> all enabled, all enabled -> none enabled)
+ *
+ * \param list Menu struct
+ **/
 void filtered_menu_toggle(struct filtered_menu *list);
 
+/**
+ * Handle keyboard commands to menu.
+ *
+ * \param list Menu struct
+ * \param c Keyboard character
+ * \return True if keyboard character was handled, false otherwise.
+ **/
 bool filtered_menu_handle(struct filtered_menu *list, int c);
 
 
