@@ -383,8 +383,15 @@ void EditWhitelist(struct tle_db *tle_db)
 		if (!handled) {
 			switch (c) {
 				case 'q':
-					run_menu = false;
-					break;
+					strncpy(field_contents, field_buffer(field[0], 0), MAX_NUM_CHARS);
+					pattern_prepare(field_contents);
+
+					if (strlen(field_contents) > 0) {
+						c = 'w'; //will jump to clearing of the field
+					} else {
+						run_menu = false;
+						break;
+					}
 				case KEY_BACKSPACE:
 					form_driver(form, REQ_DEL_PREV);
 				default:
