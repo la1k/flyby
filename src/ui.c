@@ -2235,7 +2235,7 @@ void EditWhitelist(struct tle_db *tle_db)
 
 	int row = 0;
 	mvprintw(row++,0,"                                                                                ");
-	mvprintw(row++,0,"  flyby TLE whitelister                                                         ");
+	mvprintw(row++,0,"  Enable/disable satellites                                                     ");
 	mvprintw(row++,0,"                                                                                ");
 
 	int c;
@@ -2440,7 +2440,7 @@ void MainMenu()
 	attrset(COLOR_PAIR(6)|A_REVERSE|A_BOLD);
 	mvprintw(17,41," W ");
 	attrset(COLOR_PAIR(3)|A_BOLD);
-	mvprintw(17,45," Edit satellite whitelist");
+	mvprintw(17,45," Enabled/disable satellites");
 
 	attrset(COLOR_PAIR(6)|A_REVERSE|A_BOLD);
 	mvprintw(21,41," Q ");
