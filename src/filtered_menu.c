@@ -1,26 +1,11 @@
 #include <form.h>
+#include <menu.h>
+#include "filtered_menu.h"
 #include <libgen.h>
 #include "defines.h"
 #include "tle_db.h"
-
-void pattern_prepare(char *string)
-{
-	int length = strlen(string);
-
-	//trim whitespaces from end
-	for (int i=length-1; i >= 0; i--) {
-		if (string[i] == ' ') {
-			string[i] = '\0';
-		} else if (isdigit(string[i]) || isalpha(string[i])) {
-			break;
-		}
-	}
-
-	//lowercase to uppercase
-	for (int i=0; i < length; i++) {
-		string[i] = toupper(string[i]);
-	}
-}
+#include <stdlib.h>
+#include <string.h>
 
 void free_menu_items(ITEM ***items)
 {
@@ -43,40 +28,6 @@ bool pattern_match(const char *string, const char *pattern)
 {
 	return (strlen(pattern) == 0) || (strstr(string, pattern) != NULL);
 }
-
-/**
- * Entry in filter-enabled menu.
- **/
-struct filtered_menu_entry {
-	///displayed name in menu
-	char *displayed_name;
-	///whether entry is enabled (selected/deselected in menu)
-	bool enabled;
-	///number of description strings describing the entry, to be used in pattern matching at various levels (e.g: put TLE name in one, international designator in one, filename, ...)
-	int num_descriptors;
-	///descriptor strings
-	char **descriptors;
-};
-
-/**
- * Menu that can be filtered to display only specific entries.
- **/
-struct filtered_menu {
-	///number of entries in menu
-	int num_entries;
-	///entries in menu
-	struct filtered_menu_entry *entries;
-	///number of entries that are currently displayed in menu
-	int num_displayed_entries;
-	///currently displayed items in menu
-	ITEM** displayed_entries;
-	///menu
-	MENU* menu;
-	///mapping between displayed item indices and the actual entries in the menu
-	int *entry_mapping;
-	///name of currently/last marked item (used for keeping cursor position)
-	char curr_item[MAX_NUM_CHARS];
-};
 
 void filtered_menu_entry_free(struct filtered_menu_entry *list_entry)
 {
@@ -282,148 +233,3 @@ bool filtered_menu_handle(struct filtered_menu *list, int c)
 	return true;
 }
 
-void EditWhitelist(struct tle_db *tle_db)
-{
-	/* Print header */
-	attrset(COLOR_PAIR(6)|A_REVERSE|A_BOLD);
-	clear();
-
-	int row = 0;
-	mvprintw(row++,0,"                                                                                ");
-	mvprintw(row++,0,"  flyby TLE whitelister                                                         ");
-	mvprintw(row++,0,"                                                                                ");
-
-	int c;
-
-	WINDOW *my_menu_win;
-
-	int *tle_index = (int*)calloc(tle_db->num_tles, sizeof(int));
-
-	attrset(COLOR_PAIR(3)|A_BOLD);
-	if (tle_db->num_tles >= MAX_NUM_SATS)
-		mvprintw(LINES-3,46,"Truncated to %d satellites",MAX_NUM_SATS);
-	else
-		mvprintw(LINES-3,46,"%d satellites",tle_db->num_tles);
-
-	/* Create form for query input */
-	FIELD *field[2];
-	FORM  *form;
-
-	field[0] = new_field(1, 24, 1, 1, 0, 0);
-	field[1] = NULL;
-
-	set_field_back(field[0], A_UNDERLINE);
-	field_opts_off(field[0], O_AUTOSKIP);
-
-	form = new_form(field);
-	int rows, cols;
-	scale_form(form, &rows, &cols);
-
-	int form_win_height = rows + 4;
-	WINDOW *form_win = newwin(rows + 4, cols + 4, row+1, 3);
-	row += form_win_height;
-	keypad(form_win, TRUE);
-	wattrset(form_win, COLOR_PAIR(4));
-	box(form_win, 0, 0);
-
-	/* Set main window and sub window */
-	set_form_win(form, form_win);
-	set_form_sub(form, derwin(form_win, rows, cols, 2, 2));
-
-	post_form(form);
-	wrefresh(form_win);
-
-	/* Create the window to be associated with the menu */
-	int window_width = 35;
-	int window_ypos = row;
-	my_menu_win = newwin(LINES-window_ypos-1, window_width, window_ypos, 5);
-
-	keypad(my_menu_win, TRUE);
-	wattrset(my_menu_win, COLOR_PAIR(4));
-	box(my_menu_win, 0, 0);
-
-	attrset(COLOR_PAIR(3)|A_BOLD);
-	int col = 46;
-	row = 5;
-	mvprintw( row++,col,"Use cursor keys to move up/down");
-	mvprintw( row++,col,"the list and then select with ");
-	mvprintw( row++,col,"the 'Space' key.");
-	row++;
-	mvprintw( row++,col,"Use upper-case characters to ");
-	mvprintw( row++,col,"filter satellites by name.");
-	row++;
-	mvprintw( row++,col,"Press 'q' to return to menu.");
-	mvprintw( row++,col,"Press 'a' to toggle all displayed");
-	mvprintw( row++,col,"TLES.");
-	mvprintw( row++,col,"Press 'w' to wipe query field.");
-	mvprintw(5, 6, "Filter TLEs by name:");
-
-	refresh();
-
-	struct filtered_menu menu = {0};
-	filtered_menu_from_tle_db(&menu, tle_db, my_menu_win);
-
-	char field_contents[MAX_NUM_CHARS] = {0};
-
-	refresh();
-	wrefresh(my_menu_win);
-	form_driver(form, REQ_VALIDATION);
-	wrefresh(form_win);
-	bool run_menu = true;
-
-	while (run_menu) {
-		//handle keyboard
-		c = wgetch(my_menu_win);
-		bool handled = false;
-
-		handled = filtered_menu_handle(&menu, c);
-
-		wrefresh(my_menu_win);
-
-		if (!handled) {
-			switch (c) {
-				case 'q':
-					strncpy(field_contents, field_buffer(field[0], 0), MAX_NUM_CHARS);
-					pattern_prepare(field_contents);
-
-					if (strlen(field_contents) > 0) {
-						c = 'w'; //will jump to clearing of the field
-					} else {
-						run_menu = false;
-						break;
-					}
-				case KEY_BACKSPACE:
-					form_driver(form, REQ_DEL_PREV);
-				default:
-					if (isupper(c) || isdigit(c)) {
-						form_driver(form, c);
-					}
-					if (c == 'w') {
-						form_driver(form, REQ_CLR_FIELD);
-					}
-
-					form_driver(form, REQ_VALIDATION); //update buffer with field contents
-
-					strncpy(field_contents, field_buffer(field[0], 0), MAX_NUM_CHARS);
-					pattern_prepare(field_contents);
-
-					filtered_menu_pattern_match(&menu, field_contents);
-
-					wrefresh(form_win);
-					break;
-			}
-		}
-	}
-
-	filtered_menu_to_tle_db(&menu, tle_db);
-	filtered_menu_free(&menu);
-
-	whitelist_write_to_default(tle_db);
-
-	unpost_form(form);
-
-	free(tle_index);
-	free_form(form);
-
-	free_field(field[0]);
-}
