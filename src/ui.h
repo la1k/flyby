@@ -1,7 +1,7 @@
 #ifndef FLYBY_UI_H_DEFINED
 #define FLYBY_UI_H_DEFINED
 
-#include "flyby_hamlib.h"
+#include "hamlib.h"
 #include <predict/predict.h>
 #include "tle_db.h"
 #include "transponder_db.h"

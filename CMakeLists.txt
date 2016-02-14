@@ -1,7 +1,6 @@
 # The minimum required version hasn't been tested. Feel free to adjust
 # downwards if necessary.
 cmake_minimum_required(VERSION 2.8)
-set (CMAKE_BUILD_TYPE Debug)
 
 project(flyby C)
 
@@ -25,7 +24,7 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall")
 
 configure_file(config.h.in config.h @ONLY)
 include_directories(${CMAKE_BINARY_DIR})
-add_executable(flyby flyby_ui.c flyby_hamlib.c flyby_main.c string_array.c xdg_basedirs.c tle_db.c transponder_db.c qth_config.c)
+add_executable(flyby src/ui.c src/hamlib.c src/main.c src/string_array.c src/xdg_basedirs.c src/tle_db.c src/transponder_db.c src/qth_config.c)
 install(TARGETS flyby RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 
 add_definitions(-std=gnu99)

@@ -1,7 +1,7 @@
 #ifndef FLYBY_HAMLIB_H_DEFINED
 #define FLYBY_HAMLIB_H_DEFINED
 
-#include "flyby_defines.h"
+#include "defines.h"
 #include <stdbool.h>
 
 #define ROTCTLD_DEFAULT_HOST "localhost"

@@ -3,11 +3,11 @@
 #include <getopt.h>
 #include <string.h>
 #include <stdbool.h>
-#include "flyby_defines.h"
-#include "flyby_hamlib.h"
+#include "defines.h"
+#include "hamlib.h"
 #include <predict/predict.h>
 #include <math.h>
-#include "flyby_ui.h"
+#include "ui.h"
 #include "string_array.h"
 #include "qth_config.h"
 #include "tle_db.h"
@@ -48,7 +48,7 @@ int main(int argc, char **argv)
 	//rigctl downlink options
 	bool use_rigctld_downlink = false;
 	char rigctld_downlink_host[MAX_NUM_CHARS] = RIGCTLD_DOWNLINK_DEFAULT_HOST;
-	char rigctld_downlink_port[MAX_NUM_CHARS] = RIGCTLD_DOWNLINK_DEFAULT_HOST;
+	char rigctld_downlink_port[MAX_NUM_CHARS] = RIGCTLD_DOWNLINK_DEFAULT_PORT;
 	char rigctld_downlink_vfo[MAX_NUM_CHARS] = {0};
 
 	//config files
@@ -63,14 +63,14 @@ int main(int argc, char **argv)
 		{"update-tle-db",		required_argument,	0,	'u'},
 		{"tle-file",			required_argument,	0,	't'},
 		{"qth-file",			required_argument,	0,	'q'},
-		{"rotctl",			required_argument,	0,	'a'},
+		{"rotctld-host",			required_argument,	0,	'a'},
 		{"rotctld-port",		required_argument,	0,	FLYBY_OPT_ROTCTLD_PORT},
 		{"rotctld-horizon",		required_argument,	0,	'H'},
 		{"rotctld-once-per-second",	no_argument,		0,	FLYBY_OPT_ROTCTLD_ONCE_PER_SECOND},
-		{"rigctld-uplink",		required_argument,	0,	'U'},
+		{"rigctld-uplink-host",		required_argument,	0,	'U'},
 		{"rigctld-uplink-port",		required_argument,	0,	FLYBY_OPT_UPLINK_PORT},
 		{"rigctld-uplink-vfo",		required_argument,	0,	FLYBY_OPT_UPLINK_VFO},
-		{"rigctld-downlink",		required_argument,	0,	'D'},
+		{"rigctld-downlink-host",		required_argument,	0,	'D'},
 		{"rigctld-downlink-port",	required_argument,	0,	FLYBY_OPT_DOWNLINK_PORT},
 		{"rigctld-downlink-vfo",	required_argument,	0,	FLYBY_OPT_DOWNLINK_VFO},
 		{"help",			no_argument,		0,	'h'},

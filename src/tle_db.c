@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include <dirent.h>
 #include <string.h>
-#include "flyby_ui.h"
+#include "ui.h"
 #include "xdg_basedirs.h"
 #include <errno.h>
 #include <sys/stat.h>

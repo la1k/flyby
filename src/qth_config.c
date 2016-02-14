@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "xdg_basedirs.h"
-#include "flyby_defines.h"
+#include "defines.h"
 #include "string_array.h"
 #include <math.h>
 
