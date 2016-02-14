@@ -2449,7 +2449,7 @@ void MainMenu()
 	attrset(COLOR_PAIR(6)|A_REVERSE|A_BOLD);
 	mvprintw(17,41," W ");
 	attrset(COLOR_PAIR(3)|A_BOLD);
-	mvprintw(17,45," Enabled/disable satellites");
+	mvprintw(17,45," Enable/disable satellites");
 
 	attrset(COLOR_PAIR(6)|A_REVERSE|A_BOLD);
 	mvprintw(21,41," Q ");
