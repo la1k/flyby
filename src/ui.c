@@ -2072,7 +2072,7 @@ void MultiTrack(predict_observer_t *qth, predict_orbital_elements_t **input_orbi
 
 		if (num_orbits == 0) {
 			mvprintw((line++), 1, "Satellite list is empty. Are any satellites enabled?");
-			mvprintw((line++), 1, "(Go back to main meny and press 'W')");
+			mvprintw((line++), 1, "(Go back to main menu and press 'W')");
 		}
 
 		refresh();

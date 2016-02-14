@@ -1,5 +1,7 @@
 #include <form.h>
 #include <libgen.h>
+#include "defines.h"
+#include "tle_db.h"
 
 void pattern_prepare(char *string)
 {
