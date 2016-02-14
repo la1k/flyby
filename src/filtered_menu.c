@@ -32,10 +32,6 @@ bool pattern_match(const char *string, const char *pattern)
 void filtered_menu_entry_free(struct filtered_menu_entry *list_entry)
 {
 	free(list_entry->displayed_name);
-	for (int i=0; i < list_entry->num_descriptors; i++) {
-		free(list_entry->descriptors[i]);
-	}
-	free(list_entry->descriptors);
 }
 
 void filtered_menu_free(struct filtered_menu *list)
@@ -73,7 +69,7 @@ void filtered_menu_pattern_match(struct filtered_menu *list, const char *pattern
 
 	//put all items corresponding to input pattern into current list of displayed items, update entry mapping
 	for (int i = 0; i < list->num_entries; ++i) {
-		if (pattern_match(list->entries[i].descriptors[0], pattern)) {
+		if (pattern_match(list->entries[i].displayed_name, pattern)) {
 			temp_items[item_ind] = new_item(list->entries[i].displayed_name, "");
 			list->entry_mapping[item_ind] = i;
 			item_ind++;
@@ -105,21 +101,16 @@ void filtered_menu_pattern_match(struct filtered_menu *list, const char *pattern
 	}
 }
 
-void filtered_menu_from_stringarray(struct filtered_menu *list, int num_descriptors, string_array_t *descriptors, WINDOW *my_menu_win)
+void filtered_menu_from_stringarray(struct filtered_menu *list, string_array_t *names, WINDOW *my_menu_win)
 {
 	//initialize member variables based on tle database
 	list->num_displayed_entries = 0;
-	list->num_entries = string_array_size(&(descriptors[0]));
+	list->num_entries = string_array_size(names);
 	list->displayed_entries = (ITEM **)calloc(list->num_entries + 1, sizeof(ITEM*));
 	list->entry_mapping = (int*)calloc(list->num_entries, sizeof(int));
 	list->entries = (struct filtered_menu_entry*)malloc(sizeof(struct filtered_menu_entry)*list->num_entries);
 	for (int i=0; i < list->num_entries; i++) {
-		list->entries[i].displayed_name = strdup(string_array_get(&(descriptors[0]), i));
-		list->entries[i].num_descriptors = num_descriptors;
-		list->entries[i].descriptors = (char**)malloc(sizeof(char*)*list->entries[i].num_descriptors);
-		for (int j=0; j < num_descriptors; j++) {
-			list->entries[i].descriptors[j] = strdup(string_array_get(&(descriptors[j]), i));
-		}
+		list->entries[i].displayed_name = strdup(string_array_get(names, i));
 		list->entries[i].enabled = true;
 
 		list->displayed_entries[i] = new_item(list->entries[i].displayed_name, "");
@@ -149,23 +140,19 @@ void filtered_menu_from_stringarray(struct filtered_menu *list, int num_descript
 
 void filtered_menu_from_tle_db(struct filtered_menu *list, const struct tle_db *db, WINDOW *my_menu_win)
 {
-	int num_descriptors = 2;
-	string_array_t *string_list = (string_array_t*)calloc(num_descriptors, sizeof(string_array_t));
+	string_array_t string_list = {0};
 	for (int i=0; i < db->num_tles; i++) {
-		string_array_add(&(string_list[0]), db->tles[i].name);
-		string_array_add(&(string_list[1]), db->tles[i].filename);
+		string_array_add(&string_list, db->tles[i].name);
 	}
 
-	filtered_menu_from_stringarray(list, num_descriptors, string_list, my_menu_win);
+	filtered_menu_from_stringarray(list, &string_list, my_menu_win);
 
 	for (int i=0; i < db->num_tles; i++) {
 		list->entries[i].enabled = tle_db_entry_enabled(db, i);
 	}
 	filtered_menu_pattern_match(list, "");
 
-	string_array_free(&(string_list[0]));
-	string_array_free(&(string_list[1]));
-	free(string_list);
+	string_array_free(&string_list);
 }
 
 void filtered_menu_to_tle_db(struct filtered_menu *list, struct tle_db *db)

@@ -13,10 +13,6 @@ struct filtered_menu_entry {
 	char *displayed_name;
 	///whether entry is enabled (selected/deselected in menu)
 	bool enabled;
-	///number of description strings describing the entry, to be used in pattern matching at various levels (e.g: put TLE name in one, international designator in one, filename, ...)
-	int num_descriptors;
-	///descriptor strings
-	char **descriptors;
 };
 
 /**
@@ -39,7 +35,7 @@ struct filtered_menu {
 	char curr_item[MAX_NUM_CHARS];
 };
 
-void filtered_menu_from_stringarray(struct filtered_menu *list, int num_descriptors, string_array_t *descriptors, WINDOW *my_menu_win);
+void filtered_menu_from_stringarray(struct filtered_menu *list, string_array_t *names, WINDOW *my_menu_win);
 
 void filtered_menu_from_tle_db(struct filtered_menu *list, const struct tle_db *db, WINDOW *my_menu_win);
 
