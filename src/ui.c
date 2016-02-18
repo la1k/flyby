@@ -55,6 +55,7 @@
 #include <form.h>
 #include "ui.h"
 #include "qth_config.h"
+#include "transponder_editor.h"
 
 #define EARTH_RADIUS_KM		6.378137E3		/* WGS 84 Earth radius km */
 #define HALF_DELAY_TIME	5
@@ -2471,6 +2472,66 @@ void NewUser()
 	AnyKey();
 }
 
+void EditTransponderDatabase(struct tle_db *tle_db, struct transponder_db *sat_db)
+{
+	/* Print header */
+	attrset(COLOR_PAIR(6)|A_REVERSE|A_BOLD);
+	clear();
+
+	int row = 0;
+	mvprintw(row++,0,"                                                                                ");
+	mvprintw(row++,0,"  flyby Transponder Database Editor                                             ");
+	mvprintw(row++,0,"                                                                                ");
+
+	struct transponder_entry *transponder_entry = transponder_editor_entry_create();
+	FORM *form = transponder_editor_form(transponder_entry);
+
+	int rows, cols;
+	scale_form(form, &rows, &cols);
+
+	int form_win_height = rows + 4;
+	WINDOW *form_win = newwin(rows + 4, cols + 4, row+1, 3);
+	row += form_win_height;
+	keypad(form_win, TRUE);
+	wattrset(form_win, COLOR_PAIR(4));
+	box(form_win, 0, 0);
+
+	/* Set main window and sub window */
+	set_form_win(form, form_win);
+	set_form_sub(form, derwin(form_win, rows, cols, 2, 2));
+
+	post_form(form);
+
+	mvwprintw(form_win, 1, 3, "Transponder name                Uplink      Downlink    Phase      Day of week");
+
+	refresh();
+	form_driver(form, REQ_VALIDATION);
+	wrefresh(form_win);
+
+	bool run_menu = true;
+	while (run_menu) {
+		//handle keyboard
+		int c = wgetch(form_win);
+		switch (c) {
+			case 'q':
+				run_menu = false;
+				break;
+			case KEY_BACKSPACE:
+				form_driver(form, REQ_DEL_PREV);
+			default:
+				form_driver(form, c);
+				form_driver(form, REQ_VALIDATION); //update buffer with field contents
+
+				wrefresh(form_win);
+				break;
+		}
+	}
+
+	unpost_form(form);
+
+	free_form(form);
+}
+
 void RunFlybyUI(bool new_user, const char *qthfile, predict_observer_t *observer, struct tle_db *tle_db, struct transponder_db *sat_db, rotctld_info_t *rotctld, rigctld_info_t *downlink, rigctld_info_t *uplink)
 {
 	/* Start ncurses */
@@ -2489,6 +2550,7 @@ void RunFlybyUI(bool new_user, const char *qthfile, predict_observer_t *observer
 	init_pair(5,COLOR_WHITE,COLOR_RED);
 	init_pair(6,COLOR_RED,COLOR_WHITE);
 	init_pair(7,COLOR_CYAN,COLOR_RED);
+	init_pair(8,COLOR_BLACK,COLOR_WHITE);
 
 	if (new_user) {
 		NewUser();
@@ -2592,6 +2654,9 @@ void RunFlybyUI(bool new_user, const char *qthfile, predict_observer_t *observer
 			case 'w':
 			case 'W':
 				EditWhitelist(tle_db);
+				MainMenu();
+			case 'e':
+				EditTransponderDatabase(tle_db, sat_db);
 				MainMenu();
 				break;
 		}
