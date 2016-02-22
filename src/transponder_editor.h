@@ -8,6 +8,8 @@
 //number of fields needed for defining a transponder entry
 #define NUM_TRANSPONDER_SPECIFIERS 2
 
+#define TRANSPONDER_ENTRY_DEFAULT_STYLE COLOR_PAIR(1)|A_UNDERLINE
+
 struct transponder_line {
 	FIELD *transponder_name;
 	FIELD *uplink[NUM_TRANSPONDER_SPECIFIERS];
@@ -21,8 +23,6 @@ struct transponder_entry {
 	FIELD *alon;
 	struct transponder_line *transponders[MAX_NUM_TRANSPONDERS];
 };
-
-struct transponder_line* transponder_editor_line_create(int row);
 
 struct transponder_entry* transponder_editor_entry_create();
 

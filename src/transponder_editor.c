@@ -14,7 +14,7 @@
 
 FIELD *create_field(int field_height, int field_width, int field_row, int field_col) {
 	FIELD *ret_field = new_field(field_height, field_width, field_row, field_col, 0, 0);
-	set_field_back(ret_field, COLOR_PAIR(8));
+	set_field_back(ret_field, TRANSPONDER_ENTRY_DEFAULT_STYLE);
 	return ret_field;
 }
 
@@ -55,10 +55,8 @@ FORM *transponder_editor_form(struct transponder_entry *transponder_entry)
 {
 	//create horrible FIELD array for input into the form
 	FIELD **fields = calloc(NUM_FIELDS_IN_ENTRY*MAX_NUM_TRANSPONDERS + 1, sizeof(FIELD*));
-	fprintf(stderr, "%d\n", NUM_FIELDS_IN_ENTRY*MAX_NUM_TRANSPONDERS + 1);
 	for (int i=0; i < MAX_NUM_TRANSPONDERS; i++) {
 		int field_index = i*NUM_FIELDS_IN_ENTRY;
-		fprintf(stderr, "%d\n", NUM_FIELDS_IN_ENTRY);
 		fields[field_index] = transponder_entry->transponders[i]->transponder_name;
 		fields[field_index + 1] = transponder_entry->transponders[i]->uplink[0];
 		fields[field_index + 2] = transponder_entry->transponders[i]->downlink[0];
@@ -67,7 +65,6 @@ FORM *transponder_editor_form(struct transponder_entry *transponder_entry)
 		fields[field_index + 5] = transponder_entry->transponders[i]->uplink[1];
 		fields[field_index + 6] = transponder_entry->transponders[i]->downlink[1];
 		fields[field_index + 7] = transponder_entry->transponders[i]->phase[1];
-		fprintf(stderr, "%d %d %d\n", i, field_index, field_index + 7);
 	}
 	fields[NUM_FIELDS_IN_ENTRY*MAX_NUM_TRANSPONDERS] = NULL;
 
@@ -75,8 +72,15 @@ FORM *transponder_editor_form(struct transponder_entry *transponder_entry)
 	return form;
 }
 
+void transponder_editor_entry_clear(struct transponder_entry *entry) {
+
+}
+
 void transponder_editor_entry_fill(struct transponder_entry *entry, struct sat_db_entry *db_entry)
 {
+	for (int i=0; i < db_entry->num_transponders; i++) {
+		set_field_buffer(entry->transponders[i]->transponder_name, 0, db_entry->transponder_name[i]);
+	}
 }
 
 void transponder_db_entry_from_editor(struct sat_db_entry *db_entry, struct transponder_entry *entry)

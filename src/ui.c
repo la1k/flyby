@@ -2472,17 +2472,7 @@ void NewUser()
 	AnyKey();
 }
 
-void EditTransponderDatabase(struct tle_db *tle_db, struct transponder_db *sat_db)
-{
-	/* Print header */
-	attrset(COLOR_PAIR(6)|A_REVERSE|A_BOLD);
-	clear();
-
-	int row = 0;
-	mvprintw(row++,0,"                                                                                ");
-	mvprintw(row++,0,"  flyby Transponder Database Editor                                             ");
-	mvprintw(row++,0,"                                                                                ");
-
+void EditTransponderDatabaseField(struct sat_db_entry *sat_entry) {
 	struct transponder_entry *transponder_entry = transponder_editor_entry_create();
 	FORM *form = transponder_editor_form(transponder_entry);
 
@@ -2490,8 +2480,7 @@ void EditTransponderDatabase(struct tle_db *tle_db, struct transponder_db *sat_d
 	scale_form(form, &rows, &cols);
 
 	int form_win_height = rows + 4;
-	WINDOW *form_win = newwin(rows + 4, cols + 4, row+1, 3);
-	row += form_win_height;
+	WINDOW *form_win = newwin(rows + 4, cols + 4, 10, 10);
 	keypad(form_win, TRUE);
 	wattrset(form_win, COLOR_PAIR(4));
 	box(form_win, 0, 0);
@@ -2506,30 +2495,135 @@ void EditTransponderDatabase(struct tle_db *tle_db, struct transponder_db *sat_d
 
 	refresh();
 	form_driver(form, REQ_VALIDATION);
-	wrefresh(form_win);
 
-	bool run_menu = true;
-	while (run_menu) {
-		//handle keyboard
+
+	#define TRANSPONDER_ACTIVE_FIELDSTYLE COLOR_PAIR(5)
+	FIELD *prev_field = current_field(form);
+	set_field_back(prev_field, TRANSPONDER_ACTIVE_FIELDSTYLE);
+
+	wrefresh(form_win);
+	bool run_form = true;
+	while (run_form) {
+		transponder_editor_entry_fill(transponder_entry, sat_entry);
+
 		int c = wgetch(form_win);
+
 		switch (c) {
 			case 'q':
-				run_menu = false;
+				run_form = false;
+				break;
+			case KEY_UP:
+				form_driver(form, REQ_UP_FIELD);
+				break;
+			case KEY_DOWN:
+				form_driver(form, REQ_DOWN_FIELD);
+				break;
+			case KEY_LEFT:
+				form_driver(form, REQ_LEFT_FIELD);
+				break;
+			case KEY_RIGHT:
+				form_driver(form, REQ_RIGHT_FIELD);
 				break;
 			case KEY_BACKSPACE:
 				form_driver(form, REQ_DEL_PREV);
 			default:
 				form_driver(form, c);
 				form_driver(form, REQ_VALIDATION); //update buffer with field contents
-
-				wrefresh(form_win);
 				break;
 		}
+		FIELD *curr_field = current_field(form);
+
+		if (curr_field != prev_field) {
+			set_field_back(prev_field, TRANSPONDER_ENTRY_DEFAULT_STYLE);
+			set_field_back(curr_field, TRANSPONDER_ACTIVE_FIELDSTYLE);
+			prev_field = curr_field;
+		}
+
+		wrefresh(form_win);
 	}
 
 	unpost_form(form);
 
 	free_form(form);
+}
+
+void DisplayTransponderEntry(struct sat_db_entry *entry, WINDOW *display_window)
+{
+	wclear(display_window);
+	int row = 1;
+	int col = 1;
+	if (entry->squintflag) {
+		mvwprintw(display_window, row++, col, "Squint angle: Enabled. alat: %f, alon: %f.\n", entry->alat, entry->alon);
+	} else {
+		mvwprintw(display_window, row++, col, "Squint angle: Disabled\n");
+	}
+
+	if (entry->num_transponders <= 0) {
+		mvwprintw(display_window, row++, col, "No transponders defined.\n");
+	}
+
+	for (int i=0; i < entry->num_transponders; i++) {
+		mvwprintw(display_window, row++, col, "%s\n", entry->transponder_name[i]);
+		if (entry->uplink_start[i] != 0.0) mvwprintw(display_window, row++, col, "Uplink: %f, %f\n", entry->uplink_start[i], entry->uplink_end[i]);
+		if (entry->downlink_start[i] != 0.0) mvwprintw(display_window, row++, col, "Downlink: %f, %f\n", entry->downlink_start[i], entry->downlink_end[i]);
+		if (entry->phase_start[i] != 0) mvwprintw(display_window, row++, col, "Phase: %d, %d\n", entry->phase_start[i], entry->phase_end[i]);
+		if (entry->dayofweek[i] != 0) mvwprintw(display_window, row++, col, "Day of week: %d\n", entry->dayofweek[i]);
+	}
+}
+
+void EditTransponderDatabase(struct tle_db *tle_db, struct transponder_db *sat_db)
+{
+	/* Print header */
+	attrset(COLOR_PAIR(6)|A_REVERSE|A_BOLD);
+	clear();
+
+	int header_height = 3;
+	WINDOW *header_win = newwin(header_height, 100, 1, 1);
+	wattrset(header_win, COLOR_PAIR(6)|A_REVERSE|A_BOLD);
+	mvwprintw(1,0,"  flyby Transponder Database Editor");
+
+	//menu window
+	int window_width = 25;
+	int window_ypos = header_height+1;
+	WINDOW *menu_win = newwin(LINES-window_ypos-1, window_width, window_ypos, 1);
+	WINDOW *display_win = newwin(LINES-window_ypos-1, 100, window_ypos, window_width+5);
+	box(display_win, 0, 0);
+
+	keypad(menu_win, TRUE);
+	wattrset(menu_win, COLOR_PAIR(4));
+	box(menu_win, 0, 0);
+
+	struct filtered_menu menu = {0};
+	filtered_menu_from_tle_db(&menu, tle_db, menu_win);
+
+	unpost_menu(menu.menu);
+	menu_opts_on(menu.menu, O_ONEVALUE);
+	post_menu(menu.menu);
+
+	refresh();
+	wrefresh(menu_win);
+
+	DisplayTransponderEntry(&(sat_db->sats[0]), display_win);
+	wrefresh(display_win);
+	wrefresh(header_win);
+
+	bool run_menu = true;
+	while (run_menu) {
+		refresh();
+		wrefresh(menu_win);
+		wrefresh(display_win);
+
+		//handle keyboard
+		int c = wgetch(menu_win);
+		filtered_menu_handle(&menu, c);
+		int menu_index = item_index(current_item(menu.menu));
+		DisplayTransponderEntry(&(sat_db->sats[menu_index]), display_win);
+
+		if (c == 10) { //enter
+			EditTransponderDatabaseField(&(sat_db->sats[menu_index]));
+		}
+	}
+	filtered_menu_free(&menu);
 }
 
 void RunFlybyUI(bool new_user, const char *qthfile, predict_observer_t *observer, struct tle_db *tle_db, struct transponder_db *sat_db, rotctld_info_t *rotctld, rigctld_info_t *downlink, rigctld_info_t *uplink)
@@ -2655,6 +2749,8 @@ void RunFlybyUI(bool new_user, const char *qthfile, predict_observer_t *observer
 			case 'W':
 				EditWhitelist(tle_db);
 				MainMenu();
+				break;
+			case 'E':
 			case 'e':
 				EditTransponderDatabase(tle_db, sat_db);
 				MainMenu();
