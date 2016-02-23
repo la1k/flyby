@@ -2474,79 +2474,24 @@ void NewUser()
 
 void EditTransponderDatabaseField(struct sat_db_entry *sat_entry)
 {
-	struct transponder_entry *transponder_entry = transponder_editor_entry_create();
-	FORM *form = transponder_editor_form(transponder_entry);
+	WINDOW *form_win = newwin(LINES, 500, 8, 8);
 
-	int rows, cols;
-	scale_form(form, &rows, &cols);
-
-	int form_win_height = rows + 4;
-	WINDOW *form_win = newwin(rows + 4, cols + 4, 10, 10);
-	keypad(form_win, TRUE);
-	wattrset(form_win, COLOR_PAIR(4));
-	box(form_win, 0, 0);
-
-	/* Set main window and sub window */
-	set_form_win(form, form_win);
-	set_form_sub(form, derwin(form_win, rows, cols, 2, 2));
-
-	post_form(form);
-
-	mvwprintw(form_win, 1, 3, "Transponder name                Uplink      Downlink    Phase      Day of week");
-
-	refresh();
-	form_driver(form, REQ_VALIDATION);
-
-
-	#define TRANSPONDER_ACTIVE_FIELDSTYLE COLOR_PAIR(5)
-	FIELD *prev_field = current_field(form);
-	set_field_back(prev_field, TRANSPONDER_ACTIVE_FIELDSTYLE);
+	struct transponder_entry *transponder_entry = transponder_editor_entry_create(form_win, sat_entry);
 
 	wrefresh(form_win);
 	bool run_form = true;
 	while (run_form) {
-		transponder_editor_entry_fill(transponder_entry, sat_entry);
-
 		int c = wgetch(form_win);
 
-		switch (c) {
-			case 'q':
-				run_form = false;
-				break;
-			case KEY_UP:
-				form_driver(form, REQ_UP_FIELD);
-				break;
-			case KEY_DOWN:
-				form_driver(form, REQ_DOWN_FIELD);
-				break;
-			case KEY_LEFT:
-				form_driver(form, REQ_LEFT_FIELD);
-				break;
-			case KEY_RIGHT:
-				form_driver(form, REQ_RIGHT_FIELD);
-				break;
-			case KEY_BACKSPACE:
-				form_driver(form, REQ_DEL_PREV);
-			default:
-				form_driver(form, c);
-				form_driver(form, REQ_VALIDATION); //update buffer with field contents
-				break;
-		}
-		FIELD *curr_field = current_field(form);
-
-		if (curr_field != prev_field) {
-			set_field_back(prev_field, TRANSPONDER_ENTRY_DEFAULT_STYLE);
-			set_field_back(curr_field, TRANSPONDER_ACTIVE_FIELDSTYLE);
-			prev_field = curr_field;
+		if (c == 'q') {
+			run_form = false;
+		} else {
+			transponder_entry_handle(transponder_entry, c);
 		}
 
 		wrefresh(form_win);
 	}
 	delwin(form_win);
-
-	unpost_form(form);
-
-	free_form(form);
 }
 
 void DisplayTransponderEntry(struct sat_db_entry *entry, WINDOW *display_window)
@@ -2555,21 +2500,22 @@ void DisplayTransponderEntry(struct sat_db_entry *entry, WINDOW *display_window)
 	int row = 1;
 	int col = 1;
 	if (entry->squintflag) {
-		mvwprintw(display_window, row++, col, "Squint angle: Enabled. alat: %f, alon: %f.\n", entry->alat, entry->alon);
+		mvwprintw(display_window, row++, col, "Squint angle: Enabled. alat: %f, alon: %f.", entry->alat, entry->alon);
 	} else {
-		mvwprintw(display_window, row++, col, "Squint angle: Disabled\n");
+		mvwprintw(display_window, row++, col, "Squint angle: Disabled");
 	}
 
+
 	if (entry->num_transponders <= 0) {
-		mvwprintw(display_window, row++, col, "No transponders defined.\n");
+		mvwprintw(display_window, row++, col, "No transponders defined.");
 	}
 
 	for (int i=0; i < entry->num_transponders; i++) {
-		mvwprintw(display_window, row++, col, "%s\n", entry->transponder_name[i]);
-		if (entry->uplink_start[i] != 0.0) mvwprintw(display_window, row++, col, "Uplink: %f, %f\n", entry->uplink_start[i], entry->uplink_end[i]);
-		if (entry->downlink_start[i] != 0.0) mvwprintw(display_window, row++, col, "Downlink: %f, %f\n", entry->downlink_start[i], entry->downlink_end[i]);
-		if (entry->phase_start[i] != 0) mvwprintw(display_window, row++, col, "Phase: %d, %d\n", entry->phase_start[i], entry->phase_end[i]);
-		if (entry->dayofweek[i] != 0) mvwprintw(display_window, row++, col, "Day of week: %d\n", entry->dayofweek[i]);
+		mvwprintw(display_window, row++, col, "%s", entry->transponder_name[i]);
+		if (entry->uplink_start[i] != 0.0) mvwprintw(display_window, row++, col, "Uplink: %f, %f", entry->uplink_start[i], entry->uplink_end[i]);
+		if (entry->downlink_start[i] != 0.0) mvwprintw(display_window, row++, col, "Downlink: %f, %f", entry->downlink_start[i], entry->downlink_end[i]);
+		if (entry->phase_start[i] != 0) mvwprintw(display_window, row++, col, "Phase: %d, %d", entry->phase_start[i], entry->phase_end[i]);
+		if (entry->dayofweek[i] != 0) mvwprintw(display_window, row++, col, "Day of week: %d", entry->dayofweek[i]);
 	}
 }
 

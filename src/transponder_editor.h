@@ -9,6 +9,7 @@
 #define NUM_TRANSPONDER_SPECIFIERS 2
 
 #define TRANSPONDER_ENTRY_DEFAULT_STYLE COLOR_PAIR(1)|A_UNDERLINE
+#define TRANSPONDER_ACTIVE_FIELDSTYLE COLOR_PAIR(5)
 
 struct transponder_line {
 	FIELD *transponder_name;
@@ -19,17 +20,20 @@ struct transponder_line {
 };
 
 struct transponder_entry {
+	FORM *form;
 	FIELD *alat;
 	FIELD *alon;
 	struct transponder_line *transponders[MAX_NUM_TRANSPONDERS];
+
+	int num_displayed_transponders;
+
+	FIELD *prev_selected_field;
 };
 
 struct transponder_entry* transponder_editor_entry_create();
 
-void transponder_editor_entry_fill(struct transponder_entry *entry, struct sat_db_entry *db_entry);
-
 void transponder_db_entry_from_editor(struct sat_db_entry *db_entry, struct transponder_entry *entry);
 
-FORM *transponder_editor_form(struct transponder_entry *transponder_entry);
+void transponder_entry_handle(struct transponder_entry *transponder_entry, int c);
 
 #endif
