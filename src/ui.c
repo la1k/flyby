@@ -2472,7 +2472,8 @@ void NewUser()
 	AnyKey();
 }
 
-void EditTransponderDatabaseField(struct sat_db_entry *sat_entry) {
+void EditTransponderDatabaseField(struct sat_db_entry *sat_entry)
+{
 	struct transponder_entry *transponder_entry = transponder_editor_entry_create();
 	FORM *form = transponder_editor_form(transponder_entry);
 
@@ -2541,6 +2542,7 @@ void EditTransponderDatabaseField(struct sat_db_entry *sat_entry) {
 
 		wrefresh(form_win);
 	}
+	delwin(form_win);
 
 	unpost_form(form);
 
@@ -2578,20 +2580,24 @@ void EditTransponderDatabase(struct tle_db *tle_db, struct transponder_db *sat_d
 	clear();
 
 	int header_height = 3;
-	WINDOW *header_win = newwin(header_height, 100, 1, 1);
+	int win_width = 251;
+	WINDOW *header_win = newwin(header_height, win_width, 0, 0);
 	wattrset(header_win, COLOR_PAIR(6)|A_REVERSE|A_BOLD);
-	mvwprintw(1,0,"  flyby Transponder Database Editor");
+	mvwprintw(header_win,0,0,"                                                                                ");
+	mvwprintw(header_win,1,0,"  flyby Transponder Database Editor                                             ");
+	mvwprintw(header_win,2,0,"                                                                                ");
+
+	//mvwprintw(header_win, 1,0,"  flyby Transponder Database Editor");
+	WINDOW *main_win = newwin(LINES-header_height, win_width, header_height, 0);
 
 	//menu window
 	int window_width = 25;
 	int window_ypos = header_height+1;
-	WINDOW *menu_win = newwin(LINES-window_ypos-1, window_width, window_ypos, 1);
-	WINDOW *display_win = newwin(LINES-window_ypos-1, 100, window_ypos, window_width+5);
-	box(display_win, 0, 0);
+	WINDOW *menu_win = subwin(main_win, LINES-window_ypos-1, window_width, window_ypos, 1);
+	WINDOW *display_win = subwin(main_win, LINES-window_ypos-1, 100, window_ypos, window_width+5);
 
 	keypad(menu_win, TRUE);
 	wattrset(menu_win, COLOR_PAIR(4));
-	box(menu_win, 0, 0);
 
 	struct filtered_menu menu = {0};
 	filtered_menu_from_tle_db(&menu, tle_db, menu_win);
@@ -2600,28 +2606,42 @@ void EditTransponderDatabase(struct tle_db *tle_db, struct transponder_db *sat_d
 	menu_opts_on(menu.menu, O_ONEVALUE);
 	post_menu(menu.menu);
 
-	refresh();
-	wrefresh(menu_win);
-
 	DisplayTransponderEntry(&(sat_db->sats[0]), display_win);
-	wrefresh(display_win);
+
+	box(menu_win, 0, 0);
+
+	refresh();
 	wrefresh(header_win);
+	wrefresh(display_win);
+	wrefresh(menu_win);
 
 	bool run_menu = true;
 	while (run_menu) {
-		refresh();
-		wrefresh(menu_win);
-		wrefresh(display_win);
-
 		//handle keyboard
 		int c = wgetch(menu_win);
 		filtered_menu_handle(&menu, c);
+		wrefresh(menu_win);
 		int menu_index = item_index(current_item(menu.menu));
-		DisplayTransponderEntry(&(sat_db->sats[menu_index]), display_win);
 
 		if (c == 10) { //enter
 			EditTransponderDatabaseField(&(sat_db->sats[menu_index]));
+			//clear leftovers from transponder editor
+			wclear(main_win);
+			wrefresh(main_win);
+			refresh();
+
+			//force menu update
+			unpost_menu(menu.menu);
+			post_menu(menu.menu);
+
+			//refresh the rest and redraw window boxes
+			box(menu_win, 0, 0);
+			wrefresh(menu_win);
 		}
+
+		//display/refresh transponder entry displayer
+		DisplayTransponderEntry(&(sat_db->sats[menu_index]), display_win);
+		wrefresh(display_win);
 	}
 	filtered_menu_free(&menu);
 }
