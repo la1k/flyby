@@ -2569,8 +2569,8 @@ void EditTransponderDatabase(struct tle_db *tle_db, struct transponder_db *sat_d
 		int menu_index = item_index(current_item(menu.menu));
 
 		if (c == 10) { //enter
-			fprintf(stderr, "wut\n");
 			EditTransponderDatabaseField(&(sat_db->sats[menu_index]));
+
 			//clear leftovers from transponder editor
 			wclear(main_win);
 			wrefresh(main_win);
