@@ -18,6 +18,26 @@ FIELD *create_field(int field_height, int field_width, int field_row, int field_
 	return ret_field;
 }
 
+bool transponder_line_status(struct transponder_line *transponder_line)
+{
+	return (field_status(transponder_line->transponder_name) == TRUE);
+}
+
+void transponder_line_set_visible(struct transponder_line *transponder_line) {
+	field_opts_on(transponder_line->transponder_name, O_VISIBLE);
+
+	field_opts_on(transponder_line->uplink[0], O_VISIBLE);
+	field_opts_on(transponder_line->uplink[1], O_VISIBLE);
+
+	field_opts_on(transponder_line->downlink[0], O_VISIBLE);
+	field_opts_on(transponder_line->downlink[1], O_VISIBLE);
+
+	field_opts_on(transponder_line->phase[0], O_VISIBLE);
+	field_opts_on(transponder_line->phase[1], O_VISIBLE);
+
+	field_opts_on(transponder_line->dayofweek, O_VISIBLE);
+}
+
 struct transponder_line* transponder_editor_line_create(int row)
 {
 	struct transponder_line *ret_line = (struct transponder_line*)malloc(sizeof(struct transponder_line));
@@ -96,6 +116,7 @@ struct transponder_entry* transponder_editor_entry_create(WINDOW *window, struct
 			}
 		}
 	}
+	new_entry->num_editable_transponders = db_entry->num_transponders+1;
 	fields[NUM_FIELDS_IN_ENTRY*MAX_NUM_TRANSPONDERS] = NULL;
 
 	new_entry->form = new_form(fields);
@@ -122,15 +143,13 @@ struct transponder_entry* transponder_editor_entry_create(WINDOW *window, struct
 	new_entry->prev_selected_field = current_field(new_entry->form);
 	set_field_back(new_entry->prev_selected_field, TRANSPONDER_ACTIVE_FIELDSTYLE);
 
-
-
 	transponder_editor_entry_fill(new_entry, db_entry);
-
 	return new_entry;
 }
 
 void transponder_entry_handle(struct transponder_entry *transponder_entry, int c)
 {
+	//handle keyboard
 	switch (c) {
 		case KEY_UP:
 			form_driver(transponder_entry->form, REQ_UP_FIELD);
@@ -151,12 +170,19 @@ void transponder_entry_handle(struct transponder_entry *transponder_entry, int c
 			form_driver(transponder_entry->form, REQ_VALIDATION); //update buffer with field contents
 			break;
 	}
-	FIELD *curr_field = current_field(transponder_entry->form);
 
+	//switch background color of currently marked field, reset previous field
+	FIELD *curr_field = current_field(transponder_entry->form);
 	if (curr_field != transponder_entry->prev_selected_field) {
 		set_field_back(transponder_entry->prev_selected_field, TRANSPONDER_ENTRY_DEFAULT_STYLE);
 		set_field_back(curr_field, TRANSPONDER_ACTIVE_FIELDSTYLE);
 		transponder_entry->prev_selected_field = curr_field;
+	}
+
+	//add a new transponder editor field if last entry has been edited
+	if ((transponder_entry->num_editable_transponders < MAX_NUM_TRANSPONDERS) && (transponder_line_status(transponder_entry->transponders[transponder_entry->num_editable_transponders-1]))) {
+		transponder_line_set_visible(transponder_entry->transponders[transponder_entry->num_editable_transponders]);
+		transponder_entry->num_editable_transponders++;
 	}
 }
 

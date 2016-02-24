@@ -2533,7 +2533,6 @@ void EditTransponderDatabase(struct tle_db *tle_db, struct transponder_db *sat_d
 	mvwprintw(header_win,1,0,"  flyby Transponder Database Editor                                             ");
 	mvwprintw(header_win,2,0,"                                                                                ");
 
-	//mvwprintw(header_win, 1,0,"  flyby Transponder Database Editor");
 	WINDOW *main_win = newwin(LINES-header_height, win_width, header_height, 0);
 
 	//menu window

@@ -23,6 +23,8 @@ struct transponder_entry {
 	FORM *form;
 	FIELD *alat;
 	FIELD *alon;
+
+	int num_editable_transponders;
 	struct transponder_line *transponders[MAX_NUM_TRANSPONDERS];
 
 	int num_displayed_transponders;
