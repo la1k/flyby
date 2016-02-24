@@ -2496,7 +2496,7 @@ void EditTransponderDatabaseField(struct sat_db_entry *sat_entry)
 
 void DisplayTransponderEntry(struct sat_db_entry *entry, WINDOW *display_window)
 {
-	wclear(display_window);
+	werase(display_window);
 	int row = 1;
 	int col = 1;
 	if (entry->squintflag) {
@@ -2540,7 +2540,7 @@ void EditTransponderDatabase(struct tle_db *tle_db, struct transponder_db *sat_d
 	int window_width = 25;
 	int window_ypos = header_height+1;
 	WINDOW *menu_win = subwin(main_win, LINES-window_ypos-1, window_width, window_ypos, 1);
-	WINDOW *display_win = subwin(main_win, LINES-window_ypos-1, 100, window_ypos, window_width+5);
+	WINDOW *display_win = subwin(main_win, LINES-window_ypos-1, 50, window_ypos, window_width+5);
 
 	keypad(menu_win, TRUE);
 	wattrset(menu_win, COLOR_PAIR(4));
@@ -2565,11 +2565,11 @@ void EditTransponderDatabase(struct tle_db *tle_db, struct transponder_db *sat_d
 	while (run_menu) {
 		//handle keyboard
 		int c = wgetch(menu_win);
-		filtered_menu_handle(&menu, c);
-		wrefresh(menu_win);
+		bool handled = filtered_menu_handle(&menu, c);
 		int menu_index = item_index(current_item(menu.menu));
 
 		if (c == 10) { //enter
+			fprintf(stderr, "wut\n");
 			EditTransponderDatabaseField(&(sat_db->sats[menu_index]));
 			//clear leftovers from transponder editor
 			wclear(main_win);
