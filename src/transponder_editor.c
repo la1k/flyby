@@ -8,7 +8,7 @@
 #define TRANSPONDER_PHASE_LENGTH 10
 #define TRANSPONDER_DOW_LENGTH 10
 
-#define NUM_FIELDS_IN_ENTRY (NUM_TRANSPONDER_SPECIFIERS*3 + 2)
+#define NUM_FIELDS_IN_ENTRY (NUM_TRANSPONDER_SPECIFIERS*2 + 1)
 
 #define FIELD_HEIGHT 1
 #define SPACING 2
@@ -32,11 +32,6 @@ void transponder_line_set_visible(struct transponder_line *transponder_line) {
 
 	field_opts_on(transponder_line->downlink[0], O_VISIBLE);
 	field_opts_on(transponder_line->downlink[1], O_VISIBLE);
-
-	field_opts_on(transponder_line->phase[0], O_VISIBLE);
-	field_opts_on(transponder_line->phase[1], O_VISIBLE);
-
-	field_opts_on(transponder_line->dayofweek, O_VISIBLE);
 }
 
 struct transponder_line* transponder_editor_line_create(int row)
@@ -50,11 +45,6 @@ struct transponder_line* transponder_editor_line_create(int row)
 
 	ret_line->downlink[0] = create_field(FIELD_HEIGHT, TRANSPONDER_FREQUENCY_LENGTH, row, TRANSPONDER_NAME_LENGTH+TRANSPONDER_FREQUENCY_LENGTH+1+2*SPACING);
 	ret_line->downlink[1] = create_field(FIELD_HEIGHT, TRANSPONDER_FREQUENCY_LENGTH, row+2, TRANSPONDER_NAME_LENGTH+TRANSPONDER_FREQUENCY_LENGTH+1+2*SPACING);
-
-	ret_line->phase[0] = create_field(FIELD_HEIGHT, TRANSPONDER_FREQUENCY_LENGTH, row, TRANSPONDER_NAME_LENGTH+TRANSPONDER_FREQUENCY_LENGTH*2+1+3*SPACING);
-	ret_line->phase[1] = create_field(FIELD_HEIGHT, TRANSPONDER_FREQUENCY_LENGTH, row+2, TRANSPONDER_NAME_LENGTH+TRANSPONDER_FREQUENCY_LENGTH*2+1+3*SPACING);
-
-	ret_line->dayofweek = create_field(FIELD_HEIGHT, TRANSPONDER_DOW_LENGTH, row, TRANSPONDER_NAME_LENGTH+TRANSPONDER_FREQUENCY_LENGTH*2+TRANSPONDER_PHASE_LENGTH+4*SPACING);
 
 	return ret_line;
 }
@@ -97,14 +87,11 @@ struct transponder_entry* transponder_editor_entry_create(WINDOW *window, struct
 		fields[field_index] = new_entry->transponders[i]->transponder_name;
 		fields[field_index + 1] = new_entry->transponders[i]->uplink[0];
 		fields[field_index + 2] = new_entry->transponders[i]->downlink[0];
-		fields[field_index + 3] = new_entry->transponders[i]->phase[0];
-		fields[field_index + 4] = new_entry->transponders[i]->dayofweek;
-		fields[field_index + 5] = new_entry->transponders[i]->uplink[1];
-		fields[field_index + 6] = new_entry->transponders[i]->downlink[1];
-		fields[field_index + 7] = new_entry->transponders[i]->phase[1];
+		fields[field_index + 3] = new_entry->transponders[i]->uplink[1];
+		fields[field_index + 4] = new_entry->transponders[i]->downlink[1];
 
 		if (i > db_entry->num_transponders) {
-			for (int j=field_index; j < field_index+8; j++) {
+			for (int j=field_index; j < field_index+NUM_FIELDS_IN_ENTRY; j++) {
 				field_opts_off(fields[j], O_VISIBLE);
 			}
 		}
@@ -128,7 +115,7 @@ struct transponder_entry* transponder_editor_entry_create(WINDOW *window, struct
 
 	post_form(new_entry->form);
 
-	mvwprintw(window, 1, 3, "Transponder name      Uplink      Downlink    Phase      Day of week");
+	mvwprintw(window, 1, 3, "Transponder name      Uplink      Downlink");
 
 	refresh();
 	form_driver(new_entry->form, REQ_VALIDATION);

@@ -15,8 +15,6 @@ struct transponder_line {
 	FIELD *transponder_name;
 	FIELD *uplink[NUM_TRANSPONDER_SPECIFIERS];
 	FIELD *downlink[NUM_TRANSPONDER_SPECIFIERS];
-	FIELD *phase[NUM_TRANSPONDER_SPECIFIERS];
-	FIELD *dayofweek;
 };
 
 struct transponder_entry {
