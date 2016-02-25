@@ -137,10 +137,12 @@ void transponder_editor_line_clear(struct transponder_line *line) {
 
 void transponder_editor_entry_clear(struct transponder_entry *entry)
 {
+	//clear editable lines
 	for (int i=0; i < entry->num_editable_transponders-1; i++) {
 		transponder_editor_line_clear(entry->transponders[i]);
 	}
 
+	//clear last line if it has been edited
 	struct transponder_line *last_line = entry->transponders[entry->num_editable_transponders-1];
 	if (transponder_line_status(last_line)) {
 		transponder_editor_line_clear(last_line);
