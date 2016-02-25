@@ -76,14 +76,6 @@ void transponder_editor_entry_fill(struct transponder_entry *entry, struct sat_d
 
 		snprintf(temp, MAX_NUM_CHARS, "%f", db_entry->downlink_end[i]);
 		set_field_buffer(entry->transponders[i]->downlink[1], 0, temp);
-
-		snprintf(temp, MAX_NUM_CHARS, "%c", db_entry->dayofweek[i]);
-		set_field_buffer(entry->transponders[i]->dayofweek, 0, temp);
-
-		snprintf(temp, MAX_NUM_CHARS, "%d", db_entry->phase_start[i]);
-		set_field_buffer(entry->transponders[i]->phase[0], 0, temp);
-		snprintf(temp, MAX_NUM_CHARS, "%d", db_entry->phase_end[i]);
-		set_field_buffer(entry->transponders[i]->phase[1], 0, temp);
 	}
 }
 
@@ -202,8 +194,5 @@ void transponder_db_entry_from_editor(struct sat_db_entry *db_entry, struct tran
 		db_entry->uplink_end[i] = strtod(field_buffer(line->uplink[1], 0), NULL);
 		db_entry->downlink_start[i] = strtod(field_buffer(line->downlink[0], 0), NULL);
 		db_entry->downlink_end[i] = strtod(field_buffer(line->downlink[1], 0), NULL);
-		db_entry->phase_start[i] = strtod(field_buffer(line->phase[0], 0), NULL);
-		db_entry->phase_end[i] = strtod(field_buffer(line->phase[1], 0), NULL);
-		db_entry->dayofweek[i] = field_buffer(line->dayofweek, 0)[0];
 	}
 }

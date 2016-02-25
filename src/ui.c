@@ -2516,8 +2516,6 @@ void DisplayTransponderEntry(struct sat_db_entry *entry, WINDOW *display_window)
 		mvwprintw(display_window, row++, col, "%s", entry->transponder_name[i]);
 		if (entry->uplink_start[i] != 0.0) mvwprintw(display_window, row++, col, "Uplink: %f, %f", entry->uplink_start[i], entry->uplink_end[i]);
 		if (entry->downlink_start[i] != 0.0) mvwprintw(display_window, row++, col, "Downlink: %f, %f", entry->downlink_start[i], entry->downlink_end[i]);
-		if (entry->phase_start[i] != 0) mvwprintw(display_window, row++, col, "Phase: %d, %d", entry->phase_start[i], entry->phase_end[i]);
-		if (entry->dayofweek[i] != 0) mvwprintw(display_window, row++, col, "Day of week: %d", entry->dayofweek[i]);
 	}
 }
 
@@ -2566,7 +2564,7 @@ void EditTransponderDatabase(struct tle_db *tle_db, struct transponder_db *sat_d
 	while (run_menu) {
 		//handle keyboard
 		int c = wgetch(menu_win);
-		bool handled = filtered_menu_handle(&menu, c);
+		filtered_menu_handle(&menu, c);
 		int menu_index = item_index(current_item(menu.menu));
 
 		if (c == 10) { //enter

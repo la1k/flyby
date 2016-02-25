@@ -13,7 +13,6 @@ int transponder_db_from_file(const char *dbfile, const struct tle_db *tle_db, st
 	ret_db->num_sats = tle_db->num_tles;
 	FILE *fd=fopen(dbfile,"r");
 	long catnum;
-	unsigned char dayofweek;
 	char line1[80];
 	int y = 0, match = 0, transponders = 0, entry = 0;
 	if (fd!=NULL) {
@@ -73,26 +72,10 @@ int transponder_db_from_file(const char *dbfile, const struct tle_db *tle_db, st
 					if (match)
 						sscanf(line1,"%lf, %lf", &(ret_db->sats[y].downlink_start[entry]), &(ret_db->sats[y].downlink_end[entry]));
 
-					fgets(line1,40,fd);
+					fgets(line1,40,fd); //Unused information: weekly schedule for transponder.
+					fgets(line1,40,fd); //Unused information: orbital schedule for transponder.
 
 					if (match) {
-						if (strncmp(line1,"No",2)!=0) {
-							dayofweek=(unsigned char)atoi(line1);
-							ret_db->sats[y].dayofweek[entry]=dayofweek;
-						} else
-							ret_db->sats[y].dayofweek[entry]=0;
-					}
-
-					fgets(line1,40,fd);
-
-					if (match) {
-						if (strncmp(line1,"No",2)!=0)
-							sscanf(line1,"%d, %d",&(ret_db->sats[y].phase_start[entry]), &(ret_db->sats[y].phase_end[entry]));
-						else {
-							ret_db->sats[y].phase_start[entry]=0;
-							ret_db->sats[y].phase_end[entry]=0;
-						}
-
 						if (ret_db->sats[y].uplink_start[entry]!=0.0 || ret_db->sats[y].downlink_start[entry]!=0.0)
 							transponders++;
 

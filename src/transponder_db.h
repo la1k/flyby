@@ -24,11 +24,6 @@ struct sat_db_entry {
 	///downlink frequencies
 	double downlink_start[MAX_NUM_TRANSPONDERS];
 	double downlink_end[MAX_NUM_TRANSPONDERS];
-	///at which day of week the transponder is turned on?
-	unsigned char dayofweek[MAX_NUM_TRANSPONDERS];
-	///phase something
-	int phase_start[MAX_NUM_TRANSPONDERS];
-	int phase_end[MAX_NUM_TRANSPONDERS];
 };
 
 /**
