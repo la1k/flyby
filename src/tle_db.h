@@ -84,10 +84,40 @@ void tle_db_update(const char *filename, struct tle_db *tle_db, bool *ret_was_up
  **/
 void tle_db_from_directory(const char *dirpath, struct tle_db *ret_tle_db);
 
+/**
+ * Set entry in TLE database to enabled/disabled.
+ *
+ * \param db TLE database
+ * \param tle_index Index in TLE database
+ * \param enabled True for enabling, false for disabling
+ **/
 void tle_db_entry_set_enabled(struct tle_db *db, int tle_index, bool enabled);
+
+/**
+ * Check whether TLE entry is enabled/disabled.
+ *
+ * \param db TLE database
+ * \param tle_index Index in TLE database
+ * \return True if TLE entry is enabled, false otherwise
+ **/
 bool tle_db_entry_enabled(const struct tle_db *db, int tle_index);
 
+/**
+ * Set TLE database entries to enabled according to whitelist file in search paths. Default is to let
+ * TLE entry be disabled.
+ *
+ * Whitelist file is assumed to be located in XDG_CONFIG_HOME/flyby/flyby.whitelist, containing a list of
+ * satellite numbers corresponding to the TLEs that should be enabled.
+ *
+ * \param db TLE database, which will have its enabled/disabled flags modified according to the whitelist file
+ **/
 void whitelist_from_search_paths(struct tle_db *db);
+
+/**
+ * Write enabled/disabled flags for each TLE entry to default writepath (XDG_CONFIG_HOME/flyby/flyby.whitelist).
+ *
+ * \param db TLE database
+ **/
 void whitelist_write_to_default(struct tle_db *db);
 
 /**
