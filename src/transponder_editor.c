@@ -1,7 +1,7 @@
 #include <stdlib.h>
 #include "transponder_editor.h"
 #include <string.h>
-
+#include "ui.h"
 
 #define TRANSPONDER_FREQUENCY_LENGTH 10
 #define TRANSPONDER_NAME_LENGTH 20
@@ -80,7 +80,7 @@ struct transponder_entry* transponder_editor_entry_create(WINDOW *window, struct
 		row += 4;
 	}
 
-	//create horrible FIELD array for input into the form
+	//create horrible FIELD array for input into the FORM
 	FIELD **fields = calloc(NUM_FIELDS_IN_ENTRY*MAX_NUM_TRANSPONDERS + 1, sizeof(FIELD*));
 	for (int i=0; i < MAX_NUM_TRANSPONDERS; i++) {
 		int field_index = i*NUM_FIELDS_IN_ENTRY;
@@ -98,33 +98,53 @@ struct transponder_entry* transponder_editor_entry_create(WINDOW *window, struct
 	}
 	new_entry->num_editable_transponders = db_entry->num_transponders+1;
 	fields[NUM_FIELDS_IN_ENTRY*MAX_NUM_TRANSPONDERS] = NULL;
-
 	new_entry->form = new_form(fields);
 
+	//scale input window to the form
 	int rows, cols;
 	scale_form(new_entry->form, &rows, &cols);
 	wresize(window, rows+4, cols+4);
-
 	keypad(window, TRUE);
 	wattrset(window, COLOR_PAIR(4));
 	box(window, 0, 0);
 
-	/* Set main window and sub window */
+	//sub window for form
 	set_form_win(new_entry->form, window);
 	set_form_sub(new_entry->form, derwin(window, rows, cols, 2, 2));
 
-	post_form(new_entry->form);
-
 	mvwprintw(window, 1, 3, "Transponder name      Uplink      Downlink");
-
+	post_form(new_entry->form);
 	refresh();
+
 	form_driver(new_entry->form, REQ_VALIDATION);
 
+	//mark first field with different background color
 	new_entry->prev_selected_field = current_field(new_entry->form);
 	set_field_back(new_entry->prev_selected_field, TRANSPONDER_ACTIVE_FIELDSTYLE);
 
+	//fill fields with transponder database information
 	transponder_editor_entry_fill(new_entry, db_entry);
 	return new_entry;
+}
+
+void transponder_editor_line_clear(struct transponder_line *line) {
+	set_field_buffer(line->transponder_name, 0, "");
+	set_field_buffer(line->uplink[0], 0, "");
+	set_field_buffer(line->uplink[1], 0, "");
+	set_field_buffer(line->downlink[0], 0, "");
+	set_field_buffer(line->downlink[1], 0, "");
+}
+
+void transponder_editor_entry_clear(struct transponder_entry *entry)
+{
+	for (int i=0; i < entry->num_editable_transponders-1; i++) {
+		transponder_editor_line_clear(entry->transponders[i]);
+	}
+
+	struct transponder_line *last_line = entry->transponders[entry->num_editable_transponders-1];
+	if (transponder_line_status(last_line)) {
+		transponder_editor_line_clear(last_line);
+	}
 }
 
 void transponder_entry_handle(struct transponder_entry *transponder_entry, int c)
@@ -143,8 +163,19 @@ void transponder_entry_handle(struct transponder_entry *transponder_entry, int c
 		case KEY_RIGHT:
 			form_driver(transponder_entry->form, REQ_RIGHT_FIELD);
 			break;
+		case 10:
+			form_driver(transponder_entry->form, REQ_NEXT_FIELD);
+			break;
 		case KEY_BACKSPACE:
 			form_driver(transponder_entry->form, REQ_DEL_PREV);
+			form_driver(transponder_entry->form, REQ_VALIDATION);
+			break;
+		case KEY_DC:
+			form_driver(transponder_entry->form, REQ_CLR_FIELD);
+			break;
+		case 23: //CTRL + W
+			transponder_editor_entry_clear(transponder_entry);
+			break;
 		default:
 			form_driver(transponder_entry->form, c);
 			form_driver(transponder_entry->form, REQ_VALIDATION); //update buffer with field contents
@@ -167,19 +198,27 @@ void transponder_entry_handle(struct transponder_entry *transponder_entry, int c
 }
 
 
-void transponder_editor_entry_clear(struct transponder_entry *entry) {
-
-}
-
 void transponder_db_entry_from_editor(struct sat_db_entry *db_entry, struct transponder_entry *entry)
 {
+	int entry_index = 0;
 	for (int i=0; i < entry->num_editable_transponders; i++) {
+		//get name from transponder entry
 		struct transponder_line *line = entry->transponders[i];
+		char temp[MAX_NUM_CHARS];
+		strncpy(temp, field_buffer(line->transponder_name, 0), MAX_NUM_CHARS);
+		trim_whitespaces_from_end(temp);
 
-		strncpy(db_entry->transponder_name[i], field_buffer(line->transponder_name, 0), MAX_NUM_CHARS);
-		db_entry->uplink_start[i] = strtod(field_buffer(line->uplink[0], 0), NULL);
-		db_entry->uplink_end[i] = strtod(field_buffer(line->uplink[1], 0), NULL);
-		db_entry->downlink_start[i] = strtod(field_buffer(line->downlink[0], 0), NULL);
-		db_entry->downlink_end[i] = strtod(field_buffer(line->downlink[1], 0), NULL);
+		//add to database if transponder name is defined
+		if (strlen(temp) > 0) {
+			strncpy(db_entry->transponder_name[entry_index], temp, MAX_NUM_CHARS);
+			db_entry->uplink_start[entry_index] = strtod(field_buffer(line->uplink[0], 0), NULL);
+			db_entry->uplink_end[entry_index] = strtod(field_buffer(line->uplink[1], 0), NULL);
+			db_entry->downlink_start[entry_index] = strtod(field_buffer(line->downlink[0], 0), NULL);
+			db_entry->downlink_end[entry_index] = strtod(field_buffer(line->downlink[1], 0), NULL);
+
+			entry_index++;
+		}
 	}
+
+	db_entry->num_transponders = entry_index;
 }

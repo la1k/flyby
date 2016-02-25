@@ -7,6 +7,13 @@
 #include "transponder_db.h"
 
 /**
+ * Trim whitespaces in string from end. Used for massaging output from FIELD/FORMs.
+ *
+ * \param string String to modify. Is modified in place
+ **/
+void trim_whitespaces_from_end(char *string);
+
+/**
  * Quits ncurses, resets the terminal and displays an error message.
  *
  * \param string Error message
