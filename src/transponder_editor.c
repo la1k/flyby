@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include "transponder_editor.h"
+#include <string.h>
 
 
 #define TRANSPONDER_FREQUENCY_LENGTH 10
@@ -193,4 +194,16 @@ void transponder_editor_entry_clear(struct transponder_entry *entry) {
 
 void transponder_db_entry_from_editor(struct sat_db_entry *db_entry, struct transponder_entry *entry)
 {
+	for (int i=0; i < entry->num_editable_transponders; i++) {
+		struct transponder_line *line = entry->transponders[i];
+
+		strncpy(db_entry->transponder_name[i], field_buffer(line->transponder_name, 0), MAX_NUM_CHARS);
+		db_entry->uplink_start[i] = strtod(field_buffer(line->uplink[0], 0), NULL);
+		db_entry->uplink_end[i] = strtod(field_buffer(line->uplink[1], 0), NULL);
+		db_entry->downlink_start[i] = strtod(field_buffer(line->downlink[0], 0), NULL);
+		db_entry->downlink_end[i] = strtod(field_buffer(line->downlink[1], 0), NULL);
+		db_entry->phase_start[i] = strtod(field_buffer(line->phase[0], 0), NULL);
+		db_entry->phase_end[i] = strtod(field_buffer(line->phase[1], 0), NULL);
+		db_entry->dayofweek[i] = field_buffer(line->dayofweek, 0)[0];
+	}
 }

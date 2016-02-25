@@ -2166,7 +2166,7 @@ void Illumination(const char *name, predict_orbital_elements_t *orbital_elements
 	while (quit!=1 && breakout!=1 && !(orbit.decayed));
 }
 
-void pattern_prepare(char *string)
+void trim_whitespaces_from_end(char *string)
 {
 	int length = strlen(string);
 
@@ -2297,7 +2297,7 @@ void EditWhitelist(struct tle_db *tle_db)
 			switch (c) {
 				case 'q':
 					strncpy(field_contents, field_buffer(field[0], 0), MAX_NUM_CHARS);
-					pattern_prepare(field_contents);
+					trim_whitespaces_from_end(field_contents);
 
 					if (strlen(field_contents) > 0) {
 						//wipe field if field is non-empty
@@ -2320,7 +2320,7 @@ void EditWhitelist(struct tle_db *tle_db)
 					form_driver(form, REQ_VALIDATION); //update buffer with field contents
 
 					strncpy(field_contents, field_buffer(field[0], 0), MAX_NUM_CHARS);
-					pattern_prepare(field_contents);
+					trim_whitespaces_from_end(field_contents);
 
 					filtered_menu_pattern_match(&menu, field_contents);
 
@@ -2491,6 +2491,8 @@ void EditTransponderDatabaseField(struct sat_db_entry *sat_entry)
 
 		wrefresh(form_win);
 	}
+
+	transponder_db_entry_from_editor(sat_entry, transponder_entry);
 	delwin(form_win);
 }
 
