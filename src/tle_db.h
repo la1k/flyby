@@ -36,16 +36,6 @@ struct tle_db {
 };
 
 /**
- * Defines whether to overwrite only older TLE entries or all existing TLE entries when merging two databases.
- **/
-enum tle_merge_behavior {
-	///Overwrite only old existing TLE entries
-	TLE_OVERWRITE_OLD,
-	///Overwrite none of the existing TLE entries
-	TLE_OVERWRITE_NONE
-};
-
-/**
  * Read TLE entries from folders defined using the XDG file specification. TLEs are read
  * from files located in {XDG_DATA_DIRS}/flyby/tles and XDG_DATA_HOME/flyby/tles.
  * A union over the files is used.
@@ -85,42 +75,6 @@ void tle_db_update(const char *filename, struct tle_db *tle_db, bool *ret_was_up
 void tle_db_from_directory(const char *dirpath, struct tle_db *ret_tle_db);
 
 /**
- * Set entry in TLE database to enabled/disabled.
- *
- * \param db TLE database
- * \param tle_index Index in TLE database
- * \param enabled True for enabling, false for disabling
- **/
-void tle_db_entry_set_enabled(struct tle_db *db, int tle_index, bool enabled);
-
-/**
- * Check whether TLE entry is enabled/disabled.
- *
- * \param db TLE database
- * \param tle_index Index in TLE database
- * \return True if TLE entry is enabled, false otherwise
- **/
-bool tle_db_entry_enabled(const struct tle_db *db, int tle_index);
-
-/**
- * Set TLE database entries to enabled according to whitelist file in search paths. Default is to let
- * TLE entry be disabled.
- *
- * Whitelist file is assumed to be located in XDG_CONFIG_HOME/flyby/flyby.whitelist, containing a list of
- * satellite numbers corresponding to the TLEs that should be enabled.
- *
- * \param db TLE database, which will have its enabled/disabled flags modified according to the whitelist file
- **/
-void whitelist_from_search_paths(struct tle_db *db);
-
-/**
- * Write enabled/disabled flags for each TLE entry to default writepath (XDG_CONFIG_HOME/flyby/flyby.whitelist).
- *
- * \param db TLE database
- **/
-void whitelist_write_to_default(struct tle_db *db);
-
-/**
  * Get list of filenames from which TLE database is generated.
  *
  * \param tle_db TLE database
@@ -144,6 +98,16 @@ int tle_db_from_file(const char *tle_file, struct tle_db *ret_db);
  * \param tle_db TLE database to write
  **/
 void tle_db_to_file(const char *filename, struct tle_db *tle_db);
+
+/**
+ * Defines whether to overwrite only older TLE entries or all existing TLE entries when merging two databases.
+ **/
+enum tle_merge_behavior {
+	///Overwrite only old existing TLE entries
+	TLE_OVERWRITE_OLD,
+	///Overwrite none of the existing TLE entries
+	TLE_OVERWRITE_NONE
+};
 
 /**
  * Merge two TLE databases.
@@ -189,5 +153,40 @@ void tle_db_add_entry(struct tle_db *tle_db, const struct tle_db_entry *entry);
  **/
 int tle_db_find_entry(const struct tle_db *tle_db, long satellite_number);
 
+/**
+ * Set entry in TLE database to enabled/disabled.
+ *
+ * \param db TLE database
+ * \param tle_index Index in TLE database
+ * \param enabled True for enabling, false for disabling
+ **/
+void tle_db_entry_set_enabled(struct tle_db *db, int tle_index, bool enabled);
+
+/**
+ * Check whether TLE entry is enabled/disabled.
+ *
+ * \param db TLE database
+ * \param tle_index Index in TLE database
+ * \return True if TLE entry is enabled, false otherwise
+ **/
+bool tle_db_entry_enabled(const struct tle_db *db, int tle_index);
+
+/**
+ * Set TLE database entries to enabled according to whitelist file in search paths. Default is to let
+ * TLE entry be disabled.
+ *
+ * Whitelist file is assumed to be located in XDG_CONFIG_HOME/flyby/flyby.whitelist, containing a list of
+ * satellite numbers corresponding to the TLEs that should be enabled.
+ *
+ * \param db TLE database, which will have its enabled/disabled flags modified according to the whitelist file
+ **/
+void whitelist_from_search_paths(struct tle_db *db);
+
+/**
+ * Write enabled/disabled flags for each TLE entry to default writepath (XDG_CONFIG_HOME/flyby/flyby.whitelist).
+ *
+ * \param db TLE database
+ **/
+void whitelist_write_to_default(struct tle_db *db);
 
 #endif
