@@ -183,6 +183,22 @@ bool tle_db_entry_enabled(const struct tle_db *db, int tle_index);
 void whitelist_from_search_paths(struct tle_db *db);
 
 /**
+ * Set TLE database entries to enabled according to defined whitelist file.
+ *
+ * \param db TLE database, where entries are enabled/disabled
+ * \param file Whitelist filepath
+ **/
+void whitelist_from_file(struct tle_db *db, const char *file);
+
+/**
+ * Write enabled/disabled flags for each TLE entry to file.
+ *
+ * \param filename Filepath
+ * \param db TLE database
+ **/
+void whitelist_to_file(const char *filename, struct tle_db *db);
+
+/**
  * Write enabled/disabled flags for each TLE entry to default writepath (XDG_CONFIG_HOME/flyby/flyby.whitelist).
  *
  * \param db TLE database

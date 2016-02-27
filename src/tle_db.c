@@ -432,6 +432,17 @@ void whitelist_from_search_paths(struct tle_db *db)
 	whitelist_from_file(db, whitelist_path);
 }
 
+void whitelist_to_file(const char *filename, struct tle_db *db)
+{
+	FILE* fd = fopen(filename, "w");
+	for (int i=0; i < db->num_tles; i++) {
+		if (tle_db_entry_enabled(db, i)) {
+			fprintf(fd, "%ld\n", db->tles[i].satellite_number);
+		}
+	}
+	fclose(fd);
+}
+
 void whitelist_write_to_default(struct tle_db *db)
 {
 	//get writepath
@@ -442,12 +453,6 @@ void whitelist_write_to_default(struct tle_db *db)
 	free(config_home);
 
 	//write whitelist to writepath
-	FILE* fd = fopen(writepath, "w");
-	for (int i=0; i < db->num_tles; i++) {
-		if (tle_db_entry_enabled(db, i)) {
-			fprintf(fd, "%ld\n", db->tles[i].satellite_number);
-		}
-	}
-	fclose(fd);
+	whitelist_to_file(writepath, db);
 }
 
