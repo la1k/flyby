@@ -3,10 +3,13 @@
 #include <string.h>
 #include "ui.h"
 
+#define TRANSPONDER_DESCRIPTION_LENGTH 42
 #define TRANSPONDER_FREQUENCY_LENGTH 10
 #define TRANSPONDER_NAME_LENGTH 20
 #define TRANSPONDER_PHASE_LENGTH 10
 #define TRANSPONDER_DOW_LENGTH 10
+#define SQUINT_LENGTH 10
+#define SQUINT_DESCRIPTION_LENGTH 40
 
 #define NUM_FIELDS_IN_ENTRY (NUM_TRANSPONDER_SPECIFIERS*2 + 1)
 
@@ -52,6 +55,15 @@ struct transponder_line* transponder_editor_line_create(int row)
 void transponder_editor_entry_fill(struct transponder_entry *entry, struct sat_db_entry *db_entry)
 {
 	char temp[MAX_NUM_CHARS];
+
+	if (db_entry->squintflag) {
+		snprintf(temp, MAX_NUM_CHARS, "%f", db_entry->alon);
+		set_field_buffer(entry->alon, 0, temp);
+
+		snprintf(temp, MAX_NUM_CHARS, "%f", db_entry->alat);
+		set_field_buffer(entry->alat, 0, temp);
+	}
+
 	for (int i=0; i < db_entry->num_transponders; i++) {
 		set_field_buffer(entry->transponders[i]->transponder_name, 0, db_entry->transponder_name[i]);
 
@@ -73,17 +85,36 @@ struct transponder_entry* transponder_editor_entry_create(WINDOW *window, struct
 {
 	struct transponder_entry *new_entry = (struct transponder_entry*)malloc(sizeof(struct transponder_entry));
 
+	//create FIELDs for squint angle properties
+	int row = 0;
+	FIELD *squint_description = new_field(FIELD_HEIGHT, SQUINT_DESCRIPTION_LENGTH, row++, 1, 0, 0);
+	set_field_buffer(squint_description, 0, "Alon        Alat");
+	field_opts_off(squint_description, O_ACTIVE);
+	set_field_back(squint_description, COLOR_PAIR(4)|A_BOLD);
+
+	new_entry->alon = create_field(FIELD_HEIGHT, SQUINT_LENGTH, row, 1);
+	new_entry->alat = create_field(FIELD_HEIGHT, SQUINT_LENGTH, row++, 1 + SQUINT_LENGTH + SPACING);
+	row++;
+
 	//create FIELDs for each editable field
-	int row = 1;
+	FIELD *transponder_description = new_field(FIELD_HEIGHT, TRANSPONDER_DESCRIPTION_LENGTH, row++, 1, 0, 0);
+	set_field_back(transponder_description, COLOR_PAIR(4)|A_BOLD);
+	set_field_buffer(transponder_description, 0, "Transponder name      Uplink      Downlink");
+	field_opts_off(transponder_description, O_ACTIVE);
 	for (int i=0; i < MAX_NUM_TRANSPONDERS; i++) {
 		new_entry->transponders[i] = transponder_editor_line_create(row);
 		row += 4;
 	}
 
 	//create horrible FIELD array for input into the FORM
-	FIELD **fields = calloc(NUM_FIELDS_IN_ENTRY*MAX_NUM_TRANSPONDERS + 1, sizeof(FIELD*));
+	FIELD **fields = calloc(NUM_FIELDS_IN_ENTRY*MAX_NUM_TRANSPONDERS + 5, sizeof(FIELD*));
+	fields[0] = squint_description;
+	fields[1] = new_entry->alon;
+	fields[2] = new_entry->alat;
+	fields[3] = transponder_description;
+
 	for (int i=0; i < MAX_NUM_TRANSPONDERS; i++) {
-		int field_index = i*NUM_FIELDS_IN_ENTRY;
+		int field_index = i*NUM_FIELDS_IN_ENTRY + 4;
 		fields[field_index] = new_entry->transponders[i]->transponder_name;
 		fields[field_index + 1] = new_entry->transponders[i]->uplink[0];
 		fields[field_index + 2] = new_entry->transponders[i]->downlink[0];
@@ -97,7 +128,7 @@ struct transponder_entry* transponder_editor_entry_create(WINDOW *window, struct
 		}
 	}
 	new_entry->num_editable_transponders = db_entry->num_transponders+1;
-	fields[NUM_FIELDS_IN_ENTRY*MAX_NUM_TRANSPONDERS] = NULL;
+	fields[NUM_FIELDS_IN_ENTRY*MAX_NUM_TRANSPONDERS + 2] = NULL;
 	new_entry->form = new_form(fields);
 
 	//scale input window to the form
@@ -112,7 +143,6 @@ struct transponder_entry* transponder_editor_entry_create(WINDOW *window, struct
 	set_form_win(new_entry->form, window);
 	set_form_sub(new_entry->form, derwin(window, rows, cols, 2, 2));
 
-	mvwprintw(window, 1, 3, "Transponder name      Uplink      Downlink");
 	post_form(new_entry->form);
 	refresh();
 
@@ -202,6 +232,20 @@ void transponder_entry_handle(struct transponder_entry *transponder_entry, int c
 
 void transponder_db_entry_from_editor(struct sat_db_entry *db_entry, struct transponder_entry *entry)
 {
+	//get squint angle variables
+	char *alon_str = strdup(field_buffer(entry->alon, 0));
+	trim_whitespaces_from_end(alon_str);
+	char *alat_str = strdup(field_buffer(entry->alat, 0));
+	trim_whitespaces_from_end(alat_str);
+	double alon = strtod(alon_str, NULL);
+	double alat = strtod(alat_str, NULL);
+	db_entry->squintflag = false;
+	if ((strlen(alon_str) > 0) || (strlen(alat_str) > 0)) {
+		db_entry->alon = alon;
+		db_entry->alat = alat;
+		db_entry->squintflag = true;
+	}
+
 	int entry_index = 0;
 	for (int i=0; i < entry->num_editable_transponders; i++) {
 		//get name from transponder entry
@@ -210,13 +254,35 @@ void transponder_db_entry_from_editor(struct sat_db_entry *db_entry, struct tran
 		strncpy(temp, field_buffer(line->transponder_name, 0), MAX_NUM_CHARS);
 		trim_whitespaces_from_end(temp);
 
-		//add to database if transponder name is defined
-		if (strlen(temp) > 0) {
+		//get uplink and downlink frequencies
+		double uplink_start = strtod(field_buffer(line->uplink[0], 0), NULL);
+		double uplink_end = strtod(field_buffer(line->uplink[1], 0), NULL);
+
+		double downlink_start = strtod(field_buffer(line->downlink[0], 0), NULL);
+		double downlink_end = strtod(field_buffer(line->downlink[1], 0), NULL);
+
+		//add to database if transponder name is defined and there are non-zero starting frequencies
+		if ((strlen(temp) > 0) && ((uplink_start != 0.0) || (downlink_start != 0.0))) {
 			strncpy(db_entry->transponder_name[entry_index], temp, MAX_NUM_CHARS);
-			db_entry->uplink_start[entry_index] = strtod(field_buffer(line->uplink[0], 0), NULL);
-			db_entry->uplink_end[entry_index] = strtod(field_buffer(line->uplink[1], 0), NULL);
-			db_entry->downlink_start[entry_index] = strtod(field_buffer(line->downlink[0], 0), NULL);
-			db_entry->downlink_end[entry_index] = strtod(field_buffer(line->downlink[1], 0), NULL);
+
+			if (uplink_end == 0.0) {
+				uplink_end = uplink_start;
+			}
+			if (uplink_start == 0.0) {
+				uplink_end = 0.0;
+			}
+
+			if (downlink_end == 0.0) {
+				downlink_end = downlink_start;
+			}
+			if (downlink_start == 0.0) {
+				downlink_end = 0.0;
+			}
+
+			db_entry->uplink_start[entry_index] = uplink_start;
+			db_entry->uplink_end[entry_index] = uplink_end;
+			db_entry->downlink_start[entry_index] = downlink_start;
+			db_entry->downlink_end[entry_index] = downlink_end;
 
 			entry_index++;
 		}

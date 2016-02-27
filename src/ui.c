@@ -2483,11 +2483,13 @@ void EditTransponderDatabaseField(struct sat_db_entry *sat_entry)
 
 	wrefresh(form_win);
 	bool run_form = true;
+	bool save_entry = false;
 	while (run_form) {
 		int c = wgetch(form_win);
 
-		if (c == 'q') {
+		if (c == 27) {
 			run_form = false;
+			save_entry = false;
 		} else {
 			transponder_entry_handle(transponder_entry, c);
 		}
@@ -2502,24 +2504,62 @@ void EditTransponderDatabaseField(struct sat_db_entry *sat_entry)
 void DisplayTransponderEntry(struct sat_db_entry *entry, WINDOW *display_window)
 {
 	werase(display_window);
+	int data_col = 15;
+	int info_col = 1;
 	int row = 1;
-	int col = 1;
+
+	//display squint angle information
+	wattrset(display_window, COLOR_PAIR(4)|A_BOLD);
+	mvwprintw(display_window, row, info_col, "Squint angle:");
+
+	wattrset(display_window, COLOR_PAIR(2)|A_BOLD);
 	if (entry->squintflag) {
-		mvwprintw(display_window, row++, col, "Squint angle: Enabled. alat: %f, alon: %f.", entry->alat, entry->alon);
+		mvwprintw(display_window, row++, data_col, "Enabled.");
+
+		wattrset(display_window, COLOR_PAIR(4)|A_BOLD);
+		mvwprintw(display_window, row++, info_col, "alat: ");
+		mvwprintw(display_window, row, info_col, "alon: ");
+
+		wattrset(display_window, COLOR_PAIR(2)|A_BOLD);
+		mvwprintw(display_window, row-1, data_col, "%f", entry->alat);
+		mvwprintw(display_window, row, data_col, "%f", entry->alon);
 	} else {
-		mvwprintw(display_window, row++, col, "Squint angle: Disabled");
+		mvwprintw(display_window, row, data_col, "Disabled");
 	}
+	row++;
 
-
-	if (entry->num_transponders <= 0) {
-		mvwprintw(display_window, row++, col, "No transponders defined.");
-	}
-
+	//display transponder information
 	for (int i=0; i < entry->num_transponders; i++) {
-		mvwprintw(display_window, row++, col, "%s", entry->transponder_name[i]);
-		if (entry->uplink_start[i] != 0.0) mvwprintw(display_window, row++, col, "Uplink: %f, %f", entry->uplink_start[i], entry->uplink_end[i]);
-		if (entry->downlink_start[i] != 0.0) mvwprintw(display_window, row++, col, "Downlink: %f, %f", entry->downlink_start[i], entry->downlink_end[i]);
+		wattrset(display_window, COLOR_PAIR(4)|A_BOLD);
+		mvwprintw(display_window, ++row, info_col, "%s", entry->transponder_name[i]);
+
+		//uplink
+		if (entry->uplink_start[i] != 0.0) {
+			wattrset(display_window, COLOR_PAIR(4)|A_BOLD);
+			mvwprintw(display_window, ++row, info_col, "Uplink:");
+
+			wattrset(display_window, COLOR_PAIR(2)|A_BOLD);
+			mvwprintw(display_window, row, data_col, "%f, %f", entry->uplink_start[i], entry->uplink_end[i]);
+		}
+
+		//downlink
+		if (entry->downlink_start[i] != 0.0) {
+			wattrset(display_window, COLOR_PAIR(4)|A_BOLD);
+			mvwprintw(display_window, ++row, info_col, "Downlink:");
+
+			wattrset(display_window, COLOR_PAIR(2)|A_BOLD);
+			mvwprintw(display_window, row, data_col, "%f, %f", entry->downlink_start[i], entry->downlink_end[i]);
+		}
+		row++;
 	}
+
+	//default text when no transponders are defined
+	if (entry->num_transponders <= 0) {
+		wattrset(display_window, COLOR_PAIR(4)|A_BOLD);
+		mvwprintw(display_window, ++row, info_col, "No transponders defined.");
+	}
+
+
 }
 
 void EditTransponderDatabase(struct tle_db *tle_db, struct transponder_db *sat_db)
@@ -2585,6 +2625,8 @@ void EditTransponderDatabase(struct tle_db *tle_db, struct transponder_db *sat_d
 			//refresh the rest and redraw window boxes
 			box(menu_win, 0, 0);
 			wrefresh(menu_win);
+		} else if (c == 'q') {
+			run_menu = false;
 		}
 
 		//display/refresh transponder entry displayer
