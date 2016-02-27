@@ -2475,10 +2475,8 @@ void NewUser()
 	AnyKey();
 }
 
-void EditTransponderDatabaseField(struct sat_db_entry *sat_entry)
+void EditTransponderDatabaseField(WINDOW *form_win, struct sat_db_entry *sat_entry)
 {
-	WINDOW *form_win = newwin(LINES, 500, 8, 8);
-
 	struct transponder_entry *transponder_entry = transponder_editor_entry_create(form_win, sat_entry);
 
 	wrefresh(form_win);
@@ -2583,6 +2581,7 @@ void EditTransponderDatabase(struct tle_db *tle_db, struct transponder_db *sat_d
 	int window_ypos = header_height+1;
 	WINDOW *menu_win = subwin(main_win, LINES-window_ypos-1, window_width, window_ypos, 1);
 	WINDOW *display_win = subwin(main_win, LINES-window_ypos-1, 50, window_ypos, window_width+5);
+	WINDOW *editor_win = newwin(LINES, 500, 8, 8);
 
 	keypad(menu_win, TRUE);
 	wattrset(menu_win, COLOR_PAIR(4));
@@ -2611,7 +2610,7 @@ void EditTransponderDatabase(struct tle_db *tle_db, struct transponder_db *sat_d
 		int menu_index = item_index(current_item(menu.menu));
 
 		if (c == 10) { //enter
-			EditTransponderDatabaseField(&(sat_db->sats[menu_index]));
+			EditTransponderDatabaseField(editor_win, &(sat_db->sats[menu_index]));
 
 			//clear leftovers from transponder editor
 			wclear(main_win);
