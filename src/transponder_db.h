@@ -8,8 +8,6 @@
  * Entry in transponder database.
  **/
 struct sat_db_entry {
-	///satellite number, for relating to TLE database
-	long satellite_number;
 	///whether squint angle can be calculated
 	bool squintflag;
 	///attitude latitude for squint angle calculation
