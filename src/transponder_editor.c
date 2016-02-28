@@ -3,20 +3,10 @@
 #include <string.h>
 #include "ui.h"
 
-#define TRANSPONDER_DESCRIPTION_LENGTH 42
-#define TRANSPONDER_FREQUENCY_LENGTH 10
-#define TRANSPONDER_NAME_LENGTH 20
-#define TRANSPONDER_PHASE_LENGTH 10
-#define TRANSPONDER_DOW_LENGTH 10
-#define SQUINT_LENGTH 10
-#define SQUINT_DESCRIPTION_LENGTH 40
-
-#define NUM_FIELDS_IN_ENTRY (NUM_TRANSPONDER_SPECIFIERS*2 + 1)
-
-#define FIELD_HEIGHT 1
-#define SPACING 2
-
+//default style for field
 #define TRANSPONDER_ENTRY_DEFAULT_STYLE COLOR_PAIR(1)|A_UNDERLINE
+
+//style of field when the cursor marker is in it
 #define TRANSPONDER_ACTIVE_FIELDSTYLE COLOR_PAIR(5)
 
 /**
@@ -86,6 +76,17 @@ void transponder_editor_line_clear(struct transponder_editor_line *line)
 	set_field_buffer(line->downlink[0], 0, "");
 	set_field_buffer(line->downlink[1], 0, "");
 }
+
+//height of fields
+#define FIELD_HEIGHT 1
+
+//lengths of transponder editor line fields
+#define TRANSPONDER_DESCRIPTION_LENGTH 42
+#define TRANSPONDER_FREQUENCY_LENGTH 10
+#define TRANSPONDER_NAME_LENGTH 20
+
+//spacing between fields
+#define SPACING 2
 
 /**
  * Create new transponder editor line.
@@ -164,6 +165,13 @@ void transponder_editor_fill(struct transponder_editor *entry, struct sat_db_ent
 		set_field_buffer(entry->transponders[i]->downlink[1], 0, temp);
 	}
 }
+
+//length of fields for squint variable editing
+#define SQUINT_LENGTH 10
+#define SQUINT_DESCRIPTION_LENGTH 40
+
+//number of fields in one transponder editor line
+#define NUM_FIELDS_IN_ENTRY (NUM_TRANSPONDER_SPECIFIERS*2 + 1)
 
 struct transponder_editor* transponder_editor_create(const char *satellite_name, WINDOW *window, struct sat_db_entry *db_entry)
 {
