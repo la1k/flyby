@@ -271,49 +271,6 @@ char *input;
 	return bearing;
 }
 
-char CopyFile(source, destination)
-char *source;
-char *destination;
-{
-	/* This function copies file "source" to file "destination"
-	   in 64k chunks.  The permissions on the destination file
-	   are set to rw-r--r--  (0644).  A 0 is returned if no
-	   errors are encountered.  A 1 indicates a problem writing
-	   to the destination file.  A 2 indicates a problem reading
-	   the source file.  */
-
-	int x, sd, dd;
-	char error=0, buffer[65536];
-
-	sd=open(source,O_RDONLY);
-
-	if (sd!=-1)
-	{
-		dd=open(destination,O_WRONLY | O_CREAT| O_TRUNC, 0644);
-
-		if (dd!=-1)
-		{
-			x=read(sd,&buffer,65536);
-
-			while (x)
-			{
-				write(dd,&buffer,x);
-				x=read(sd,&buffer,65536);
-			}
-
-			close(dd);
-		}
-		else
-			error=1;
-
-		close(sd);
-	}
-	else
-		error+=2;
-
-	return error;
-}
-
 void AutoUpdate(const char *string, struct tle_db *tle_db, predict_orbital_elements_t **orbits)
 {
 	bool interactive_mode = (string[0] == '\0');
