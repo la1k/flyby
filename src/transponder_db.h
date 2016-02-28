@@ -61,4 +61,13 @@ void transponder_db_from_search_paths(const struct tle_db *tle_db, struct transp
  **/
 int transponder_db_from_file(const char *db_file, const struct tle_db *tle_db, struct transponder_db *ret_db);
 
+/**
+ * Write transponder database to file.
+ *
+ * \param filename Filename
+ * \param tle_db TLE database, used for obtaining name and satellite number of satellite
+ * \param transponder_db Transponder database to write to file
+ **/
+void transponder_db_to_file(const char *filename, struct tle_db *tle_db, struct transponder_db *transponder_db);
+
 #endif

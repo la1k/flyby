@@ -72,7 +72,7 @@ int transponder_db_from_file(const char *dbfile, const struct tle_db *tle_db, st
 					if (match)
 						sscanf(line1,"%lf, %lf", &(ret_db->sats[y].downlink_start[entry]), &(ret_db->sats[y].downlink_end[entry]));
 
-					fgets(line1,40,fd); //Unused information: weekly schedule for transponder.
+					fgets(line1,40,fd); //FIXME: Unused information: weekly schedule for transponder. See issue #29.
 					fgets(line1,40,fd); //Unused information: orbital schedule for transponder.
 
 					if (match) {
@@ -122,4 +122,37 @@ void transponder_db_from_search_paths(const struct tle_db *tle_db, struct transp
 		transponder_db_from_file(db_path, tle_db, transponder_db);
 	}
 	string_array_free(&data_dirs);
+}
+
+void transponder_db_to_file(const char *filename, struct tle_db *tle_db, struct transponder_db *transponder_db)
+{
+	FILE *fd;
+	fd = fopen(filename,"w");
+	for (int i=0; i < transponder_db->num_sats; i++) {
+		struct sat_db_entry *entry = &(transponder_db->sats[i]);
+
+		//write if sat db entry is non-empty
+		if ((entry->num_transponders > 0) || (entry->squintflag)) {
+			fprintf(fd, "%s\n", tle_db->tles[i].name);
+			fprintf(fd, "%ld\n", tle_db->tles[i].satellite_number);
+
+			//squint properties
+			if (entry->squintflag) {
+				fprintf(fd, "%f, %f\n", entry->alat, entry->alon);
+			} else {
+				fprintf(fd, "No alat, alon\n");
+			}
+
+			//transponders
+			for (int j=0; j < entry->num_transponders; j++) {
+				fprintf(fd, "%s\n", entry->transponder_name[j]);
+				fprintf(fd, "%f, %f\n", entry->uplink_start[j], entry->uplink_end[j]);
+				fprintf(fd, "%f, %f\n", entry->downlink_start[j], entry->downlink_end[j]);
+				fprintf(fd, "No weekly schedule\n"); //FIXME: See issue #29.
+				fprintf(fd, "No orbital schedule\n");
+			}
+			fprintf(fd, "end\n");
+		}
+	}
+	fclose(fd);
 }
