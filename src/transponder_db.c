@@ -5,7 +5,7 @@
 #include "xdg_basedirs.h"
 #include "string_array.h"
 
-int transponder_db_from_file(const char *dbfile, const struct tle_db *tle_db, struct transponder_db *ret_db)
+int transponder_db_from_file(const char *dbfile, const struct tle_db *tle_db, struct transponder_db *ret_db, enum sat_db_location location_info)
 {
 	//copied from ReadDataFiles().
 
@@ -89,6 +89,7 @@ int transponder_db_from_file(const char *dbfile, const struct tle_db *tle_db, st
 			if (match) {
 				ret_db->sats[y].num_transponders=transponders;
 				ret_db->loaded = true;
+				ret_db->sats[y].location = location_info;
 			}
 
 			entry=0;
@@ -102,26 +103,33 @@ int transponder_db_from_file(const char *dbfile, const struct tle_db *tle_db, st
 	return 0;
 }
 
+bool transponder_db_entry_empty(const struct sat_db_entry *entry)
+{
+	return (entry->num_transponders == 0) && !(entry->squintflag);
+}
+
 void transponder_db_from_search_paths(const struct tle_db *tle_db, struct transponder_db *transponder_db)
 {
 	string_array_t data_dirs = {0};
 	char *data_home = xdg_data_home();
-	string_array_add(&data_dirs, data_home);
-	free(data_home);
 
 	char *data_dirs_str = xdg_data_dirs();
 	stringsplit(data_dirs_str, &data_dirs);
 	free(data_dirs_str);
 
-	//read transponder databases from system-wide data directories in opposide order of precedence, and then the home directory
+	//read transponder databases from system-wide data directories in opposide order of precedence
 	for (int i=string_array_size(&data_dirs)-1; i >= 0; i--) {
 		char db_path[MAX_NUM_CHARS] = {0};
 		snprintf(db_path, MAX_NUM_CHARS, "%s%s", string_array_get(&data_dirs, i), DB_RELATIVE_FILE_PATH);
-
-		//will overwrite existing entries at their correct positions automatically, and ignore everything else
-		transponder_db_from_file(db_path, tle_db, transponder_db);
+		transponder_db_from_file(db_path, tle_db, transponder_db, LOCATION_DATA_DIRS);
 	}
 	string_array_free(&data_dirs);
+
+	//read from user home directory
+	char db_path[MAX_NUM_CHARS] = {0};
+	snprintf(db_path, MAX_NUM_CHARS, "%s%s", data_home, DB_RELATIVE_FILE_PATH);
+	transponder_db_from_file(db_path, tle_db, transponder_db, LOCATION_DATA_HOME);
+	free(data_home);
 }
 
 void transponder_db_to_file(const char *filename, struct tle_db *tle_db, struct transponder_db *transponder_db)
@@ -131,8 +139,8 @@ void transponder_db_to_file(const char *filename, struct tle_db *tle_db, struct 
 	for (int i=0; i < transponder_db->num_sats; i++) {
 		struct sat_db_entry *entry = &(transponder_db->sats[i]);
 
-		//write if sat db entry is non-empty
-		if ((entry->num_transponders > 0) || (entry->squintflag)) {
+		//write if satellite is marked as belonging to XDG_DATA_HOME.
+		if ((entry->location == LOCATION_DATA_HOME) || (entry->location == LOCATION_TRANSIENT)) {
 			fprintf(fd, "%s\n", tle_db->tles[i].name);
 			fprintf(fd, "%ld\n", tle_db->tles[i].satellite_number);
 
@@ -152,6 +160,8 @@ void transponder_db_to_file(const char *filename, struct tle_db *tle_db, struct 
 				fprintf(fd, "No orbital schedule\n");
 			}
 			fprintf(fd, "end\n");
+
+			entry->location = LOCATION_DATA_HOME;
 		}
 	}
 	fclose(fd);
@@ -168,4 +178,41 @@ void transponder_db_write_to_default(struct tle_db *tle_db, struct transponder_d
 
 	//write database to file
 	transponder_db_to_file(writepath, tle_db, transponder_db);
+}
+
+bool transponder_db_entry_equal(struct sat_db_entry *entry_1, struct sat_db_entry *entry_2)
+{
+	if ((entry_1->squintflag != entry_2->squintflag) ||
+		(entry_1->alat != entry_2->alat) ||
+		(entry_1->alon != entry_2->alon) ||
+		(entry_1->num_transponders != entry_2->num_transponders)) {
+		return false;
+	}
+
+	for (int i=0; i < entry_1->num_transponders; i++) {
+		if ((strncmp(entry_1->transponder_name[i], entry_2->transponder_name[i], MAX_NUM_CHARS) != 0) ||
+			(entry_1->uplink_start[i] != entry_2->uplink_start[i]) ||
+			(entry_1->uplink_end[i] != entry_2->uplink_end[i]) ||
+			(entry_1->downlink_start[i] != entry_2->downlink_start[i]) ||
+			(entry_1->downlink_end[i] != entry_2->downlink_end[i])) {
+			return false;
+		}
+	}
+	return true;
+}
+
+void transponder_db_entry_copy(struct sat_db_entry *destination, struct sat_db_entry *source)
+{
+	destination->squintflag = source->squintflag;
+	destination->alat = source->alat;
+	destination->alon = source->alon;
+	destination->num_transponders = source->num_transponders;
+	for (int i=0; i < source->num_transponders; i++) {
+		strncpy(destination->transponder_name[i], source->transponder_name[i], MAX_NUM_TRANSPONDERS);
+	}
+	memcpy(destination->uplink_start, source->uplink_start, MAX_NUM_TRANSPONDERS*sizeof(double));
+	memcpy(destination->uplink_end, source->uplink_end, MAX_NUM_TRANSPONDERS*sizeof(double));
+	memcpy(destination->downlink_start, source->downlink_start, MAX_NUM_TRANSPONDERS*sizeof(double));
+	memcpy(destination->downlink_end, source->downlink_end, MAX_NUM_TRANSPONDERS*sizeof(double));
+	destination->location = source->location;
 }

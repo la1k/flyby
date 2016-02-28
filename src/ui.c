@@ -2492,7 +2492,15 @@ void EditTransponderDatabaseField(const char *satellite_name, WINDOW *form_win, 
 		wrefresh(form_win);
 	}
 
-	transponder_db_entry_from_editor(sat_entry, transponder_entry);
+	struct sat_db_entry new_entry;
+
+	transponder_db_entry_from_editor(&new_entry, transponder_entry);
+
+	//ensure that we don't write an empty entry (or the same system database entry) to the file database unless we are actually trying to override a system database entry
+	if (!transponder_db_entry_equal(&new_entry, sat_entry)) {
+		transponder_db_entry_copy(sat_entry, &new_entry);
+	}
+
 	delwin(form_win);
 }
 
@@ -2502,6 +2510,25 @@ void DisplayTransponderEntry(struct sat_db_entry *entry, WINDOW *display_window)
 	int data_col = 15;
 	int info_col = 1;
 	int row = 1;
+
+	//file location information
+	wattrset(display_window, COLOR_PAIR(4)|A_BOLD);
+	switch (entry->location) {
+		case LOCATION_DATA_DIRS:
+			mvwprintw(display_window, row++, info_col, "Loaded from system dirs.");
+			break;
+
+		case LOCATION_DATA_HOME:
+			mvwprintw(display_window, row++, info_col, "Loaded from user database.");
+			break;
+		case LOCATION_TRANSIENT:
+			mvwprintw(display_window, row++, info_col, "To be written to user database.");
+			break;
+		default:
+			break;
+	}
+
+	row = 3;
 
 	//display squint angle information
 	wattrset(display_window, COLOR_PAIR(4)|A_BOLD);
@@ -2553,8 +2580,6 @@ void DisplayTransponderEntry(struct sat_db_entry *entry, WINDOW *display_window)
 		wattrset(display_window, COLOR_PAIR(4)|A_BOLD);
 		mvwprintw(display_window, ++row, info_col, "No transponders defined.");
 	}
-
-
 }
 
 void EditTransponderDatabase(struct tle_db *tle_db, struct transponder_db *sat_db)
