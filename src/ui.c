@@ -2481,12 +2481,10 @@ void EditTransponderDatabaseField(const char *satellite_name, WINDOW *form_win, 
 
 	wrefresh(form_win);
 	bool run_form = true;
-	bool save_entry = false;
 	while (run_form) {
 		int c = wgetch(form_win);
 		if ((c == 27) || ((c == 10) && (transponder_entry->prev_selected_field == transponder_entry->last_field))) {
 			run_form = false;
-			save_entry = false;
 		} else {
 			transponder_entry_handle(transponder_entry, c);
 		}
@@ -2632,6 +2630,8 @@ void EditTransponderDatabase(struct tle_db *tle_db, struct transponder_db *sat_d
 		wrefresh(display_win);
 	}
 	filtered_menu_free(&menu);
+
+	transponder_db_write_to_default(tle_db, sat_db);
 }
 
 void RunFlybyUI(bool new_user, const char *qthfile, predict_observer_t *observer, struct tle_db *tle_db, struct transponder_db *sat_db, rotctld_info_t *rotctld, rigctld_info_t *downlink, rigctld_info_t *uplink)

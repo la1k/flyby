@@ -156,3 +156,16 @@ void transponder_db_to_file(const char *filename, struct tle_db *tle_db, struct 
 	}
 	fclose(fd);
 }
+
+void transponder_db_write_to_default(struct tle_db *tle_db, struct transponder_db *transponder_db)
+{
+	//get writepath
+	create_xdg_dirs();
+	char *data_home = xdg_data_home();
+	char writepath[MAX_NUM_CHARS] = {0};
+	snprintf(writepath, MAX_NUM_CHARS, "%s%s", data_home, DB_RELATIVE_FILE_PATH);
+	free(data_home);
+
+	//write database to file
+	transponder_db_to_file(writepath, tle_db, transponder_db);
+}

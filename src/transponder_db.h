@@ -70,4 +70,12 @@ int transponder_db_from_file(const char *db_file, const struct tle_db *tle_db, s
  **/
 void transponder_db_to_file(const char *filename, struct tle_db *tle_db, struct transponder_db *transponder_db);
 
+/**
+ * Write transponder database to $XDG_DATA_HOME/flyby/flyby.db.
+ *
+ * \param tle_db TLE database
+ * \param transponder_db Transponder database to write to default location
+ **/
+void transponder_db_write_to_default(struct tle_db *tle_db, struct transponder_db *transponder_db);
+
 #endif
