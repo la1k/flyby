@@ -84,24 +84,38 @@ void transponder_db_to_file(const char *filename, struct tle_db *tle_db, struct 
  * Write transponder database to $XDG_DATA_HOME/flyby/flyby.db. Writes only entries
  * that are marked with LOCATION_DATA_HOME or LOCATION_TRANSIENT in the `location` field.
  *
- * Entries that were not originally loaded from XDG_CONFIG_HOME, but should be
+ * Entries that were not originally loaded from XDG_CONFIG_HOME, but should
  * be used to update the user database, should be marked with LOCATION_TRANSIENT or LOCATION_DATA_HOME.
  *
  * It also means that such entries will be saved to the user database irregardless
  * of whether any transponders or squint angle variables actually are defined,
  * in order to be able to override the system database. Empty entries in XDG_DATA_HOME
- * will therefore stay that way until manually edited from the text file (FIXME?)...
+ * will therefore stay that way until manually edited from the text file.
  *
  * Since only entries corresponding to existing TLEs will be loaded into the database,
  * only such entries will be written to the user database file. If any entries
- * without corresponding TLEs originally existed in the file, these will be overwritten without warning (FIXME?).
+ * without corresponding TLEs originally existed in the file, these will be overwritten.
  *
  * \param tle_db TLE database
  * \param transponder_db Transponder database to write to default location
  **/
 void transponder_db_write_to_default(struct tle_db *tle_db, struct transponder_db *transponder_db);
 
+/**
+ * Check whether to satellite database entries are the same.
+ *
+ * \param entry_1 Entry 1
+ * \param entry_2 Entry 2
+ * \return True if fields in entry 1 are the same as the fields in entry 2
+ **/
 bool transponder_db_entry_equal(struct sat_db_entry *entry_1, struct sat_db_entry *entry_2);
+
+/**
+ * Copy contents of one satellite database entry to another.
+ *
+ * \param destination Destination struct
+ * \param source Source struct
+ **/
 void transponder_db_entry_copy(struct sat_db_entry *destination, struct sat_db_entry *source);
 
 #endif
