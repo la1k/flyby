@@ -28,6 +28,7 @@ struct transponder_entry {
 	int num_displayed_transponders;
 
 	FIELD *prev_selected_field;
+	FIELD *last_field;
 };
 
 struct transponder_entry* transponder_editor_entry_create();

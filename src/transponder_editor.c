@@ -27,14 +27,41 @@ bool transponder_line_status(struct transponder_line *transponder_line)
 	return (field_status(transponder_line->transponder_name) == TRUE);
 }
 
-void transponder_line_set_visible(struct transponder_line *transponder_line) {
-	field_opts_on(transponder_line->transponder_name, O_VISIBLE);
+void transponder_line_set_visible(struct transponder_line *transponder_line, bool visible)
+{
+	if (visible) {
+		field_opts_on(transponder_line->transponder_name, O_VISIBLE);
 
-	field_opts_on(transponder_line->uplink[0], O_VISIBLE);
-	field_opts_on(transponder_line->uplink[1], O_VISIBLE);
+		field_opts_on(transponder_line->uplink[0], O_VISIBLE);
+		field_opts_on(transponder_line->uplink[1], O_VISIBLE);
 
-	field_opts_on(transponder_line->downlink[0], O_VISIBLE);
-	field_opts_on(transponder_line->downlink[1], O_VISIBLE);
+		field_opts_on(transponder_line->downlink[0], O_VISIBLE);
+		field_opts_on(transponder_line->downlink[1], O_VISIBLE);
+	} else {
+		field_opts_off(transponder_line->transponder_name, O_VISIBLE);
+
+		field_opts_off(transponder_line->uplink[0], O_VISIBLE);
+		field_opts_off(transponder_line->uplink[1], O_VISIBLE);
+
+		field_opts_off(transponder_line->downlink[0], O_VISIBLE);
+		field_opts_off(transponder_line->downlink[1], O_VISIBLE);
+	}
+}
+
+void transponder_editor_set_visible(struct transponder_entry *transponder_entry, int num_visible_entries)
+{
+	int end_ind = 0;
+	for (int i=0; i < (num_visible_entries) && (i < MAX_NUM_TRANSPONDERS); i++) {
+		transponder_line_set_visible(transponder_entry->transponders[i], true);
+		end_ind++;
+	}
+	for (int i=end_ind; i < MAX_NUM_TRANSPONDERS; i++) {
+		transponder_line_set_visible(transponder_entry->transponders[i], false);
+	}
+	transponder_entry->num_editable_transponders = end_ind;
+
+	//update current last visible field in form
+	transponder_entry->last_field = transponder_entry->transponders[end_ind-1]->downlink[1];
 }
 
 struct transponder_line* transponder_editor_line_create(int row)
@@ -81,7 +108,7 @@ void transponder_editor_entry_fill(struct transponder_entry *entry, struct sat_d
 	}
 }
 
-struct transponder_entry* transponder_editor_entry_create(WINDOW *window, struct sat_db_entry *db_entry)
+struct transponder_entry* transponder_editor_entry_create(const char *satellite_name, WINDOW *window, struct sat_db_entry *db_entry)
 {
 	struct transponder_entry *new_entry = (struct transponder_entry*)malloc(sizeof(struct transponder_entry));
 
@@ -106,6 +133,8 @@ struct transponder_entry* transponder_editor_entry_create(WINDOW *window, struct
 		row += 4;
 	}
 
+	transponder_editor_set_visible(new_entry, db_entry->num_transponders+1);
+
 	//create horrible FIELD array for input into the FORM
 	FIELD **fields = calloc(NUM_FIELDS_IN_ENTRY*MAX_NUM_TRANSPONDERS + 5, sizeof(FIELD*));
 	fields[0] = squint_description;
@@ -120,15 +149,8 @@ struct transponder_entry* transponder_editor_entry_create(WINDOW *window, struct
 		fields[field_index + 2] = new_entry->transponders[i]->downlink[0];
 		fields[field_index + 3] = new_entry->transponders[i]->uplink[1];
 		fields[field_index + 4] = new_entry->transponders[i]->downlink[1];
-
-		if (i > db_entry->num_transponders) {
-			for (int j=field_index; j < field_index+NUM_FIELDS_IN_ENTRY; j++) {
-				field_opts_off(fields[j], O_VISIBLE);
-			}
-		}
 	}
-	new_entry->num_editable_transponders = db_entry->num_transponders+1;
-	fields[NUM_FIELDS_IN_ENTRY*MAX_NUM_TRANSPONDERS + 2] = NULL;
+	fields[NUM_FIELDS_IN_ENTRY*MAX_NUM_TRANSPONDERS + 4] = NULL;
 	new_entry->form = new_form(fields);
 
 	//scale input window to the form
@@ -154,6 +176,10 @@ struct transponder_entry* transponder_editor_entry_create(WINDOW *window, struct
 
 	//fill fields with transponder database information
 	transponder_editor_entry_fill(new_entry, db_entry);
+
+	//display satellite name on top
+	mvwprintw(window, 0, 5, "%s", satellite_name);
+
 	return new_entry;
 }
 
@@ -167,6 +193,9 @@ void transponder_editor_line_clear(struct transponder_line *line) {
 
 void transponder_editor_entry_clear(struct transponder_entry *entry)
 {
+	set_field_buffer(entry->alon, 0, "");
+	set_field_buffer(entry->alat, 0, "");
+
 	//clear editable lines
 	for (int i=0; i < entry->num_editable_transponders-1; i++) {
 		transponder_editor_line_clear(entry->transponders[i]);
@@ -224,8 +253,7 @@ void transponder_entry_handle(struct transponder_entry *transponder_entry, int c
 
 	//add a new transponder editor field if last entry has been edited
 	if ((transponder_entry->num_editable_transponders < MAX_NUM_TRANSPONDERS) && (transponder_line_status(transponder_entry->transponders[transponder_entry->num_editable_transponders-1]))) {
-		transponder_line_set_visible(transponder_entry->transponders[transponder_entry->num_editable_transponders]);
-		transponder_entry->num_editable_transponders++;
+		transponder_editor_set_visible(transponder_entry, transponder_entry->num_editable_transponders+1);
 	}
 }
 
