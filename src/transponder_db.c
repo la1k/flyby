@@ -132,15 +132,13 @@ void transponder_db_from_search_paths(const struct tle_db *tle_db, struct transp
 	free(data_home);
 }
 
-void transponder_db_to_file(const char *filename, struct tle_db *tle_db, struct transponder_db *transponder_db)
+void transponder_db_to_file(const char *filename, struct tle_db *tle_db, struct transponder_db *transponder_db, bool *should_write)
 {
 	FILE *fd;
 	fd = fopen(filename,"w");
 	for (int i=0; i < transponder_db->num_sats; i++) {
-		struct sat_db_entry *entry = &(transponder_db->sats[i]);
-
-		//write if satellite is marked as belonging to XDG_DATA_HOME.
-		if ((entry->location == LOCATION_DATA_HOME) || (entry->location == LOCATION_TRANSIENT)) {
+		if (should_write[i]) {
+			struct sat_db_entry *entry = &(transponder_db->sats[i]);
 			fprintf(fd, "%s\n", tle_db->tles[i].name);
 			fprintf(fd, "%ld\n", tle_db->tles[i].satellite_number);
 
@@ -160,8 +158,6 @@ void transponder_db_to_file(const char *filename, struct tle_db *tle_db, struct 
 				fprintf(fd, "No orbital schedule\n");
 			}
 			fprintf(fd, "end\n");
-
-			entry->location = LOCATION_DATA_HOME;
 		}
 	}
 	fclose(fd);
@@ -176,8 +172,17 @@ void transponder_db_write_to_default(struct tle_db *tle_db, struct transponder_d
 	snprintf(writepath, MAX_NUM_CHARS, "%s%s", data_home, DB_RELATIVE_FILE_PATH);
 	free(data_home);
 
+
 	//write database to file
-	transponder_db_to_file(writepath, tle_db, transponder_db);
+	bool *should_write = (bool*)calloc(transponder_db->num_sats, sizeof(bool));
+	for (int i=0; i < transponder_db->num_sats; i++) {
+		struct sat_db_entry *entry = &(transponder_db->sats[i]);
+		if ((entry->location == LOCATION_DATA_HOME) || (entry->location == LOCATION_TRANSIENT)) {
+			should_write[i] = true;
+			entry->location = LOCATION_DATA_HOME;
+		}
+	}
+	transponder_db_to_file(writepath, tle_db, transponder_db, should_write);
 }
 
 bool transponder_db_entry_equal(struct sat_db_entry *entry_1, struct sat_db_entry *entry_2)

@@ -31,7 +31,7 @@ struct sat_db_entry {
 	///downlink frequencies
 	double downlink_start[MAX_NUM_TRANSPONDERS];
 	double downlink_end[MAX_NUM_TRANSPONDERS];
-	///from where the transponder db entry was loaded. Used for overriding system database with user information
+	///from where the transponder db entry was loaded. Used in deciding which entries to save to XDG_DATA_HOME in transponder_db_write_to_default().
 	enum sat_db_location location;
 };
 
@@ -77,8 +77,9 @@ int transponder_db_from_file(const char *db_file, const struct tle_db *tle_db, s
  * \param filename Filename
  * \param tle_db TLE database, used for obtaining name and satellite number of satellite
  * \param transponder_db Transponder database to write to file
+ * \param should_write Boolean array of at least transponder_db->num_sats length. Used to specify whether a database entry should be written to file, since there are situations where we would like empty entries to be written to file (and other situations where we don't)
  **/
-void transponder_db_to_file(const char *filename, struct tle_db *tle_db, struct transponder_db *transponder_db);
+void transponder_db_to_file(const char *filename, struct tle_db *tle_db, struct transponder_db *transponder_db, bool *should_write);
 
 /**
  * Write transponder database to $XDG_DATA_HOME/flyby/flyby.db. Writes only entries
