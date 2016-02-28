@@ -2477,7 +2477,7 @@ void NewUser()
 
 void EditTransponderDatabaseField(const char *satellite_name, WINDOW *form_win, struct sat_db_entry *sat_entry)
 {
-	struct transponder_entry *transponder_entry = transponder_editor_entry_create(satellite_name, form_win, sat_entry);
+	struct transponder_editor *transponder_entry = transponder_editor_create(satellite_name, form_win, sat_entry);
 
 	wrefresh(form_win);
 	bool run_form = true;
@@ -2494,7 +2494,7 @@ void EditTransponderDatabaseField(const char *satellite_name, WINDOW *form_win, 
 
 	struct sat_db_entry new_entry;
 
-	transponder_db_entry_from_editor(&new_entry, transponder_entry);
+	transponder_editor_to_db_entry(&new_entry, transponder_entry);
 
 	//ensure that we don't write an empty entry (or the same system database entry) to the file database unless we are actually trying to override a system database entry
 	if (!transponder_db_entry_equal(&new_entry, sat_entry)) {
