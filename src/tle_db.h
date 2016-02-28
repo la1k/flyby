@@ -188,7 +188,7 @@ void whitelist_from_search_paths(struct tle_db *db);
  * \param db TLE database, where entries are enabled/disabled
  * \param file Whitelist filepath
  **/
-void whitelist_from_file(struct tle_db *db, const char *file);
+void whitelist_from_file(const char *file, struct tle_db *db);
 
 /**
  * Write enabled/disabled flags for each TLE entry to file.

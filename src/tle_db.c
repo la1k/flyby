@@ -393,7 +393,7 @@ bool tle_db_entry_enabled(const struct tle_db *db, int tle_index)
 	return false;
 }
 
-void whitelist_from_file(struct tle_db *db, const char *file)
+void whitelist_from_file(const char *file, struct tle_db *db)
 {
 	for (int i=0; i < db->num_tles; i++) {
 		tle_db_entry_set_enabled(db, i, false);
@@ -429,7 +429,7 @@ void whitelist_from_search_paths(struct tle_db *db)
 	snprintf(whitelist_path, MAX_NUM_CHARS, "%s%s", config_home, WHITELIST_RELATIVE_FILE_PATH);
 	free(config_home);
 
-	whitelist_from_file(db, whitelist_path);
+	whitelist_from_file(whitelist_path, db);
 }
 
 void whitelist_to_file(const char *filename, struct tle_db *db)
