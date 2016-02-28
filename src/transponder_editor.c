@@ -33,7 +33,7 @@ FIELD *create_transponder_editor_field(int field_height, int field_width, int fi
  **/
 bool transponder_editor_line_is_edited(struct transponder_editor_line *transponder_line)
 {
-	return (field_status(transponder_line->transponder_name) == TRUE);
+	return (field_status(transponder_line->name) == TRUE);
 }
 
 /**
@@ -45,7 +45,7 @@ bool transponder_editor_line_is_edited(struct transponder_editor_line *transpond
 void transponder_editor_line_set_visible(struct transponder_editor_line *transponder_line, bool visible)
 {
 	if (visible) {
-		field_opts_on(transponder_line->transponder_name, O_VISIBLE);
+		field_opts_on(transponder_line->name, O_VISIBLE);
 
 		field_opts_on(transponder_line->uplink[0], O_VISIBLE);
 		field_opts_on(transponder_line->uplink[1], O_VISIBLE);
@@ -53,7 +53,7 @@ void transponder_editor_line_set_visible(struct transponder_editor_line *transpo
 		field_opts_on(transponder_line->downlink[0], O_VISIBLE);
 		field_opts_on(transponder_line->downlink[1], O_VISIBLE);
 	} else {
-		field_opts_off(transponder_line->transponder_name, O_VISIBLE);
+		field_opts_off(transponder_line->name, O_VISIBLE);
 
 		field_opts_off(transponder_line->uplink[0], O_VISIBLE);
 		field_opts_off(transponder_line->uplink[1], O_VISIBLE);
@@ -70,7 +70,7 @@ void transponder_editor_line_set_visible(struct transponder_editor_line *transpo
  **/
 void transponder_editor_line_clear(struct transponder_editor_line *line)
 {
-	set_field_buffer(line->transponder_name, 0, "");
+	set_field_buffer(line->name, 0, "");
 	set_field_buffer(line->uplink[0], 0, "");
 	set_field_buffer(line->uplink[1], 0, "");
 	set_field_buffer(line->downlink[0], 0, "");
@@ -98,7 +98,7 @@ struct transponder_editor_line* transponder_editor_line_create(int row)
 {
 	struct transponder_editor_line *ret_line = (struct transponder_editor_line*)malloc(sizeof(struct transponder_editor_line));
 
-	ret_line->transponder_name = create_transponder_editor_field(FIELD_HEIGHT, TRANSPONDER_NAME_LENGTH, row, 1);
+	ret_line->name = create_transponder_editor_field(FIELD_HEIGHT, TRANSPONDER_NAME_LENGTH, row, 1);
 
 	ret_line->uplink[0] = create_transponder_editor_field(FIELD_HEIGHT, TRANSPONDER_FREQUENCY_LENGTH, row, TRANSPONDER_NAME_LENGTH+1+SPACING);
 	ret_line->uplink[1] = create_transponder_editor_field(FIELD_HEIGHT, TRANSPONDER_FREQUENCY_LENGTH, row+2, TRANSPONDER_NAME_LENGTH+1+SPACING);
@@ -128,7 +128,7 @@ void transponder_editor_set_visible(struct transponder_editor *transponder_entry
 	transponder_entry->num_editable_transponders = end_ind;
 
 	//update current last visible field in form
-	transponder_entry->last_field = transponder_entry->transponders[end_ind-1]->downlink[1];
+	transponder_entry->last_field_in_form = transponder_entry->transponders[end_ind-1]->downlink[1];
 }
 
 /**
@@ -150,7 +150,7 @@ void transponder_editor_fill(struct transponder_editor *entry, struct sat_db_ent
 	}
 
 	for (int i=0; i < db_entry->num_transponders; i++) {
-		set_field_buffer(entry->transponders[i]->transponder_name, 0, db_entry->transponder_name[i]);
+		set_field_buffer(entry->transponders[i]->name, 0, db_entry->transponder_name[i]);
 
 		snprintf(temp, MAX_NUM_CHARS, "%f", db_entry->uplink_start[i]);
 		set_field_buffer(entry->transponders[i]->uplink[0], 0, temp);
@@ -209,7 +209,7 @@ struct transponder_editor* transponder_editor_create(const char *satellite_name,
 
 	for (int i=0; i < MAX_NUM_TRANSPONDERS; i++) {
 		int field_index = i*NUM_FIELDS_IN_ENTRY + 4;
-		fields[field_index] = new_entry->transponders[i]->transponder_name;
+		fields[field_index] = new_entry->transponders[i]->name;
 		fields[field_index + 1] = new_entry->transponders[i]->uplink[0];
 		fields[field_index + 2] = new_entry->transponders[i]->downlink[0];
 		fields[field_index + 3] = new_entry->transponders[i]->uplink[1];
@@ -236,8 +236,8 @@ struct transponder_editor* transponder_editor_create(const char *satellite_name,
 	form_driver(new_entry->form, REQ_VALIDATION);
 
 	//mark first field with different background color
-	new_entry->prev_selected_field = current_field(new_entry->form);
-	set_field_back(new_entry->prev_selected_field, TRANSPONDER_ACTIVE_FIELDSTYLE);
+	new_entry->curr_selected_field = current_field(new_entry->form);
+	set_field_back(new_entry->curr_selected_field, TRANSPONDER_ACTIVE_FIELDSTYLE);
 
 	//fill fields with transponder database information
 	transponder_editor_fill(new_entry, db_entry);
@@ -307,10 +307,10 @@ void transponder_editor_handle(struct transponder_editor *transponder_entry, int
 
 	//switch background color of currently marked field, reset previous field
 	FIELD *curr_field = current_field(transponder_entry->form);
-	if (curr_field != transponder_entry->prev_selected_field) {
-		set_field_back(transponder_entry->prev_selected_field, TRANSPONDER_ENTRY_DEFAULT_STYLE);
+	if (curr_field != transponder_entry->curr_selected_field) {
+		set_field_back(transponder_entry->curr_selected_field, TRANSPONDER_ENTRY_DEFAULT_STYLE);
 		set_field_back(curr_field, TRANSPONDER_ACTIVE_FIELDSTYLE);
-		transponder_entry->prev_selected_field = curr_field;
+		transponder_entry->curr_selected_field = curr_field;
 	}
 
 	//add a new transponder editor field if last entry has been edited
@@ -340,7 +340,7 @@ void transponder_editor_to_db_entry(struct transponder_editor *entry, struct sat
 		//get name from transponder entry
 		struct transponder_editor_line *line = entry->transponders[i];
 		char temp[MAX_NUM_CHARS];
-		strncpy(temp, field_buffer(line->transponder_name, 0), MAX_NUM_CHARS);
+		strncpy(temp, field_buffer(line->name, 0), MAX_NUM_CHARS);
 		trim_whitespaces_from_end(temp);
 
 		//get uplink and downlink frequencies

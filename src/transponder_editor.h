@@ -5,27 +5,39 @@
 #include "defines.h"
 #include "transponder_db.h"
 
-//number of fields needed for defining a transponder entry
+//number of fields needed for defining transponder frequencies
 #define NUM_TRANSPONDER_SPECIFIERS 2
 
+/**
+ * Editor for single transponder.
+ **/
 struct transponder_editor_line {
-	FIELD *transponder_name;
+	///Field for editing transponder name
+	FIELD *name;
+	///Field for editing uplink frequency interval (position 0: Interval start, position 1: interval end)
 	FIELD *uplink[NUM_TRANSPONDER_SPECIFIERS];
+	///Field for editing downlink frequency interval (position 0: Interval start, position 1: interval end)
 	FIELD *downlink[NUM_TRANSPONDER_SPECIFIERS];
 };
 
+/**
+ * Editor for full transponder database entry.
+ **/
 struct transponder_editor {
+	///Form containing all fields in the transponder editor
 	FORM *form;
+	///Field for editing attitude latitude for squint angle calculation
 	FIELD *alat;
+	///Field for editing attitude longitude for squint angle calculation
 	FIELD *alon;
-
+	///Number of editable transponder entries
 	int num_editable_transponders;
+	///Transponder entries
 	struct transponder_editor_line *transponders[MAX_NUM_TRANSPONDERS];
-
-	int num_displayed_transponders;
-
-	FIELD *prev_selected_field;
-	FIELD *last_field;
+	///Currently selected field in form
+	FIELD *curr_selected_field;
+	///Last selectable field in form
+	FIELD *last_field_in_form;
 };
 
 /**

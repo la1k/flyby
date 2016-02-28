@@ -2483,7 +2483,7 @@ void EditTransponderDatabaseField(const char *satellite_name, WINDOW *form_win, 
 	bool run_form = true;
 	while (run_form) {
 		int c = wgetch(form_win);
-		if ((c == 27) || ((c == 10) && (transponder_entry->prev_selected_field == transponder_entry->last_field))) {
+		if ((c == 27) || ((c == 10) && (transponder_entry->curr_selected_field == transponder_entry->last_field_in_form))) {
 			run_form = false;
 		} else {
 			transponder_editor_handle(transponder_entry, c);
@@ -2677,7 +2677,6 @@ void RunFlybyUI(bool new_user, const char *qthfile, predict_observer_t *observer
 	init_pair(5,COLOR_WHITE,COLOR_RED);
 	init_pair(6,COLOR_RED,COLOR_WHITE);
 	init_pair(7,COLOR_CYAN,COLOR_RED);
-	init_pair(8,COLOR_BLACK,COLOR_WHITE);
 
 	if (new_user) {
 		NewUser();
