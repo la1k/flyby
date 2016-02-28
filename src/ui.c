@@ -2486,7 +2486,7 @@ void EditTransponderDatabaseField(const char *satellite_name, WINDOW *form_win, 
 		if ((c == 27) || ((c == 10) && (transponder_entry->prev_selected_field == transponder_entry->last_field))) {
 			run_form = false;
 		} else {
-			transponder_entry_handle(transponder_entry, c);
+			transponder_editor_handle(transponder_entry, c);
 		}
 
 		wrefresh(form_win);
@@ -2494,7 +2494,7 @@ void EditTransponderDatabaseField(const char *satellite_name, WINDOW *form_win, 
 
 	struct sat_db_entry new_entry;
 
-	transponder_editor_to_db_entry(&new_entry, transponder_entry);
+	transponder_editor_to_db_entry(transponder_entry, &new_entry);
 
 	//ensure that we don't write an empty entry (or the same system database entry) to the file database unless we are actually trying to override a system database entry
 	if (!transponder_db_entry_equal(&new_entry, sat_entry)) {

@@ -28,4 +28,29 @@ struct transponder_editor {
 	FIELD *last_field;
 };
 
+/**
+ * Create transponder editor.
+ *
+ * \param satellite_name Name of satellite
+ * \param window Window to put the FIELDs in. Will be resized to fit the FORM
+ * \param db_entry Database entry
+ **/
+struct transponder_editor* transponder_editor_create(const char *satellite_name, WINDOW *window, struct sat_db_entry *db_entry);
+
+/**
+ * Handle input character to transponder editor.
+ *
+ * \param transponder_entry Transponder editor
+ * \param c Input character
+ **/
+void transponder_editor_handle(struct transponder_editor *transponder_entry, int c);
+
+/**
+ * Convert information in transponder editor fields to database fields
+ *
+ * \param entry Transponder editor
+ * \param db_entry Database entry
+ **/
+void transponder_editor_to_db_entry(struct transponder_editor *entry, struct sat_db_entry *db_entry);
+
 #endif
