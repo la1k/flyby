@@ -2513,7 +2513,6 @@ void DisplayTransponderEntry(struct sat_db_entry *entry, WINDOW *display_window)
 
 	//file location information
 	wattrset(display_window, COLOR_PAIR(4)|A_BOLD);
-	char location_string[MAX_NUM_CHARS] = {0};
 	if (entry->location & LOCATION_DATA_HOME) {
 		mvwprintw(display_window, row++, info_col, "Loaded from user database.");
 	} else if (entry->location & LOCATION_DATA_DIRS) {
