@@ -2493,6 +2493,7 @@ void EditTransponderDatabaseField(const char *satellite_name, WINDOW *form_win, 
 	}
 
 	struct sat_db_entry new_entry;
+	transponder_db_entry_copy(&new_entry, sat_entry);
 
 	transponder_editor_to_db_entry(transponder_entry, &new_entry);
 

@@ -182,8 +182,15 @@ void transponder_db_write_to_default(struct tle_db *tle_db, struct transponder_d
 	bool *should_write = (bool*)calloc(transponder_db->num_sats, sizeof(bool));
 	for (int i=0; i < transponder_db->num_sats; i++) {
 		struct sat_db_entry *entry = &(transponder_db->sats[i]);
+
+		//write to user database if the entry was originally loaded from XDG_DATA_HOME, or has been marked as being edited
 		if ((entry->location & LOCATION_DATA_HOME) || (entry->location & LOCATION_TRANSIENT)) {
 			should_write[i] = true;
+		}
+
+		//do not write to user database if it's only defined LOCATION_DATA_HOME and has become empty
+		if ((entry->location & LOCATION_DATA_HOME) && !(entry->location & LOCATION_DATA_DIRS) && transponder_db_entry_empty(entry)) {
+			should_write[i] = false;
 		}
 	}
 	transponder_db_to_file(writepath, tle_db, transponder_db, should_write);
