@@ -11,6 +11,19 @@
 #include <unistd.h>
 #include "string_array.h"
 
+struct tle_db *tle_db_create()
+{
+	struct tle_db *tle_db = (struct tle_db*) malloc(sizeof(struct tle_db));
+	memset((void*)tle_db, 0, sizeof(struct tle_db));
+	return tle_db;
+}
+
+void tle_db_destroy(struct tle_db **tle_db)
+{
+	free(*tle_db);
+	*tle_db = NULL;
+}
+
 /**
  * Check if tle_1 is more recent than tle_2.
  *

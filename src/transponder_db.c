@@ -5,6 +5,19 @@
 #include "xdg_basedirs.h"
 #include "string_array.h"
 
+struct transponder_db *transponder_db_create()
+{
+	struct transponder_db *transponder_db = (struct transponder_db*) malloc(sizeof(struct transponder_db));
+	memset((void*)transponder_db, 0, sizeof(struct transponder_db));
+	return transponder_db;
+}
+
+void transponder_db_destroy(struct transponder_db **transponder_db)
+{
+	free(*transponder_db);
+	*transponder_db = NULL;
+}
+
 int transponder_db_from_file(const char *dbfile, const struct tle_db *tle_db, struct transponder_db *ret_db, enum sat_db_location location_info)
 {
 	//copied from ReadDataFiles().
@@ -13,7 +26,7 @@ int transponder_db_from_file(const char *dbfile, const struct tle_db *tle_db, st
 	ret_db->num_sats = tle_db->num_tles;
 	FILE *fd=fopen(dbfile,"r");
 	long catnum;
-	char line1[80];
+	char line1[80] = {0};
 	int y = 0, match = 0, transponders = 0, entry = 0;
 	if (fd!=NULL) {
 		fgets(line1,40,fd);
