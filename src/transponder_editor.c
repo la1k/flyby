@@ -252,12 +252,12 @@ struct transponder_editor* transponder_editor_create(const struct tle_db_entry *
 
 void transponder_editor_sysdefault(struct transponder_editor *entry, struct sat_db_entry *sat_db_entry)
 {
-	//create dummy TLE database
-	struct tle_db dummy_tle_db = {0};
-	struct transponder_db dummy_transponder_db = {0};
+	//create dummy TLE database with a single entry corresponding to the satellite number
+	struct tle_db *dummy_tle_db = tle_db_create();
+	struct transponder_db *dummy_transponder_db = transponder_db_create();
 	struct tle_db_entry dummy_entry;
 	dummy_entry.satellite_number = entry->satellite_number;
-	tle_db_add_entry(&dummy_tle_db, &dummy_entry);
+	tle_db_add_entry(dummy_tle_db, &dummy_entry);
 
 	//read from XDG_DATA_DIRS
 	string_array_t data_dirs = {0};
@@ -268,15 +268,18 @@ void transponder_editor_sysdefault(struct transponder_editor *entry, struct sat_
 	for (int i=string_array_size(&data_dirs)-1; i >= 0; i--) {
 		char db_path[MAX_NUM_CHARS] = {0};
 		snprintf(db_path, MAX_NUM_CHARS, "%s%s", string_array_get(&data_dirs, i), DB_RELATIVE_FILE_PATH);
-		transponder_db_from_file(db_path, &dummy_tle_db, &dummy_transponder_db, LOCATION_DATA_DIRS);
+		transponder_db_from_file(db_path, dummy_tle_db, dummy_transponder_db, LOCATION_DATA_DIRS);
 	}
 	string_array_free(&data_dirs);
 
 	//copy entry fields to input satellite database entry and the transponder editor fields
-	transponder_db_entry_copy(sat_db_entry, &(dummy_transponder_db.sats[0]));
-	transponder_editor_fill(entry, &(dummy_transponder_db.sats[0]));
+	transponder_db_entry_copy(sat_db_entry, &(dummy_transponder_db->sats[0]));
+	transponder_editor_fill(entry, &(dummy_transponder_db->sats[0]));
 
 	transponder_editor_set_visible(entry, sat_db_entry->num_transponders+1);
+
+	tle_db_destroy(&dummy_tle_db);
+	transponder_db_destroy(&dummy_transponder_db);
 }
 
 /**
