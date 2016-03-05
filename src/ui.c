@@ -2504,6 +2504,8 @@ void EditTransponderDatabaseField(const struct tle_db_entry *sat_info, WINDOW *f
 		transponder_db_entry_copy(sat_entry, &new_entry);
 	}
 
+	transponder_editor_destroy(&transponder_entry);
+
 	delwin(form_win);
 }
 

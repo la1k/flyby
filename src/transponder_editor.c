@@ -219,6 +219,7 @@ struct transponder_editor* transponder_editor_create(const struct tle_db_entry *
 	}
 	fields[NUM_FIELDS_IN_ENTRY*MAX_NUM_TRANSPONDERS + 4] = NULL;
 	new_entry->form = new_form(fields);
+	new_entry->field_list = fields;
 
 	//scale input window to the form
 	int rows, cols;
@@ -248,6 +249,31 @@ struct transponder_editor* transponder_editor_create(const struct tle_db_entry *
 	mvwprintw(window, 0, 5, "%s", sat_info->name);
 
 	return new_entry;
+}
+
+void transponder_editor_line_destroy(struct transponder_editor_line **line)
+{
+	free_field((*line)->name);
+	free_field((*line)->uplink[0]);
+	free_field((*line)->uplink[1]);
+	free_field((*line)->downlink[0]);
+	free_field((*line)->downlink[1]);
+
+	free(*line);
+	*line = NULL;
+}
+
+void transponder_editor_destroy(struct transponder_editor **transponder_editor)
+{
+	unpost_form((*transponder_editor)->form);
+	free_field((*transponder_editor)->alat);
+	free_field((*transponder_editor)->alon);
+	for (int i=0; i < MAX_NUM_TRANSPONDERS; i++) {
+		transponder_editor_line_destroy(&((*transponder_editor)->transponders[i]));
+	}
+	free((*transponder_editor)->field_list);
+	free(*transponder_editor);
+	*transponder_editor = NULL;
 }
 
 void transponder_editor_sysdefault(struct transponder_editor *entry, struct sat_db_entry *sat_db_entry)
@@ -368,6 +394,8 @@ void transponder_editor_to_db_entry(struct transponder_editor *entry, struct sat
 		db_entry->alat = alat;
 		db_entry->squintflag = true;
 	}
+	free(alon_str);
+	free(alat_str);
 
 	int entry_index = 0;
 	for (int i=0; i < entry->num_editable_transponders; i++) {

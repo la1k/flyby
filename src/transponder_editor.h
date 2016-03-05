@@ -27,6 +27,7 @@ struct transponder_editor {
 	long satellite_number;
 	///Form containing all fields in the transponder editor
 	FORM *form;
+	FIELD **field_list;
 	///Field for editing attitude latitude for squint angle calculation
 	FIELD *alat;
 	///Field for editing attitude longitude for squint angle calculation
@@ -51,6 +52,8 @@ struct transponder_editor {
 struct transponder_editor* transponder_editor_create(const struct tle_db_entry *sat_info, WINDOW *window, struct sat_db_entry *db_entry);
 
 void transponder_editor_sysdefault(struct transponder_editor *entry, struct sat_db_entry *sat_db_entry);
+
+void transponder_editor_destroy(struct transponder_editor **transponder_editor);
 
 /**
  * Handle input character to transponder editor.

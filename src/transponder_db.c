@@ -190,7 +190,6 @@ void transponder_db_write_to_default(struct tle_db *tle_db, struct transponder_d
 	snprintf(writepath, MAX_NUM_CHARS, "%s%s", data_home, DB_RELATIVE_FILE_PATH);
 	free(data_home);
 
-
 	//write database to file
 	bool *should_write = (bool*)calloc(transponder_db->num_sats, sizeof(bool));
 	for (int i=0; i < transponder_db->num_sats; i++) {
@@ -207,6 +206,7 @@ void transponder_db_write_to_default(struct tle_db *tle_db, struct transponder_d
 		}
 	}
 	transponder_db_to_file(writepath, tle_db, transponder_db, should_write);
+	free(should_write);
 }
 
 bool transponder_db_entry_equal(struct sat_db_entry *entry_1, struct sat_db_entry *entry_2)
