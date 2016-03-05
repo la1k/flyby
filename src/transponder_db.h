@@ -5,10 +5,10 @@
 #include "tle_db.h"
 
 enum sat_db_location {
-	LOCATION_NONE = 0, //not loaded from anywhere
-	LOCATION_DATA_HOME = 1, //loaded from XDG_DATA_HOME
-	LOCATION_DATA_DIRS = 2, //loaded from XDG_DATA_DIRS
-	LOCATION_TRANSIENT = 3 //to be newly written to XDG_DATA_HOME
+	LOCATION_NONE = (1u << 0), //not loaded from anywhere
+	LOCATION_DATA_HOME = (1u << 1), //loaded from XDG_DATA_HOME
+	LOCATION_DATA_DIRS = (1u << 2), //loaded from XDG_DATA_DIRS
+	LOCATION_TRANSIENT = (1u << 3) //to be newly written to XDG_DATA_HOME
 };
 
 /**
@@ -32,7 +32,7 @@ struct sat_db_entry {
 	double downlink_start[MAX_NUM_TRANSPONDERS];
 	double downlink_end[MAX_NUM_TRANSPONDERS];
 	///from where the transponder db entry was loaded. Used in deciding which entries to save to XDG_DATA_HOME in transponder_db_write_to_default().
-	enum sat_db_location location;
+	int location;
 };
 
 /**

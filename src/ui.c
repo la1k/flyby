@@ -2513,22 +2513,20 @@ void DisplayTransponderEntry(struct sat_db_entry *entry, WINDOW *display_window)
 
 	//file location information
 	wattrset(display_window, COLOR_PAIR(4)|A_BOLD);
-	switch (entry->location) {
-		case LOCATION_DATA_DIRS:
-			mvwprintw(display_window, row++, info_col, "Loaded from system dirs.");
-			break;
-
-		case LOCATION_DATA_HOME:
-			mvwprintw(display_window, row++, info_col, "Loaded from user database.");
-			break;
-		case LOCATION_TRANSIENT:
-			mvwprintw(display_window, row++, info_col, "To be written to user database.");
-			break;
-		default:
-			break;
+	char location_string[MAX_NUM_CHARS] = {0};
+	if (entry->location & LOCATION_DATA_HOME) {
+		mvwprintw(display_window, row++, info_col, "Loaded from user database.");
+	} else if (entry->location & LOCATION_DATA_DIRS) {
+		mvwprintw(display_window, row++, info_col, "Loaded from system dirs.");
+	} else if (entry->location & LOCATION_TRANSIENT) {
+		mvwprintw(display_window, row++, info_col, "To be written to user database.");
 	}
 
-	row = 3;
+	if ((entry->location & LOCATION_DATA_DIRS) && ((entry->location & LOCATION_DATA_HOME) || (entry->location & LOCATION_TRANSIENT))) {
+		mvwprintw(display_window, row++, info_col, "A system default exists.");
+	}
+
+	row = 4;
 
 	//display squint angle information
 	wattrset(display_window, COLOR_PAIR(4)|A_BOLD);
@@ -2548,7 +2546,7 @@ void DisplayTransponderEntry(struct sat_db_entry *entry, WINDOW *display_window)
 	} else {
 		mvwprintw(display_window, row, data_col, "Disabled");
 	}
-	row++;
+	row = 7;
 
 	//display transponder information
 	for (int i=0; i < entry->num_transponders; i++) {
@@ -2656,7 +2654,11 @@ void EditTransponderDatabase(struct tle_db *tle_db, struct transponder_db *sat_d
 	}
 	filtered_menu_free(&menu);
 
+	//write transponder database to file
 	transponder_db_write_to_default(tle_db, sat_db);
+
+	//read transponder database from file again in order to set the flags correctly
+	transponder_db_from_search_paths(tle_db, sat_db);
 }
 
 void RunFlybyUI(bool new_user, const char *qthfile, predict_observer_t *observer, struct tle_db *tle_db, struct transponder_db *sat_db, rotctld_info_t *rotctld, rigctld_info_t *downlink, rigctld_info_t *uplink)

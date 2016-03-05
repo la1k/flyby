@@ -89,7 +89,7 @@ int transponder_db_from_file(const char *dbfile, const struct tle_db *tle_db, st
 			if (match) {
 				ret_db->sats[y].num_transponders=transponders;
 				ret_db->loaded = true;
-				ret_db->sats[y].location = location_info;
+				ret_db->sats[y].location |= location_info;
 			}
 
 			entry=0;
@@ -116,6 +116,11 @@ void transponder_db_from_search_paths(const struct tle_db *tle_db, struct transp
 	char *data_dirs_str = xdg_data_dirs();
 	stringsplit(data_dirs_str, &data_dirs);
 	free(data_dirs_str);
+
+	//initialize location variable
+	for (int i=0; i < MAX_NUM_SATS; i++) {
+		transponder_db->sats[i].location = LOCATION_NONE;
+	}
 
 	//read transponder databases from system-wide data directories in opposide order of precedence
 	for (int i=string_array_size(&data_dirs)-1; i >= 0; i--) {
@@ -177,9 +182,8 @@ void transponder_db_write_to_default(struct tle_db *tle_db, struct transponder_d
 	bool *should_write = (bool*)calloc(transponder_db->num_sats, sizeof(bool));
 	for (int i=0; i < transponder_db->num_sats; i++) {
 		struct sat_db_entry *entry = &(transponder_db->sats[i]);
-		if ((entry->location == LOCATION_DATA_HOME) || (entry->location == LOCATION_TRANSIENT)) {
+		if ((entry->location & LOCATION_DATA_HOME) || (entry->location & LOCATION_TRANSIENT)) {
 			should_write[i] = true;
-			entry->location = LOCATION_DATA_HOME;
 		}
 	}
 	transponder_db_to_file(writepath, tle_db, transponder_db, should_write);

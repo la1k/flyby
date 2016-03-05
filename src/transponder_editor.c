@@ -378,5 +378,5 @@ void transponder_editor_to_db_entry(struct transponder_editor *entry, struct sat
 	}
 
 	db_entry->num_transponders = entry_index;
-	db_entry->location = LOCATION_TRANSIENT;
+	db_entry->location |= LOCATION_TRANSIENT;
 }
