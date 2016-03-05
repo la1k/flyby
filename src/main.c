@@ -44,7 +44,7 @@ int main(int argc, char **argv)
 	char rigctld_uplink_host[MAX_NUM_CHARS] = RIGCTLD_UPLINK_DEFAULT_HOST;
 	char rigctld_uplink_port[MAX_NUM_CHARS] = RIGCTLD_UPLINK_DEFAULT_PORT;
 	char rigctld_uplink_vfo[MAX_NUM_CHARS] = {0};
-	
+
 	//rigctl downlink options
 	bool use_rigctld_downlink = false;
 	char rigctld_downlink_host[MAX_NUM_CHARS] = RIGCTLD_DOWNLINK_DEFAULT_HOST;
@@ -136,33 +136,34 @@ int main(int argc, char **argv)
 	}
 
 	//read TLE database
-	struct tle_db tle_db = {0};
+	struct tle_db *tle_db = tle_db_create();
 	int num_cmd_tle_files = string_array_size(&tle_cmd_filenames);
 	if (num_cmd_tle_files > 0) {
 		//TLEs are read from files specified on the command line
 		for (int i=0; i < num_cmd_tle_files; i++) {
-			struct tle_db temp_db = {0};
-			int retval = tle_db_from_file(string_array_get(&tle_cmd_filenames, i), &temp_db);
+			struct tle_db *temp_db = tle_db_create();
+			int retval = tle_db_from_file(string_array_get(&tle_cmd_filenames, i), temp_db);
 			if (retval != -1) {
-				tle_db_merge(&temp_db, &tle_db, TLE_OVERWRITE_OLD);
+				tle_db_merge(temp_db, tle_db, TLE_OVERWRITE_OLD);
 			} else {
 				fprintf(stderr, "TLE file %s could not be loaded, exiting.\n", string_array_get(&tle_cmd_filenames, i));
 				return 1;
 			}
+			tle_db_destroy(&temp_db);
 		}
 	} else {
 		//TLEs are read from XDG dirs
-		tle_db_from_search_paths(&tle_db);
+		tle_db_from_search_paths(tle_db);
 	}
 
-	whitelist_from_search_paths(&tle_db);
+	whitelist_from_search_paths(tle_db);
 
 	//use tle update files to update the TLE database, if present
 	int num_update_files = string_array_size(&tle_update_filenames);
 	if (num_update_files > 0) {
 		for (int i=0; i < num_update_files; i++) {
 			printf("Updating TLE database using %s:\n\n", string_array_get(&tle_update_filenames, i));
-			AutoUpdate(string_array_get(&tle_update_filenames, i), &tle_db, NULL);
+			AutoUpdate(string_array_get(&tle_update_filenames, i), tle_db, NULL);
 			printf("\n");
 		}
 		string_array_free(&tle_update_filenames);
@@ -202,10 +203,10 @@ int main(int argc, char **argv)
 		free(temp);
 	}
 
-	struct transponder_db transponder_db = {0};
-	transponder_db_from_search_paths(&tle_db, &transponder_db);
+	struct transponder_db *transponder_db = transponder_db_create();
+	transponder_db_from_search_paths(tle_db, transponder_db);
 
-	RunFlybyUI(is_new_user, qth_filename, observer, &tle_db, &transponder_db, &rotctld, &downlink, &uplink);
+	RunFlybyUI(is_new_user, qth_filename, observer, tle_db, transponder_db, &rotctld, &downlink, &uplink);
 
 	//disconnect from rigctl and rotctl
 	rigctld_disconnect(&downlink);
@@ -214,6 +215,8 @@ int main(int argc, char **argv)
 
 	//free memory
 	predict_destroy_observer(observer);
+	tle_db_destroy(&tle_db);
+	transponder_db_destroy(&transponder_db);
 }
 
 /**

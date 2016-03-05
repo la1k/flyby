@@ -44,6 +44,20 @@ struct transponder_db {
 };
 
 /**
+ * Create transponder database struct.
+ *
+ * \return Allocated transponder database
+ **/
+struct transponder_db *transponder_db_create();
+
+/**
+ * Free memory associated with allocated transponder database struct.
+ *
+ * \param transponder_db transponder database to free
+ **/
+void transponder_db_destroy(struct transponder_db **transponder_db);
+
+/**
  * Read transponder database from folders defined using the XDG file specification.
  * Database file is assumed to be located in {XDG_DATA_DIRS}/flyby/flyby.db and XDG_DATA_HOME/flyby/flyby.db.
  * A union over the files is used.

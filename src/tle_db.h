@@ -36,6 +36,20 @@ struct tle_db {
 };
 
 /**
+ * Create TLE database struct.
+ *
+ * \return Allocated TLE database
+ **/
+struct tle_db *tle_db_create();
+
+/**
+ * Free memory associated with allocated TLE database struct.
+ *
+ * \param tle_db TLE database to free
+ **/
+void tle_db_destroy(struct tle_db **tle_db);
+
+/**
  * Read TLE entries from folders defined using the XDG file specification. TLEs are read
  * from files located in {XDG_DATA_DIRS}/flyby/tles and XDG_DATA_HOME/flyby/tles.
  * A union over the files is used.
