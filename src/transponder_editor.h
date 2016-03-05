@@ -24,6 +24,7 @@ struct transponder_editor_line {
  * Editor for full transponder database entry.
  **/
 struct transponder_editor {
+	long satellite_number;
 	///Form containing all fields in the transponder editor
 	FORM *form;
 	///Field for editing attitude latitude for squint angle calculation
@@ -43,11 +44,13 @@ struct transponder_editor {
 /**
  * Create transponder editor.
  *
- * \param satellite_name Name of satellite
+ * \param sat_info TLE entry, used for getting satellite name and number
  * \param window Window to put the FIELDs in. Will be resized to fit the FORM
  * \param db_entry Database entry
  **/
-struct transponder_editor* transponder_editor_create(const char *satellite_name, WINDOW *window, struct sat_db_entry *db_entry);
+struct transponder_editor* transponder_editor_create(const struct tle_db_entry *sat_info, WINDOW *window, struct sat_db_entry *db_entry);
+
+void transponder_editor_sysdefault(struct transponder_editor *entry, struct sat_db_entry *sat_db_entry);
 
 /**
  * Handle input character to transponder editor.

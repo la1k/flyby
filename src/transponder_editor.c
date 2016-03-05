@@ -2,6 +2,7 @@
 #include "transponder_editor.h"
 #include <string.h>
 #include "ui.h"
+#include "xdg_basedirs.h"
 
 //default style for field
 #define TRANSPONDER_ENTRY_DEFAULT_STYLE COLOR_PAIR(1)|A_UNDERLINE
@@ -173,9 +174,10 @@ void transponder_editor_fill(struct transponder_editor *entry, struct sat_db_ent
 //number of fields in one transponder editor line
 #define NUM_FIELDS_IN_ENTRY (NUM_TRANSPONDER_SPECIFIERS*2 + 1)
 
-struct transponder_editor* transponder_editor_create(const char *satellite_name, WINDOW *window, struct sat_db_entry *db_entry)
+struct transponder_editor* transponder_editor_create(const struct tle_db_entry *sat_info, WINDOW *window, struct sat_db_entry *db_entry)
 {
 	struct transponder_editor *new_entry = (struct transponder_editor*)malloc(sizeof(struct transponder_editor));
+	new_entry->satellite_number = sat_info->satellite_number;
 
 	//create FIELDs for squint angle properties
 	int row = 0;
@@ -243,9 +245,38 @@ struct transponder_editor* transponder_editor_create(const char *satellite_name,
 	transponder_editor_fill(new_entry, db_entry);
 
 	//display satellite name on top
-	mvwprintw(window, 0, 5, "%s", satellite_name);
+	mvwprintw(window, 0, 5, "%s", sat_info->name);
 
 	return new_entry;
+}
+
+void transponder_editor_sysdefault(struct transponder_editor *entry, struct sat_db_entry *sat_db_entry)
+{
+	//create dummy TLE database
+	struct tle_db dummy_tle_db = {0};
+	struct transponder_db dummy_transponder_db = {0};
+	struct tle_db_entry dummy_entry;
+	dummy_entry.satellite_number = entry->satellite_number;
+	tle_db_add_entry(&dummy_tle_db, &dummy_entry);
+
+	//read from XDG_DATA_DIRS
+	string_array_t data_dirs = {0};
+	char *data_dirs_str = xdg_data_dirs();
+	stringsplit(data_dirs_str, &data_dirs);
+	free(data_dirs_str);
+
+	for (int i=string_array_size(&data_dirs)-1; i >= 0; i--) {
+		char db_path[MAX_NUM_CHARS] = {0};
+		snprintf(db_path, MAX_NUM_CHARS, "%s%s", string_array_get(&data_dirs, i), DB_RELATIVE_FILE_PATH);
+		transponder_db_from_file(db_path, &dummy_tle_db, &dummy_transponder_db, LOCATION_DATA_DIRS);
+	}
+	string_array_free(&data_dirs);
+
+	//copy entry fields to input satellite database entry and the transponder editor fields
+	transponder_db_entry_copy(sat_db_entry, &(dummy_transponder_db.sats[0]));
+	transponder_editor_fill(entry, &(dummy_transponder_db.sats[0]));
+
+	transponder_editor_set_visible(entry, sat_db_entry->num_transponders+1);
 }
 
 /**

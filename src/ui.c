@@ -2475,9 +2475,9 @@ void NewUser()
 	AnyKey();
 }
 
-void EditTransponderDatabaseField(const char *satellite_name, WINDOW *form_win, struct sat_db_entry *sat_entry)
+void EditTransponderDatabaseField(const struct tle_db_entry *sat_info, WINDOW *form_win, struct sat_db_entry *sat_entry)
 {
-	struct transponder_editor *transponder_entry = transponder_editor_create(satellite_name, form_win, sat_entry);
+	struct transponder_editor *transponder_entry = transponder_editor_create(sat_info, form_win, sat_entry);
 
 	wrefresh(form_win);
 	bool run_form = true;
@@ -2485,6 +2485,8 @@ void EditTransponderDatabaseField(const char *satellite_name, WINDOW *form_win, 
 		int c = wgetch(form_win);
 		if ((c == 27) || ((c == 10) && (transponder_entry->curr_selected_field == transponder_entry->last_field_in_form))) {
 			run_form = false;
+		} else if (c == 18) { //CTRL + R
+			transponder_editor_sysdefault(transponder_entry, sat_entry);
 		} else {
 			transponder_editor_handle(transponder_entry, c);
 		}
@@ -2630,7 +2632,7 @@ void EditTransponderDatabase(struct tle_db *tle_db, struct transponder_db *sat_d
 		int menu_index = item_index(current_item(menu.menu));
 
 		if (c == 10) { //enter
-			EditTransponderDatabaseField(tle_db->tles[menu_index].name, editor_win, &(sat_db->sats[menu_index]));
+			EditTransponderDatabaseField(&(tle_db->tles[menu_index]), editor_win, &(sat_db->sats[menu_index]));
 
 			//clear leftovers from transponder editor
 			wclear(main_win);
