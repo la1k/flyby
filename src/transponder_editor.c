@@ -205,6 +205,8 @@ void transponder_editor_keybindings(WINDOW *window, int row, int col)
 	print_hint(window, "CTRL + R", "Restore entry to system default", row, col);
 	row += 4;
 	print_hint(window, "ESCAPE", "Save and exit", row, col);
+	row += 3;
+	print_hint(window, "PGUP/PGDN", "Next/previous page", row, col);
 }
 
 //length of fields for squint variable editing
@@ -235,10 +237,24 @@ struct transponder_editor* transponder_editor_create(const struct tle_db_entry *
 	set_field_back(transponder_description, COLOR_PAIR(4)|A_BOLD);
 	set_field_buffer(transponder_description, 0, "Transponder name      Uplink      Downlink");
 	field_opts_off(transponder_description, O_ACTIVE);
+
+	int num_rows_per_page = 20;
 	for (int i=0; i < MAX_NUM_TRANSPONDERS; i++) {
+		bool page_break = false;
+		if (row > num_rows_per_page) {
+			row = 0;
+			page_break = true;
+		}
+
 		new_editor->transponders[i] = transponder_editor_line_create(row);
 		row += 4;
+
+		if (page_break) {
+			set_new_page(new_editor->transponders[i]->name, true);
+		}
 	}
+
+	//set page break at appropriate entry
 
 	transponder_editor_set_visible(new_editor, db_entry->num_transponders+1);
 
@@ -265,7 +281,7 @@ struct transponder_editor* transponder_editor_create(const struct tle_db_entry *
 	int rows, cols;
 	scale_form(new_editor->form, &rows, &cols);
 	int win_width = cols+30;
-	wresize(window, rows+4, win_width);
+	wresize(window, rows+6, win_width);
 	keypad(window, TRUE);
 	wattrset(window, COLOR_PAIR(4));
 	box(window, 0, 0);
@@ -291,7 +307,7 @@ struct transponder_editor* transponder_editor_create(const struct tle_db_entry *
 
 	//display key binding hints
 	int key_binding_col = cols + 4;
-	WINDOW *key_binding_window = derwin(window, 0, win_width-key_binding_col-2, 5, key_binding_col);
+	WINDOW *key_binding_window = derwin(window, 0, win_width-key_binding_col-2, 2, key_binding_col);
 	transponder_editor_keybindings(key_binding_window, 0, 0);
 
 	return new_editor;
@@ -398,6 +414,12 @@ void transponder_editor_handle(struct transponder_editor *transponder_editor, in
 		case KEY_BACKSPACE:
 			form_driver(transponder_editor->form, REQ_DEL_PREV);
 			form_driver(transponder_editor->form, REQ_VALIDATION);
+			break;
+		case KEY_PPAGE:
+			form_driver(transponder_editor->form, REQ_PREV_PAGE);
+			break;
+		case KEY_NPAGE:
+			form_driver(transponder_editor->form, REQ_NEXT_PAGE);
 			break;
 		case KEY_DC:
 			form_driver(transponder_editor->form, REQ_CLR_FIELD);
