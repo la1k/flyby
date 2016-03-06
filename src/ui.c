@@ -2413,6 +2413,11 @@ void MainMenu()
 	mvprintw(17,45," Enable/disable satellites");
 
 	attrset(COLOR_PAIR(6)|A_REVERSE|A_BOLD);
+	mvprintw(19,41," E ");
+	attrset(COLOR_PAIR(3)|A_BOLD);
+	mvprintw(19,45," Edit transponder database");
+
+	attrset(COLOR_PAIR(6)|A_REVERSE|A_BOLD);
 	mvprintw(21,41," Q ");
 	attrset(COLOR_PAIR(3)|A_BOLD);
 	mvprintw(21,45," Exit flyby");
