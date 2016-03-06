@@ -2476,7 +2476,7 @@ void NewUser()
 }
 
 /**
- * Display transponder editor form and edits the transponder entry.
+ * Display transponder editor form and edit the transponder entry.
  *
  * - Transponder entry is not changed: Nothing happens. Entries from XDG_DATA_HOME remain in the user database, nothing happens to entries defined in XDG_DATA_DIRS.
  * - Transponder entry is changed: Mark with LOCATION_TRANSIENT, will be written to user database.
@@ -2535,12 +2535,12 @@ void DisplayTransponderEntry(struct sat_db_entry *entry, WINDOW *display_window)
 
 	//file location information
 	wattrset(display_window, COLOR_PAIR(4)|A_BOLD);
-	if (entry->location & LOCATION_DATA_HOME) {
+	if (entry->location & LOCATION_TRANSIENT) {
+		mvwprintw(display_window, row++, info_col, "To be written to user database.");
+	} else if (entry->location & LOCATION_DATA_HOME) {
 		mvwprintw(display_window, row++, info_col, "Loaded from user database.");
 	} else if (entry->location & LOCATION_DATA_DIRS) {
 		mvwprintw(display_window, row++, info_col, "Loaded from system dirs.");
-	} else if (entry->location & LOCATION_TRANSIENT) {
-		mvwprintw(display_window, row++, info_col, "To be written to user database.");
 	}
 
 	if ((entry->location & LOCATION_DATA_DIRS) && ((entry->location & LOCATION_DATA_HOME) || (entry->location & LOCATION_TRANSIENT))) {
@@ -2628,7 +2628,7 @@ void EditTransponderDatabase(struct tle_db *tle_db, struct transponder_db *sat_d
 	int window_ypos = header_height+1;
 	WINDOW *menu_win = subwin(main_win, LINES-window_ypos-1, window_width, window_ypos, 1);
 	WINDOW *display_win = subwin(main_win, LINES-window_ypos-1, 50, window_ypos, window_width+5);
-	WINDOW *editor_win = newwin(LINES, 500, 8, 8);
+	WINDOW *editor_win = newwin(LINES, 500, 4, 1);
 
 	keypad(menu_win, TRUE);
 	wattrset(menu_win, COLOR_PAIR(4));

@@ -167,6 +167,46 @@ void transponder_editor_fill(struct transponder_editor *entry, struct sat_db_ent
 	}
 }
 
+/**
+ * Print keybinding hint as KEY: DESCRIPTION with different colorformatting of KEY.
+ *
+ * \param window Window to print hints in
+ * \param key Key
+ * \param description Description
+ * \param row Row
+ * \param col Column
+ **/
+void print_hint(WINDOW *window, const char *key, const char *description, int row, int col)
+{
+	wattrset(window, A_BOLD);
+	mvwprintw(window, row, col, "%s:", key);
+
+	wattrset(window, COLOR_PAIR(3)|A_BOLD);
+	mvwprintw(window, row+1, col, "%s", description);
+}
+
+/**
+ * Display transponder editor keybinding hints.
+ *
+ * \param window Window in which the keybinding hints are to be displayed
+ **/
+void transponder_editor_keybindings(WINDOW *window, int row, int col)
+{
+	print_hint(window, "ENTER", "Move to next field", row, col);
+	row += 3;
+	print_hint(window, "UP/DOWN/LEFT/RIGHT", "Navigate the form", row, col);
+	row += 3;
+	print_hint(window, "BACKSPACE", "Move to previous field  or remove characters", row, col);
+	row += 4;
+	print_hint(window, "DELETE", "Clear field", row, col);
+	row += 3;
+	print_hint(window, "CTRL + W", "Clear all fields", row, col);
+	row += 3;
+	print_hint(window, "CTRL + R", "Restore entry to system default", row, col);
+	row += 4;
+	print_hint(window, "ESCAPE", "Save and exit", row, col);
+}
+
 //length of fields for squint variable editing
 #define SQUINT_LENGTH 10
 #define SQUINT_DESCRIPTION_LENGTH 40
@@ -224,7 +264,8 @@ struct transponder_editor* transponder_editor_create(const struct tle_db_entry *
 	//scale input window to the form
 	int rows, cols;
 	scale_form(new_entry->form, &rows, &cols);
-	wresize(window, rows+4, cols+4);
+	int win_width = cols+30;
+	wresize(window, rows+4, win_width);
 	keypad(window, TRUE);
 	wattrset(window, COLOR_PAIR(4));
 	box(window, 0, 0);
@@ -247,6 +288,11 @@ struct transponder_editor* transponder_editor_create(const struct tle_db_entry *
 
 	//display satellite name on top
 	mvwprintw(window, 0, 5, "%s", sat_info->name);
+
+	//display key binding hints
+	int key_binding_col = cols + 4;
+	WINDOW *key_binding_window = derwin(window, 0, win_width-key_binding_col-2, 5, key_binding_col);
+	transponder_editor_keybindings(key_binding_window, 0, 0);
 
 	return new_entry;
 }
