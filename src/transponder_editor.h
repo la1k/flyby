@@ -56,10 +56,10 @@ struct transponder_editor* transponder_editor_create(const struct tle_db_entry *
 /**
  * Restore satellite transponder entry to the system default defined in XDG_DATA_DIRS.
  *
- * \param entry Transponder editor, in which the fields are restored to the system default
+ * \param transponder_editor Transponder editor, in which the fields are restored to the system default
  * \param sat_db_entry Satellite database entry to restore to system default
  **/
-void transponder_editor_sysdefault(struct transponder_editor *entry, struct sat_db_entry *sat_db_entry);
+void transponder_editor_sysdefault(struct transponder_editor *transponder_editor, struct sat_db_entry *sat_db_entry);
 
 /**
  * Destroy transponder editor.
@@ -71,17 +71,17 @@ void transponder_editor_destroy(struct transponder_editor **transponder_editor);
 /**
  * Handle input character to transponder editor.
  *
- * \param transponder_entry Transponder editor
+ * \param transponder_editor Transponder editor
  * \param c Input character
  **/
-void transponder_editor_handle(struct transponder_editor *transponder_entry, int c);
+void transponder_editor_handle(struct transponder_editor *transponder_editor, int c);
 
 /**
  * Convert information in transponder editor fields to database fields
  *
- * \param entry Transponder editor
+ * \param transponder_editor Transponder editor
  * \param db_entry Database entry
  **/
-void transponder_editor_to_db_entry(struct transponder_editor *entry, struct sat_db_entry *db_entry);
+void transponder_editor_to_db_entry(struct transponder_editor *transponder_editor, struct sat_db_entry *db_entry);
 
 #endif

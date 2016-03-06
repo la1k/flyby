@@ -2493,18 +2493,18 @@ void NewUser()
  **/
 void EditTransponderDatabaseField(const struct tle_db_entry *sat_info, WINDOW *form_win, struct sat_db_entry *sat_entry)
 {
-	struct transponder_editor *transponder_entry = transponder_editor_create(sat_info, form_win, sat_entry);
+	struct transponder_editor *transponder_editor = transponder_editor_create(sat_info, form_win, sat_entry);
 
 	wrefresh(form_win);
 	bool run_form = true;
 	while (run_form) {
 		int c = wgetch(form_win);
-		if ((c == 27) || ((c == 10) && (transponder_entry->curr_selected_field == transponder_entry->last_field_in_form))) {
+		if ((c == 27) || ((c == 10) && (transponder_editor->curr_selected_field == transponder_editor->last_field_in_form))) {
 			run_form = false;
 		} else if (c == 18) { //CTRL + R
-			transponder_editor_sysdefault(transponder_entry, sat_entry);
+			transponder_editor_sysdefault(transponder_editor, sat_entry);
 		} else {
-			transponder_editor_handle(transponder_entry, c);
+			transponder_editor_handle(transponder_editor, c);
 		}
 
 		wrefresh(form_win);
@@ -2513,14 +2513,14 @@ void EditTransponderDatabaseField(const struct tle_db_entry *sat_info, WINDOW *f
 	struct sat_db_entry new_entry;
 	transponder_db_entry_copy(&new_entry, sat_entry);
 
-	transponder_editor_to_db_entry(transponder_entry, &new_entry);
+	transponder_editor_to_db_entry(transponder_editor, &new_entry);
 
 	//ensure that we don't write an empty entry (or the same system database entry) to the file database unless we are actually trying to override a system database entry
 	if (!transponder_db_entry_equal(&new_entry, sat_entry)) {
 		transponder_db_entry_copy(sat_entry, &new_entry);
 	}
 
-	transponder_editor_destroy(&transponder_entry);
+	transponder_editor_destroy(&transponder_editor);
 
 	delwin(form_win);
 }
