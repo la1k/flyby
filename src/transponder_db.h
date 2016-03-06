@@ -4,6 +4,9 @@
 #include "defines.h"
 #include "tle_db.h"
 
+/**
+ * Location from where satellite database entry was loaded, used in deciding which entries to write to XDG_DATA_HOME.
+ **/
 enum sat_db_location {
 	LOCATION_NONE = (1u << 0), //not loaded from anywhere
 	LOCATION_DATA_HOME = (1u << 1), //loaded from XDG_DATA_HOME

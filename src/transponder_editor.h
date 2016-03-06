@@ -24,9 +24,11 @@ struct transponder_editor_line {
  * Editor for full transponder database entry.
  **/
 struct transponder_editor {
+	///Satellite number of the satellite to be edited
 	long satellite_number;
 	///Form containing all fields in the transponder editor
 	FORM *form;
+	///Field array used in the form. Contains pointers to the FIELD entries defined below and in struct transponder_editor_line.
 	FIELD **field_list;
 	///Field for editing attitude latitude for squint angle calculation
 	FIELD *alat;
@@ -51,8 +53,19 @@ struct transponder_editor {
  **/
 struct transponder_editor* transponder_editor_create(const struct tle_db_entry *sat_info, WINDOW *window, struct sat_db_entry *db_entry);
 
+/**
+ * Restore satellite transponder entry to the system default defined in XDG_DATA_DIRS.
+ *
+ * \param entry Transponder editor, in which the fields are restored to the system default
+ * \param sat_db_entry Satellite database entry to restore to system default
+ **/
 void transponder_editor_sysdefault(struct transponder_editor *entry, struct sat_db_entry *sat_db_entry);
 
+/**
+ * Destroy transponder editor.
+ *
+ * \param transponder_editor Transponder editor to free
+ **/
 void transponder_editor_destroy(struct transponder_editor **transponder_editor);
 
 /**

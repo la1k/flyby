@@ -116,6 +116,12 @@ int transponder_db_from_file(const char *dbfile, const struct tle_db *tle_db, st
 	return 0;
 }
 
+/**
+ * Check whether a transponder database entry is empty.
+ *
+ * \param entry Transponder database entry to check
+ * \return True if transponder database entry is empty, false otherwise
+ **/
 bool transponder_db_entry_empty(const struct sat_db_entry *entry)
 {
 	return (entry->num_transponders == 0) && !(entry->squintflag);
