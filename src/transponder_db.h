@@ -107,8 +107,9 @@ void transponder_db_to_file(const char *filename, struct tle_db *tle_db, struct 
  *
  * It also means that such entries will be saved to the user database irregardless
  * of whether any transponders or squint angle variables actually are defined,
- * in order to be able to override the system database. Empty entries in XDG_DATA_HOME
- * will therefore stay that way until manually edited from the text file.
+ * in order to be able to override the system database.
+ *
+ * Entries that are empty and only defined in XDG_DATA_HOME will not be written to file.
  *
  * Since only entries corresponding to existing TLEs will be loaded into the database,
  * only such entries will be written to the user database file. If any entries
