@@ -34,7 +34,7 @@ struct sat_db_entry {
 	///downlink frequencies
 	double downlink_start[MAX_NUM_TRANSPONDERS];
 	double downlink_end[MAX_NUM_TRANSPONDERS];
-	///from where the transponder db entry was loaded. Used in deciding which entries to save to XDG_DATA_HOME in transponder_db_write_to_default().
+	//where this transponder db entry is defined (bitwise or on enum sat_db_location)
 	int location;
 };
 
@@ -83,7 +83,7 @@ void transponder_db_from_search_paths(const struct tle_db *tle_db, struct transp
  * \param db_file .db file
  * \param tle_db Previously read TLE database, for which fields from transponder database are matched
  * \param ret_db Returned transponder database
- * \param location_info Whether entry is being loaded from XDG_DATA_DIRS or XDG_DATA_HOME. Used for marking the corresponding, loaded entries during this function call with this information
+ * \param location_info Whether entry is being loaded from XDG_DATA_DIRS or XDG_DATA_HOME. The location flag in the loaded entries are bitwise OR-ed with the input flag
  * \return 0 on success, -1 otherwise
  **/
 int transponder_db_from_file(const char *db_file, const struct tle_db *tle_db, struct transponder_db *ret_db, enum sat_db_location location_info);
