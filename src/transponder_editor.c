@@ -238,7 +238,7 @@ struct transponder_editor* transponder_editor_create(const struct tle_db_entry *
 	set_field_buffer(transponder_description, 0, "Transponder name      Uplink      Downlink");
 	field_opts_off(transponder_description, O_ACTIVE);
 
-	int num_rows_per_page = 20;
+	int num_rows_per_page = LINES-12;//20;
 	for (int i=0; i < MAX_NUM_TRANSPONDERS; i++) {
 		bool page_break = false;
 		if (row > num_rows_per_page) {
