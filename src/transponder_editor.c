@@ -216,10 +216,16 @@ void transponder_editor_keybindings(WINDOW *window, int row, int col)
 //number of fields in one transponder editor line
 #define NUM_FIELDS_IN_ENTRY (NUM_TRANSPONDER_SPECIFIERS*2 + 1)
 
+void transponder_editor_print_page_number(struct transponder_editor *transponder_editor)
+{
+	mvwprintw(transponder_editor->editor_window, 2, 2*SQUINT_LENGTH+SPACING+9, "Page %d of %d", transponder_editor->curr_page_number+1, transponder_editor->num_pages);
+}
+
 struct transponder_editor* transponder_editor_create(const struct tle_db_entry *sat_info, WINDOW *window, struct sat_db_entry *db_entry)
 {
 	struct transponder_editor *new_editor = (struct transponder_editor*)malloc(sizeof(struct transponder_editor));
 	new_editor->satellite_number = sat_info->satellite_number;
+	new_editor->editor_window = window;
 
 	//create FIELDs for squint angle properties
 	int row = 0;
@@ -238,23 +244,25 @@ struct transponder_editor* transponder_editor_create(const struct tle_db_entry *
 	set_field_buffer(transponder_description, 0, "Transponder name      Uplink      Downlink");
 	field_opts_off(transponder_description, O_ACTIVE);
 
-	int num_rows_per_page = LINES-12;//20;
+	int num_rows_per_page = LINES-12;
+	new_editor->num_pages = 1;
 	for (int i=0; i < MAX_NUM_TRANSPONDERS; i++) {
 		bool page_break = false;
 		if (row > num_rows_per_page) {
 			row = 0;
 			page_break = true;
+			new_editor->num_pages++;
 		}
 
 		new_editor->transponders[i] = transponder_editor_line_create(row);
 		row += 4;
 
+		//set page break at appropriate entry
 		if (page_break) {
 			set_new_page(new_editor->transponders[i]->name, true);
 		}
 	}
-
-	//set page break at appropriate entry
+	new_editor->curr_page_number = 0;
 
 	transponder_editor_set_visible(new_editor, db_entry->num_transponders+1);
 
@@ -309,6 +317,8 @@ struct transponder_editor* transponder_editor_create(const struct tle_db_entry *
 	int key_binding_col = cols + 4;
 	WINDOW *key_binding_window = derwin(window, 0, win_width-key_binding_col-2, 2, key_binding_col);
 	transponder_editor_keybindings(key_binding_window, 0, 0);
+
+	transponder_editor_print_page_number(new_editor);
 
 	return new_editor;
 }
@@ -417,9 +427,11 @@ void transponder_editor_handle(struct transponder_editor *transponder_editor, in
 			break;
 		case KEY_PPAGE:
 			form_driver(transponder_editor->form, REQ_PREV_PAGE);
+			transponder_editor->curr_page_number = (transponder_editor->curr_page_number - 1 + transponder_editor->num_pages) % (transponder_editor->num_pages);
 			break;
 		case KEY_NPAGE:
 			form_driver(transponder_editor->form, REQ_NEXT_PAGE);
+			transponder_editor->curr_page_number = (transponder_editor->curr_page_number + 1 + transponder_editor->num_pages) % (transponder_editor->num_pages);
 			break;
 		case KEY_DC:
 			form_driver(transponder_editor->form, REQ_CLR_FIELD);
@@ -432,6 +444,7 @@ void transponder_editor_handle(struct transponder_editor *transponder_editor, in
 			form_driver(transponder_editor->form, REQ_VALIDATION); //update buffer with field contents
 			break;
 	}
+	transponder_editor_print_page_number(transponder_editor);
 
 	//switch background color of currently marked field, reset previous field
 	FIELD *curr_field = current_field(transponder_editor->form);

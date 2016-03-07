@@ -42,6 +42,12 @@ struct transponder_editor {
 	FIELD *curr_selected_field;
 	///Last selectable field in form
 	FIELD *last_field_in_form;
+	///Number of form pages
+	int num_pages;
+	///Current page number
+	int curr_page_number;
+	///Window editor within which editor is contained
+	WINDOW *editor_window;
 };
 
 /**
