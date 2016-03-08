@@ -112,8 +112,7 @@ struct transponder_editor_line* transponder_editor_line_create(int row)
 
 void transponder_editor_print_page_number(struct transponder_editor *transponder_editor)
 {
-	int row = 1;//18;
-	mvwprintw(transponder_editor->editor_window, row, 49, "Page %d of %d", transponder_editor->curr_page_number+1, transponder_editor->num_pages);
+	mvwprintw(transponder_editor->editor_window, transponder_editor->window_rows-2, 61, "Page %d of %d", transponder_editor->curr_page_number+1, transponder_editor->num_pages);
 }
 
 
@@ -142,7 +141,9 @@ void transponder_editor_set_visible(struct transponder_editor *transponder_edito
 		transponder_editor->num_pages++;
 	}
 
-	transponder_editor_print_page_number(transponder_editor);
+	if (transponder_editor->num_pages > 1) {
+		transponder_editor_print_page_number(transponder_editor);
+	}
 }
 
 /**
@@ -223,6 +224,8 @@ void transponder_editor_keybindings(WINDOW *window, int row, int col)
 //number of fields in one transponder editor line
 #define NUM_FIELDS_IN_ENTRY (NUM_TRANSPONDER_SPECIFIERS*2 + 1)
 
+#define MIN_TRANSPONDERS_PER_PAGE 20
+
 struct transponder_editor* transponder_editor_create(const struct tle_db_entry *sat_info, WINDOW *window, struct sat_db_entry *db_entry)
 {
 	struct transponder_editor *new_editor = (struct transponder_editor*)malloc(sizeof(struct transponder_editor));
@@ -246,7 +249,11 @@ struct transponder_editor* transponder_editor_create(const struct tle_db_entry *
 	set_field_buffer(transponder_description, 0, "Transponder name      Uplink      Downlink");
 	field_opts_off(transponder_description, O_ACTIVE);
 
-	int num_rows_per_page = 10;//LINES-12;
+	int num_rows_per_page = LINES-12;
+	if (num_rows_per_page < MIN_TRANSPONDERS_PER_PAGE) {
+		num_rows_per_page = MIN_TRANSPONDERS_PER_PAGE;
+	}
+
 	new_editor->tot_num_pages = 1;
 	new_editor->num_pages = 1;
 	new_editor->transponders_per_page = 0;
@@ -299,10 +306,12 @@ struct transponder_editor* transponder_editor_create(const struct tle_db_entry *
 	int rows, cols;
 	scale_form(new_editor->form, &rows, &cols);
 	int win_width = cols+30;
-	wresize(window, rows+6, win_width);
+	int win_height = rows+6;
+	wresize(window, win_height, win_width);
 	keypad(window, TRUE);
 	wattrset(window, COLOR_PAIR(4));
 	box(window, 0, 0);
+	new_editor->window_rows = win_height;
 
 	//sub window for form
 	set_form_win(new_editor->form, window);
@@ -328,7 +337,9 @@ struct transponder_editor* transponder_editor_create(const struct tle_db_entry *
 	WINDOW *key_binding_window = derwin(window, 0, win_width-key_binding_col-2, 2, key_binding_col);
 	transponder_editor_keybindings(key_binding_window, 0, 0);
 
-	transponder_editor_print_page_number(new_editor);
+	if (new_editor->num_pages > 1) {
+		transponder_editor_print_page_number(new_editor);
+	}
 
 	return new_editor;
 }
@@ -436,12 +447,16 @@ void transponder_editor_handle(struct transponder_editor *transponder_editor, in
 			form_driver(transponder_editor->form, REQ_VALIDATION);
 			break;
 		case KEY_PPAGE:
-			form_driver(transponder_editor->form, REQ_PREV_PAGE);
-			transponder_editor->curr_page_number = (transponder_editor->curr_page_number - 1 + transponder_editor->num_pages) % (transponder_editor->num_pages);
+			if (transponder_editor->curr_page_number > 0) {
+				form_driver(transponder_editor->form, REQ_PREV_PAGE);
+				transponder_editor->curr_page_number = (transponder_editor->curr_page_number - 1 + transponder_editor->num_pages) % (transponder_editor->num_pages);
+			}
 			break;
 		case KEY_NPAGE:
-			form_driver(transponder_editor->form, REQ_NEXT_PAGE);
-			transponder_editor->curr_page_number = (transponder_editor->curr_page_number + 1 + transponder_editor->num_pages) % (transponder_editor->num_pages);
+			if (transponder_editor->curr_page_number+1 < transponder_editor->num_pages) {
+				form_driver(transponder_editor->form, REQ_NEXT_PAGE);
+				transponder_editor->curr_page_number = (transponder_editor->curr_page_number + 1 + transponder_editor->num_pages) % (transponder_editor->num_pages);
+			}
 			break;
 		case KEY_DC:
 			form_driver(transponder_editor->form, REQ_CLR_FIELD);
@@ -454,7 +469,10 @@ void transponder_editor_handle(struct transponder_editor *transponder_editor, in
 			form_driver(transponder_editor->form, REQ_VALIDATION); //update buffer with field contents
 			break;
 	}
-	transponder_editor_print_page_number(transponder_editor);
+
+	if (transponder_editor->num_pages > 1) {
+		transponder_editor_print_page_number(transponder_editor);
+	}
 
 	//switch background color of currently marked field, reset previous field
 	FIELD *curr_field = current_field(transponder_editor->form);

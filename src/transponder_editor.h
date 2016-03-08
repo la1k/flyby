@@ -52,6 +52,8 @@ struct transponder_editor {
 	int transponders_per_page;
 	///Window editor within which editor is contained
 	WINDOW *editor_window;
+	///Number of rows in window
+	int window_rows;
 };
 
 /**
