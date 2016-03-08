@@ -220,3 +220,15 @@ bool filtered_menu_handle(struct filtered_menu *list, int c)
 	return true;
 }
 
+void filtered_menu_set_multimark(struct filtered_menu *list, bool toggle)
+{
+	if (toggle) {
+		unpost_menu(list->menu);
+		menu_opts_off(list->menu, O_ONEVALUE);
+		post_menu(list->menu);
+	} else {
+		unpost_menu(list->menu);
+		menu_opts_on(list->menu, O_ONEVALUE);
+		post_menu(list->menu);
+	}
+}

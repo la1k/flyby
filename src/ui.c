@@ -2640,10 +2640,7 @@ void EditTransponderDatabase(struct tle_db *tle_db, struct transponder_db *sat_d
 
 	struct filtered_menu menu = {0};
 	filtered_menu_from_tle_db(&menu, tle_db, menu_win);
-
-	unpost_menu(menu.menu);
-	menu_opts_on(menu.menu, O_ONEVALUE);
-	post_menu(menu.menu);
+	filtered_menu_set_multimark(&menu, false);
 
 	DisplayTransponderEntry(&(sat_db->sats[0]), display_win);
 
