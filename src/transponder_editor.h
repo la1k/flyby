@@ -42,10 +42,14 @@ struct transponder_editor {
 	FIELD *curr_selected_field;
 	///Last selectable field in form
 	FIELD *last_field_in_form;
-	///Number of form pages
+	///Total number of available form pages, including invisible entries
+	int tot_num_pages;
+	///Number of visible form pages
 	int num_pages;
 	///Current page number
 	int curr_page_number;
+	///Number of transponders per form page
+	int transponders_per_page;
 	///Window editor within which editor is contained
 	WINDOW *editor_window;
 };

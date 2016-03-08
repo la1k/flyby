@@ -110,6 +110,13 @@ struct transponder_editor_line* transponder_editor_line_create(int row)
 	return ret_line;
 }
 
+void transponder_editor_print_page_number(struct transponder_editor *transponder_editor)
+{
+	int row = 1;//18;
+	mvwprintw(transponder_editor->editor_window, row, 49, "Page %d of %d", transponder_editor->curr_page_number+1, transponder_editor->num_pages);
+}
+
+
 /**
  * Set transponder line editors visible.
  *
@@ -130,6 +137,12 @@ void transponder_editor_set_visible(struct transponder_editor *transponder_edito
 
 	//update current last visible field in form
 	transponder_editor->last_field_in_form = transponder_editor->transponders[end_ind-1]->downlink[1];
+
+	if (((transponder_editor->num_editable_transponders) % (transponder_editor->transponders_per_page + 1)) == 0) {
+		transponder_editor->num_pages++;
+	}
+
+	transponder_editor_print_page_number(transponder_editor);
 }
 
 /**
@@ -192,12 +205,6 @@ void print_hint(WINDOW *window, const char *key, const char *description, int ro
  **/
 void transponder_editor_keybindings(WINDOW *window, int row, int col)
 {
-	print_hint(window, "ENTER", "Move to next field", row, col);
-	row += 3;
-	print_hint(window, "UP/DOWN/LEFT/RIGHT", "Navigate the form", row, col);
-	row += 3;
-	print_hint(window, "BACKSPACE", "Move to previous field  or remove characters", row, col);
-	row += 4;
 	print_hint(window, "DELETE", "Clear field", row, col);
 	row += 3;
 	print_hint(window, "CTRL + W", "Clear all fields", row, col);
@@ -215,11 +222,6 @@ void transponder_editor_keybindings(WINDOW *window, int row, int col)
 
 //number of fields in one transponder editor line
 #define NUM_FIELDS_IN_ENTRY (NUM_TRANSPONDER_SPECIFIERS*2 + 1)
-
-void transponder_editor_print_page_number(struct transponder_editor *transponder_editor)
-{
-	mvwprintw(transponder_editor->editor_window, 2, 2*SQUINT_LENGTH+SPACING+9, "Page %d of %d", transponder_editor->curr_page_number+1, transponder_editor->num_pages);
-}
 
 struct transponder_editor* transponder_editor_create(const struct tle_db_entry *sat_info, WINDOW *window, struct sat_db_entry *db_entry)
 {
@@ -244,14 +246,22 @@ struct transponder_editor* transponder_editor_create(const struct tle_db_entry *
 	set_field_buffer(transponder_description, 0, "Transponder name      Uplink      Downlink");
 	field_opts_off(transponder_description, O_ACTIVE);
 
-	int num_rows_per_page = LINES-12;
+	int num_rows_per_page = 10;//LINES-12;
+	new_editor->tot_num_pages = 1;
 	new_editor->num_pages = 1;
+	new_editor->transponders_per_page = 0;
+	bool first_page = false;
 	for (int i=0; i < MAX_NUM_TRANSPONDERS; i++) {
 		bool page_break = false;
 		if (row > num_rows_per_page) {
 			row = 0;
 			page_break = true;
-			new_editor->num_pages++;
+			new_editor->tot_num_pages++;
+			first_page = true;
+		}
+
+		if (!first_page) {
+			new_editor->transponders_per_page++;
 		}
 
 		new_editor->transponders[i] = transponder_editor_line_create(row);
