@@ -224,7 +224,8 @@ void transponder_editor_keybindings(WINDOW *window, int row, int col)
 //number of fields in one transponder editor line
 #define NUM_FIELDS_IN_ENTRY (NUM_TRANSPONDER_SPECIFIERS*2 + 1)
 
-#define MIN_TRANSPONDERS_PER_PAGE 20
+//number of allowed rows per transponder page, for scrolling
+#define NUM_ROWS_PER_TRANSPONDER_PAGE 20
 
 struct transponder_editor* transponder_editor_create(const struct tle_db_entry *sat_info, WINDOW *window, struct sat_db_entry *db_entry)
 {
@@ -249,18 +250,13 @@ struct transponder_editor* transponder_editor_create(const struct tle_db_entry *
 	set_field_buffer(new_editor->transponder_description, 0, "Transponder name      Uplink      Downlink");
 	field_opts_off(new_editor->transponder_description, O_ACTIVE);
 
-	int num_rows_per_page = LINES-12;
-	if (num_rows_per_page < MIN_TRANSPONDERS_PER_PAGE) {
-		num_rows_per_page = MIN_TRANSPONDERS_PER_PAGE;
-	}
-
 	new_editor->tot_num_pages = 1;
 	new_editor->num_pages = 1;
 	new_editor->transponders_per_page = 0;
 	bool first_page = false;
 	for (int i=0; i < MAX_NUM_TRANSPONDERS; i++) {
 		bool page_break = false;
-		if (row > num_rows_per_page) {
+		if (row > NUM_ROWS_PER_TRANSPONDER_PAGE) {
 			row = 0;
 			page_break = true;
 			new_editor->tot_num_pages++;
