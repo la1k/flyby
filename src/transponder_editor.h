@@ -34,6 +34,10 @@ struct transponder_editor {
 	FIELD *alat;
 	///Field for editing attitude longitude for squint angle calculation
 	FIELD *alon;
+	///Squint field description
+	FIELD *squint_description;
+	///Transponder fields description
+	FIELD *transponder_description;
 	///Number of editable transponder entries
 	int num_editable_transponders;
 	///Transponder entries

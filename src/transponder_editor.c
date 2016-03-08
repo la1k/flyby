@@ -234,20 +234,20 @@ struct transponder_editor* transponder_editor_create(const struct tle_db_entry *
 
 	//create FIELDs for squint angle properties
 	int row = 0;
-	FIELD *squint_description = new_field(FIELD_HEIGHT, SQUINT_DESCRIPTION_LENGTH, row++, 1, 0, 0);
-	set_field_buffer(squint_description, 0, "Alon        Alat");
-	field_opts_off(squint_description, O_ACTIVE);
-	set_field_back(squint_description, COLOR_PAIR(4)|A_BOLD);
+	new_editor->squint_description = new_field(FIELD_HEIGHT, SQUINT_DESCRIPTION_LENGTH, row++, 1, 0, 0);
+	set_field_buffer(new_editor->squint_description, 0, "Alon        Alat");
+	field_opts_off(new_editor->squint_description, O_ACTIVE);
+	set_field_back(new_editor->squint_description, COLOR_PAIR(4)|A_BOLD);
 
 	new_editor->alon = create_transponder_editor_field(FIELD_HEIGHT, SQUINT_LENGTH, row, 1);
 	new_editor->alat = create_transponder_editor_field(FIELD_HEIGHT, SQUINT_LENGTH, row++, 1 + SQUINT_LENGTH + SPACING);
 	row++;
 
 	//create FIELDs for each editable field
-	FIELD *transponder_description = new_field(FIELD_HEIGHT, TRANSPONDER_DESCRIPTION_LENGTH, row++, 1, 0, 0);
-	set_field_back(transponder_description, COLOR_PAIR(4)|A_BOLD);
-	set_field_buffer(transponder_description, 0, "Transponder name      Uplink      Downlink");
-	field_opts_off(transponder_description, O_ACTIVE);
+	new_editor->transponder_description = new_field(FIELD_HEIGHT, TRANSPONDER_DESCRIPTION_LENGTH, row++, 1, 0, 0);
+	set_field_back(new_editor->transponder_description, COLOR_PAIR(4)|A_BOLD);
+	set_field_buffer(new_editor->transponder_description, 0, "Transponder name      Uplink      Downlink");
+	field_opts_off(new_editor->transponder_description, O_ACTIVE);
 
 	int num_rows_per_page = LINES-12;
 	if (num_rows_per_page < MIN_TRANSPONDERS_PER_PAGE) {
@@ -285,10 +285,10 @@ struct transponder_editor* transponder_editor_create(const struct tle_db_entry *
 
 	//create horrible FIELD array for input into the FORM
 	FIELD **fields = calloc(NUM_FIELDS_IN_ENTRY*MAX_NUM_TRANSPONDERS + 5, sizeof(FIELD*));
-	fields[0] = squint_description;
+	fields[0] = new_editor->squint_description;
 	fields[1] = new_editor->alon;
 	fields[2] = new_editor->alat;
-	fields[3] = transponder_description;
+	fields[3] = new_editor->transponder_description;
 
 	for (int i=0; i < MAX_NUM_TRANSPONDERS; i++) {
 		int field_index = i*NUM_FIELDS_IN_ENTRY + 4;
@@ -359,8 +359,11 @@ void transponder_editor_line_destroy(struct transponder_editor_line **line)
 void transponder_editor_destroy(struct transponder_editor **transponder_editor)
 {
 	unpost_form((*transponder_editor)->form);
+	free_form((*transponder_editor)->form);
 	free_field((*transponder_editor)->alat);
 	free_field((*transponder_editor)->alon);
+	free_field((*transponder_editor)->squint_description);
+	free_field((*transponder_editor)->transponder_description);
 	for (int i=0; i < MAX_NUM_TRANSPONDERS; i++) {
 		transponder_editor_line_destroy(&((*transponder_editor)->transponders[i]));
 	}
