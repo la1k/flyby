@@ -2559,7 +2559,7 @@ void DisplayTransponderEntry(struct sat_db_entry *entry, WINDOW *display_window)
 
 	//display transponder information
 	for (int i=0; i < entry->num_transponders; i++) {
-		wattrset(display_window, COLOR_PAIR(4)|A_BOLD);
+		wattrset(display_window, A_BOLD);
 		mvwprintw(display_window, ++row, info_col, "%s", entry->transponder_name[i]);
 
 		//uplink
