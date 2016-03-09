@@ -2591,7 +2591,7 @@ void DisplayTransponderEntry(struct sat_db_entry *entry, WINDOW *display_window)
 
 void EditTransponderDatabase(struct tle_db *tle_db, struct transponder_db *sat_db)
 {
-	/* Print header */
+	//print header
 	attrset(COLOR_PAIR(6)|A_REVERSE|A_BOLD);
 	clear();
 
@@ -2603,9 +2603,8 @@ void EditTransponderDatabase(struct tle_db *tle_db, struct transponder_db *sat_d
 	mvwprintw(header_win,1,0,"  flyby Transponder Database Editor                                             ");
 	mvwprintw(header_win,2,0,"                                                                                ");
 
+	//prepare the other windows
 	WINDOW *main_win = newwin(LINES-header_height, win_width, header_height, 0);
-
-	//menu window
 	int window_width = 25;
 	int window_ypos = header_height+1;
 	WINDOW *menu_win = subwin(main_win, LINES-window_ypos-1, window_width, window_ypos, 1);
@@ -2615,6 +2614,7 @@ void EditTransponderDatabase(struct tle_db *tle_db, struct transponder_db *sat_d
 	keypad(menu_win, TRUE);
 	wattrset(menu_win, COLOR_PAIR(4));
 
+	//prepare menu
 	struct filtered_menu menu = {0};
 	filtered_menu_from_tle_db(&menu, tle_db, menu_win);
 	filtered_menu_set_multimark(&menu, false);
