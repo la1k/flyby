@@ -277,8 +277,6 @@ struct transponder_editor* transponder_editor_create(const struct tle_db_entry *
 	}
 	new_editor->curr_page_number = 0;
 
-	transponder_editor_set_visible(new_editor, db_entry->num_transponders+1);
-
 	//create horrible FIELD array for input into the FORM
 	FIELD **fields = calloc(NUM_FIELDS_IN_ENTRY*MAX_NUM_TRANSPONDERS + 5, sizeof(FIELD*));
 	fields[0] = new_editor->squint_description;
@@ -337,6 +335,8 @@ struct transponder_editor* transponder_editor_create(const struct tle_db_entry *
 		transponder_editor_print_page_number(new_editor);
 	}
 
+	transponder_editor_set_visible(new_editor, db_entry->num_transponders+1);
+
 	return new_editor;
 }
 
@@ -354,6 +354,7 @@ void transponder_editor_line_destroy(struct transponder_editor_line **line)
 
 void transponder_editor_destroy(struct transponder_editor **transponder_editor)
 {
+	wclear((*transponder_editor)->editor_window);
 	unpost_form((*transponder_editor)->form);
 	free_form((*transponder_editor)->form);
 	free_field((*transponder_editor)->alat);
