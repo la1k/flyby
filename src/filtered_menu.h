@@ -92,5 +92,13 @@ void filtered_menu_toggle(struct filtered_menu *list);
  **/
 bool filtered_menu_handle(struct filtered_menu *list, int c);
 
+/**
+ * Set/unset option for being able to select multiple entries in menu.
+ *
+ * \param list Menu struct
+ * \param Toggle True if multimark is to be set, false if only a single entry can be selected in the menu
+ **/
+void filtered_menu_set_multimark(struct filtered_menu *list, bool toggle);
+
 
 #endif

@@ -55,6 +55,7 @@
 #include <form.h>
 #include "ui.h"
 #include "qth_config.h"
+#include "transponder_editor.h"
 
 #define EARTH_RADIUS_KM		6.378137E3		/* WGS 84 Earth radius km */
 #define HALF_DELAY_TIME	5
@@ -2165,21 +2166,24 @@ void Illumination(const char *name, predict_orbital_elements_t *orbital_elements
 	while (quit!=1 && breakout!=1 && !(orbit.decayed));
 }
 
-void pattern_prepare(char *string)
+void trim_whitespaces_from_end(char *string)
 {
-	int length = strlen(string);
-
 	//trim whitespaces from end
-	for (int i=length-1; i >= 0; i--) {
+	for (int i=strlen(string)-1; i >= 0; i--) {
 		if (string[i] == ' ') {
 			string[i] = '\0';
 		} else if (isdigit(string[i]) || isalpha(string[i])) {
 			break;
 		}
 	}
+}
+
+void prepare_pattern(char *string)
+{
+	trim_whitespaces_from_end(string);
 
 	//lowercase to uppercase
-	for (int i=0; i < length; i++) {
+	for (int i=0; i < strlen(string); i++) {
 		string[i] = toupper(string[i]);
 	}
 }
@@ -2296,7 +2300,7 @@ void EditWhitelist(struct tle_db *tle_db)
 			switch (c) {
 				case 'q':
 					strncpy(field_contents, field_buffer(field[0], 0), MAX_NUM_CHARS);
-					pattern_prepare(field_contents);
+					prepare_pattern(field_contents);
 
 					if (strlen(field_contents) > 0) {
 						//wipe field if field is non-empty
@@ -2319,7 +2323,7 @@ void EditWhitelist(struct tle_db *tle_db)
 					form_driver(form, REQ_VALIDATION); //update buffer with field contents
 
 					strncpy(field_contents, field_buffer(field[0], 0), MAX_NUM_CHARS);
-					pattern_prepare(field_contents);
+					prepare_pattern(field_contents);
 
 					filtered_menu_pattern_match(&menu, field_contents);
 
@@ -2409,6 +2413,11 @@ void MainMenu()
 	mvprintw(17,45," Enable/disable satellites");
 
 	attrset(COLOR_PAIR(6)|A_REVERSE|A_BOLD);
+	mvprintw(19,41," E ");
+	attrset(COLOR_PAIR(3)|A_BOLD);
+	mvprintw(19,45," Edit transponder database");
+
+	attrset(COLOR_PAIR(6)|A_REVERSE|A_BOLD);
 	mvprintw(21,41," Q ");
 	attrset(COLOR_PAIR(3)|A_BOLD);
 	mvprintw(21,45," Exit flyby");
@@ -2469,6 +2478,193 @@ void NewUser()
 
 	attrset(COLOR_PAIR(4)|A_BOLD);
 	AnyKey();
+}
+
+void EditTransponderDatabaseField(const struct tle_db_entry *sat_info, WINDOW *form_win, struct sat_db_entry *sat_entry)
+{
+	struct transponder_editor *transponder_editor = transponder_editor_create(sat_info, form_win, sat_entry);
+
+	wrefresh(form_win);
+	bool run_form = true;
+	while (run_form) {
+		int c = wgetch(form_win);
+		if ((c == 27) || ((c == 10) && (transponder_editor->curr_selected_field == transponder_editor->last_field_in_form))) {
+			run_form = false;
+		} else if (c == 18) { //CTRL + R
+			transponder_editor_sysdefault(transponder_editor, sat_entry);
+		} else {
+			transponder_editor_handle(transponder_editor, c);
+		}
+
+		wrefresh(form_win);
+	}
+
+	struct sat_db_entry new_entry;
+	transponder_db_entry_copy(&new_entry, sat_entry);
+
+	transponder_editor_to_db_entry(transponder_editor, &new_entry);
+
+	//ensure that we don't write an empty entry (or the same system database entry) to the file database unless we are actually trying to override a system database entry
+	if (!transponder_db_entry_equal(&new_entry, sat_entry)) {
+		transponder_db_entry_copy(sat_entry, &new_entry);
+	}
+
+	transponder_editor_destroy(&transponder_editor);
+
+	delwin(form_win);
+}
+
+void DisplayTransponderEntry(struct sat_db_entry *entry, WINDOW *display_window)
+{
+	werase(display_window);
+	int data_col = 15;
+	int info_col = 1;
+	int row = 1;
+
+	//file location information
+	wattrset(display_window, COLOR_PAIR(4)|A_BOLD);
+	if (entry->location & LOCATION_TRANSIENT) {
+		mvwprintw(display_window, row++, info_col, "To be written to user database.");
+	} else if (entry->location & LOCATION_DATA_HOME) {
+		mvwprintw(display_window, row++, info_col, "Loaded from user database.");
+	} else if (entry->location & LOCATION_DATA_DIRS) {
+		mvwprintw(display_window, row++, info_col, "Loaded from system dirs.");
+	}
+
+	if ((entry->location & LOCATION_DATA_DIRS) && ((entry->location & LOCATION_DATA_HOME) || (entry->location & LOCATION_TRANSIENT))) {
+		mvwprintw(display_window, row++, info_col, "A system default exists.");
+	}
+
+	row = 4;
+
+	//display squint angle information
+	wattrset(display_window, COLOR_PAIR(4)|A_BOLD);
+	mvwprintw(display_window, row, info_col, "Squint angle:");
+
+	wattrset(display_window, COLOR_PAIR(2)|A_BOLD);
+	if (entry->squintflag) {
+		mvwprintw(display_window, row++, data_col, "Enabled.");
+
+		wattrset(display_window, COLOR_PAIR(4)|A_BOLD);
+		mvwprintw(display_window, row++, info_col, "alat: ");
+		mvwprintw(display_window, row, info_col, "alon: ");
+
+		wattrset(display_window, COLOR_PAIR(2)|A_BOLD);
+		mvwprintw(display_window, row-1, data_col, "%f", entry->alat);
+		mvwprintw(display_window, row, data_col, "%f", entry->alon);
+	} else {
+		mvwprintw(display_window, row, data_col, "Disabled");
+	}
+	row = 7;
+
+	//display transponder information
+	for (int i=0; i < entry->num_transponders; i++) {
+		wattrset(display_window, A_BOLD);
+		mvwprintw(display_window, ++row, info_col, "%s", entry->transponder_name[i]);
+
+		//uplink
+		if (entry->uplink_start[i] != 0.0) {
+			wattrset(display_window, COLOR_PAIR(4)|A_BOLD);
+			mvwprintw(display_window, ++row, info_col, "Uplink:");
+
+			wattrset(display_window, COLOR_PAIR(2)|A_BOLD);
+			mvwprintw(display_window, row, data_col, "%f, %f", entry->uplink_start[i], entry->uplink_end[i]);
+		}
+
+		//downlink
+		if (entry->downlink_start[i] != 0.0) {
+			wattrset(display_window, COLOR_PAIR(4)|A_BOLD);
+			mvwprintw(display_window, ++row, info_col, "Downlink:");
+
+			wattrset(display_window, COLOR_PAIR(2)|A_BOLD);
+			mvwprintw(display_window, row, data_col, "%f, %f", entry->downlink_start[i], entry->downlink_end[i]);
+		}
+		row++;
+	}
+
+	//default text when no transponders are defined
+	if (entry->num_transponders <= 0) {
+		wattrset(display_window, COLOR_PAIR(4)|A_BOLD);
+		mvwprintw(display_window, ++row, info_col, "No transponders defined.");
+	}
+}
+
+void EditTransponderDatabase(struct tle_db *tle_db, struct transponder_db *sat_db)
+{
+	//print header
+	attrset(COLOR_PAIR(6)|A_REVERSE|A_BOLD);
+	clear();
+
+	int header_height = 3;
+	int win_width = 251;
+	WINDOW *header_win = newwin(header_height, win_width, 0, 0);
+	wattrset(header_win, COLOR_PAIR(6)|A_REVERSE|A_BOLD);
+	mvwprintw(header_win,0,0,"                                                                                ");
+	mvwprintw(header_win,1,0,"  flyby Transponder Database Editor                                             ");
+	mvwprintw(header_win,2,0,"                                                                                ");
+
+	//prepare the other windows
+	WINDOW *main_win = newwin(LINES-header_height, win_width, header_height, 0);
+	int window_width = 25;
+	int window_ypos = header_height+1;
+	WINDOW *menu_win = subwin(main_win, LINES-window_ypos-1, window_width, window_ypos, 1);
+	WINDOW *display_win = subwin(main_win, LINES-window_ypos-1, 50, window_ypos, window_width+5);
+	WINDOW *editor_win = newwin(LINES, 500, 4, 1);
+
+	keypad(menu_win, TRUE);
+	wattrset(menu_win, COLOR_PAIR(4));
+
+	//prepare menu
+	struct filtered_menu menu = {0};
+	filtered_menu_from_tle_db(&menu, tle_db, menu_win);
+	filtered_menu_set_multimark(&menu, false);
+
+	DisplayTransponderEntry(&(sat_db->sats[0]), display_win);
+
+	box(menu_win, 0, 0);
+
+	refresh();
+	wrefresh(header_win);
+	wrefresh(display_win);
+	wrefresh(menu_win);
+
+	bool run_menu = true;
+	while (run_menu) {
+		//handle keyboard
+		int c = wgetch(menu_win);
+		filtered_menu_handle(&menu, c);
+		int menu_index = item_index(current_item(menu.menu));
+
+		if (c == 10) { //enter
+			EditTransponderDatabaseField(&(tle_db->tles[menu_index]), editor_win, &(sat_db->sats[menu_index]));
+
+			//clear leftovers from transponder editor
+			wclear(main_win);
+			wrefresh(main_win);
+			refresh();
+
+			//force menu update
+			unpost_menu(menu.menu);
+			post_menu(menu.menu);
+
+			//refresh the rest and redraw window boxes
+			box(menu_win, 0, 0);
+			wrefresh(menu_win);
+		} else if (c == 'q') {
+			run_menu = false;
+		}
+
+		//display/refresh transponder entry displayer
+		DisplayTransponderEntry(&(sat_db->sats[menu_index]), display_win);
+		wrefresh(display_win);
+	}
+	filtered_menu_free(&menu);
+
+	//write transponder database to file
+	transponder_db_write_to_default(tle_db, sat_db);
+
+	//read transponder database from file again in order to set the flags correctly
+	transponder_db_from_search_paths(tle_db, sat_db);
 }
 
 void RunFlybyUI(bool new_user, const char *qthfile, predict_observer_t *observer, struct tle_db *tle_db, struct transponder_db *sat_db, rotctld_info_t *rotctld, rigctld_info_t *downlink, rigctld_info_t *uplink)
@@ -2592,6 +2788,11 @@ void RunFlybyUI(bool new_user, const char *qthfile, predict_observer_t *observer
 			case 'w':
 			case 'W':
 				EditWhitelist(tle_db);
+				MainMenu();
+				break;
+			case 'E':
+			case 'e':
+				EditTransponderDatabase(tle_db, sat_db);
 				MainMenu();
 				break;
 		}

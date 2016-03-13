@@ -128,7 +128,7 @@ void filtered_menu_from_stringarray(struct filtered_menu *list, string_array_t *
 	int max_width, max_height;
 	getmaxyx(my_menu_win, max_height, max_width);
 	set_menu_sub(my_menu, derwin(my_menu_win, max_height - 3, max_width - 2, 2, 1));
-	set_menu_format(my_menu, LINES-14, 1);
+	set_menu_format(my_menu, max_height-4, 1);
 
 	set_menu_mark(my_menu, " * ");
 	menu_opts_off(my_menu, O_ONEVALUE);
@@ -220,3 +220,15 @@ bool filtered_menu_handle(struct filtered_menu *list, int c)
 	return true;
 }
 
+void filtered_menu_set_multimark(struct filtered_menu *list, bool toggle)
+{
+	if (toggle) {
+		unpost_menu(list->menu);
+		menu_opts_off(list->menu, O_ONEVALUE);
+		post_menu(list->menu);
+	} else {
+		unpost_menu(list->menu);
+		menu_opts_on(list->menu, O_ONEVALUE);
+		post_menu(list->menu);
+	}
+}
