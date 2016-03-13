@@ -24,6 +24,7 @@ FIELD *create_transponder_editor_field(int field_height, int field_width, int fi
 	FIELD *ret_field = new_field(field_height, field_width, field_row, field_col, 0, 0);
 	set_field_back(ret_field, TRANSPONDER_ENTRY_DEFAULT_STYLE);
 	field_opts_off(ret_field, O_STATIC);
+	set_max_field(ret_field, MAX_NUM_CHARS);
 	return ret_field;
 }
 
@@ -337,6 +338,7 @@ struct transponder_editor* transponder_editor_create(const struct tle_db_entry *
 	}
 
 	transponder_editor_set_visible(new_editor, db_entry->num_transponders+1);
+	form_driver(new_editor->form, REQ_VALIDATION);
 
 	return new_editor;
 }
@@ -480,6 +482,7 @@ void transponder_editor_handle(struct transponder_editor *transponder_editor, in
 	if (curr_field != transponder_editor->curr_selected_field) {
 		set_field_back(transponder_editor->curr_selected_field, TRANSPONDER_ENTRY_DEFAULT_STYLE);
 		set_field_back(curr_field, TRANSPONDER_ACTIVE_FIELDSTYLE);
+		form_driver(transponder_editor->form, REQ_VALIDATION);
 		transponder_editor->curr_selected_field = curr_field;
 	}
 
