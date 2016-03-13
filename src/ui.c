@@ -2482,7 +2482,6 @@ void NewUser()
 
 void EditTransponderDatabaseField(const struct tle_db_entry *sat_info, WINDOW *form_win, struct sat_db_entry *sat_entry)
 {
-	curs_set(1); //re-enable cursor
 	struct transponder_editor *transponder_editor = transponder_editor_create(sat_info, form_win, sat_entry);
 
 	wrefresh(form_win);
@@ -2513,7 +2512,6 @@ void EditTransponderDatabaseField(const struct tle_db_entry *sat_info, WINDOW *f
 	transponder_editor_destroy(&transponder_editor);
 
 	delwin(form_win);
-	curs_set(0); //disable cursor
 }
 
 void DisplayTransponderEntry(struct sat_db_entry *entry, WINDOW *display_window)
