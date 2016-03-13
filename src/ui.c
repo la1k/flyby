@@ -1175,7 +1175,7 @@ void QthEdit(const char *qthfile, predict_observer_t *qth)
 	mvprintw(11,43,"%s",qth->name);
 	mvprintw(12,43,"%g [DegN]",qth->latitude*180.0/M_PI);
 	mvprintw(13,43,"%g [DegE]",qth->longitude*180.0/M_PI);
-	mvprintw(14,43,"%d",qth->altitude);
+	mvprintw(14,43,"%g",qth->altitude);
 
 	refresh();
 

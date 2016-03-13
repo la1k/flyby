@@ -62,7 +62,7 @@ void qth_to_file(const char *qth_path, predict_observer_t *qth)
 	fprintf(fd,"%s\n",qth->name);
 	fprintf(fd," %g\n",qth->latitude*180.0/M_PI);
 	fprintf(fd," %g\n",-qth->longitude*180.0/M_PI); //convert from N/E to N/W
-	fprintf(fd," %d\n",(int)floor(qth->altitude));
+	fprintf(fd," %g\n",(double)qth->altitude);
 
 	fclose(fd);
 }
@@ -78,16 +78,16 @@ int qth_from_file(const char *qthfile, predict_observer_t *observer)
 		callsign[strlen(callsign)-1]=0;
 
 		double latitude, longitude;
-		int altitude;
+		double altitude;
 		fscanf(fd,"%lf", &latitude);
 		fscanf(fd,"%lf", &longitude);
-		fscanf(fd,"%d", &altitude);
+		fscanf(fd,"%lf", &altitude);
 		fclose(fd);
 
 		strncpy(observer->name, callsign, 16);
 		observer->latitude = latitude*M_PI/180.0;
 		observer->longitude = -longitude*M_PI/180.0; //convert from N/W to N/E
-		observer->altitude = altitude*M_PI/180.0;
+		observer->altitude = altitude;
 	} else {
 		return -1;
 	}
