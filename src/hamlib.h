@@ -12,17 +12,26 @@
 #define RIGCTLD_DOWNLINK_DEFAULT_PORT "4532\0\0"
 
 typedef struct {
+	///Whether we are connected to a rotctld instance
 	bool connected;
+	///Socket file identificator
 	int socket;
+	///Hostname
 	char host[MAX_NUM_CHARS];
+	///Port
 	char port[MAX_NUM_CHARS];
-	bool once_per_second;
+	///Time interval for rotctld update. 0 means that commands will be sent only when angles change
+	int update_time_interval;
+	///Horizon above which we start tracking
 	double tracking_horizon;
 } rotctld_info_t;
 
 typedef struct {
+	///Whether we are connected to a rigctld instance
 	bool connected;
+	///Socket file identificator
 	int socket;
+	///VFO name
 	char vfo_name[MAX_NUM_CHARS];
 } rigctld_info_t;
 
@@ -31,11 +40,11 @@ typedef struct {
  *
  * \param hostname Hostname/IP address
  * \param port Port
- * \param once_per_second Whether data should be sent once per second or when azimuth/elevation changes. NOTE: Not used internally in rotctld_functions, used externally in SingleTrack
+ * \param update_interval Time interval for rotctld updates. Set to 0 if rotctld should be updated only when (azimuth, elevation) changes. NOTE: Not used internally in rotctld_functions, used externally in SingleTrack
  * \param tracking_horizon Tracking horizon in degrees. NOTE: Not used internally in rotctld_ functions, used externally in SingleTrack
  * \param ret_info Returned rotctld connection instance
  **/
-void rotctld_connect(const char *hostname, const char *port, bool once_per_second, double tracking_horizon, rotctld_info_t *ret_info);
+void rotctld_connect(const char *hostname, const char *port, int update_interval, double tracking_horizon, rotctld_info_t *ret_info);
 
 /**
  * Disconnect from rotctld.

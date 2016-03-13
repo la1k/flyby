@@ -33,7 +33,7 @@ int sock_readline(int sockd, char *message, size_t bufsize)
 	return pos;
 }
 
-void rotctld_connect(const char *rotctld_host, const char *rotctld_port, bool once_per_second, double tracking_horizon, rotctld_info_t *ret_info)
+void rotctld_connect(const char *rotctld_host, const char *rotctld_port, int update_interval, double tracking_horizon, rotctld_info_t *ret_info)
 {
 	struct addrinfo hints, *servinfo, *servinfop;
 	memset(&hints, 0, sizeof(hints));
@@ -74,7 +74,11 @@ void rotctld_connect(const char *rotctld_host, const char *rotctld_port, bool on
 	strncpy(ret_info->host, rotctld_host, MAX_NUM_CHARS);
 	strncpy(ret_info->port, rotctld_port, MAX_NUM_CHARS);
 	ret_info->tracking_horizon = tracking_horizon;
-	ret_info->once_per_second = once_per_second;
+
+	if (update_interval < 0) {
+		update_interval = 0;
+	}
+	ret_info->update_time_interval = update_interval;
 }
 
 void rotctld_track(const rotctld_info_t *info, double azimuth, double elevation)

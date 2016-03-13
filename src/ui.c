@@ -1249,7 +1249,6 @@ int get_next_enabled_satellite(int curr_index, int step, struct tle_db *tle_db)
 
 void SingleTrack(int orbit_ind, predict_orbital_elements_t **orbital_elements_array, predict_observer_t *qth, struct transponder_db *sat_db, struct tle_db *tle_db, rotctld_info_t *rotctld, rigctld_info_t *downlink_info, rigctld_info_t *uplink_info)
 {
-	bool once_per_second = rotctld->once_per_second;
 	double horizon = rotctld->tracking_horizon;
 
 	struct sat_db_entry *sat_db_entries = sat_db->sats;
@@ -1589,15 +1588,16 @@ void SingleTrack(int orbit_ind, predict_orbital_elements_t **orbital_elements_ar
 				mvprintw(18,67,"Not  Enabled");
 
 
-			/* Send data to rotctld, either when it changes, or at a given interval
-       * (as specified by the user). TODO: Implement this, currently fixed at
-       * once per second. */
+			//send data to rotctld
 			if (obs.elevation*180.0/M_PI >= horizon) {
 				time_t curr_time = time(NULL);
 				int elevation = (int)round(obs.elevation*180.0/M_PI);
 				int azimuth = (int)round(obs.azimuth*180.0/M_PI);
+				bool coordinates_differ = (elevation != prev_elevation) || (azimuth != prev_azimuth);
+				bool use_update_interval = (rotctld->update_time_interval > 0);
 
-				if ((elevation != prev_elevation) || (azimuth != prev_azimuth) || (once_per_second && (curr_time > prev_time))) {
+				//send when coordinates differ or when a update interval has been specified
+				if ((coordinates_differ && !use_update_interval) || (use_update_interval && ((curr_time - rotctld->update_time_interval) >= prev_time))) {
 					if (rotctld->connected) rotctld_track(rotctld, obs.azimuth*180.0/M_PI, obs.elevation*180.0/M_PI);
 					prev_elevation = elevation;
 					prev_azimuth = azimuth;
@@ -2452,8 +2452,8 @@ void ProgramInfo(const char *qthfile, struct tle_db *tle_db, struct transponder_
 
 		printw("\t\tTracking horizon: %.2f degrees. ", rotctld->tracking_horizon);
 
-		if (rotctld->once_per_second)
-			printw("Update every second");
+		if (rotctld->update_time_interval > 0)
+			printw("Update every %d seconds", rotctld->update_time_interval);
 
 		printw("\n");
 	} else
