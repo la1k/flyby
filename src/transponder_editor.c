@@ -139,10 +139,8 @@ void transponder_editor_set_visible(struct transponder_editor *transponder_edito
 	//update current last visible field in form
 	transponder_editor->last_field_in_form = transponder_editor->transponders[end_ind-1]->downlink[1];
 
-	if (((transponder_editor->num_editable_transponders) % (transponder_editor->transponders_per_page + 1)) == 0) {
-		transponder_editor->num_pages++;
-	}
-
+	//update page number
+	transponder_editor->num_pages = (transponder_editor->num_editable_transponders-1)/transponder_editor->transponders_per_page+1;
 	if (transponder_editor->num_pages > 1) {
 		transponder_editor_print_page_number(transponder_editor);
 	}
