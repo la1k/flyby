@@ -23,6 +23,7 @@ FIELD *create_transponder_editor_field(int field_height, int field_width, int fi
 {
 	FIELD *ret_field = new_field(field_height, field_width, field_row, field_col, 0, 0);
 	set_field_back(ret_field, TRANSPONDER_ENTRY_DEFAULT_STYLE);
+	field_opts_off(ret_field, O_STATIC);
 	return ret_field;
 }
 

@@ -243,7 +243,7 @@ void transponder_db_entry_copy(struct sat_db_entry *destination, struct sat_db_e
 	destination->alon = source->alon;
 	destination->num_transponders = source->num_transponders;
 	for (int i=0; i < source->num_transponders; i++) {
-		strncpy(destination->transponder_name[i], source->transponder_name[i], MAX_NUM_TRANSPONDERS);
+		strncpy(destination->transponder_name[i], source->transponder_name[i], MAX_NUM_CHARS);
 	}
 	memcpy(destination->uplink_start, source->uplink_start, MAX_NUM_TRANSPONDERS*sizeof(double));
 	memcpy(destination->uplink_end, source->uplink_end, MAX_NUM_TRANSPONDERS*sizeof(double));
