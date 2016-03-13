@@ -124,7 +124,14 @@ int transponder_db_from_file(const char *dbfile, const struct tle_db *tle_db, st
  **/
 bool transponder_db_entry_empty(const struct sat_db_entry *entry)
 {
-	return (entry->num_transponders == 0) && !(entry->squintflag);
+	//check if downlink/uplinks are well-defined
+	int num_defined_entries = 0;
+	for (int i=0; i < entry->num_transponders; i++) {
+		if ((entry->downlink_start[i] != 0.0) || (entry->uplink_start[i] != 0.0)) {
+			num_defined_entries++;
+		}
+	}
+	return ((num_defined_entries == 0) && !(entry->squintflag));
 }
 
 void transponder_db_from_search_paths(const struct tle_db *tle_db, struct transponder_db *transponder_db)
@@ -136,8 +143,10 @@ void transponder_db_from_search_paths(const struct tle_db *tle_db, struct transp
 	stringsplit(data_dirs_str, &data_dirs);
 	free(data_dirs_str);
 
-	//initialize location variable
+	//initialize database
 	for (int i=0; i < MAX_NUM_SATS; i++) {
+		transponder_db->sats[i].squintflag = false;
+		transponder_db->sats[i].num_transponders = 0;
 		transponder_db->sats[i].location = LOCATION_NONE;
 	}
 
@@ -207,7 +216,7 @@ void transponder_db_write_to_default(struct tle_db *tle_db, struct transponder_d
 		}
 
 		//do not write to user database if it's only defined LOCATION_DATA_HOME and has become empty
-		if ((entry->location & LOCATION_DATA_HOME) && !(entry->location & LOCATION_DATA_DIRS) && transponder_db_entry_empty(entry)) {
+		if (((entry->location & LOCATION_DATA_HOME) || (entry->location & LOCATION_NONE)) && !(entry->location & LOCATION_DATA_DIRS) && transponder_db_entry_empty(entry)) {
 			should_write[i] = false;
 		}
 	}
