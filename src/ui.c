@@ -2260,9 +2260,10 @@ void EditWhitelist(struct tle_db *tle_db)
 	mvprintw( 11,col,"the list and then disable/enable");
 	mvprintw( 12,col,"with        .");
 
-	mvprintw( 14,col,"Press  q  to return to menu.");
-	mvprintw( 16,col,"Press  a  to toggle visible entries.");
-	mvprintw( 18,col,"Press  w  or  q  to wipe query field.");
+	mvprintw( 14,col,"Press  q  to return to menu or");
+	mvprintw( 15,col,"wipe query field if filled.");
+	mvprintw( 17,col,"Press  a  to toggle visible entries.");
+	mvprintw( 19,col,"Press  w  to wipe query field.");
 	mvprintw(5, 6, "Filter TLEs by name:");
 	row = 18;
 
@@ -2270,9 +2271,8 @@ void EditWhitelist(struct tle_db *tle_db)
 	attrset(COLOR_PAIR(6)|A_REVERSE|A_BOLD);
 	mvprintw( 12,col+5," SPACE ");
 	mvprintw( 14,col+6," q ");
-	mvprintw( 16,col+6," a ");
-	mvprintw( 18,col+6," w ");
-	mvprintw( 18,col+13," q ");
+	mvprintw( 17,col+6," a ");
+	mvprintw( 19,col+6," w ");
 
 	refresh();
 
