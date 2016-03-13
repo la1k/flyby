@@ -405,11 +405,6 @@ int Select(struct tle_db *tle_db, predict_orbital_elements_t **orbital_elements_
 	mvprintw( 7,46,"the 'Enter' key.");
 	mvprintw( 9,46,"Press 'q' to return to menu.");
 
-	if (num_orbits >= MAX_NUM_SATS)
-		mvprintw(LINES-3,46,"Truncated to %d satellites",MAX_NUM_SATS);
-	else
-		mvprintw(LINES-3,46,"%d satellites",num_orbits);
-
 	/* Create the window to be associated with the menu */
 	my_menu_win = newwin(LINES-5, 40, 4, 4);
 	keypad(my_menu_win, TRUE);
@@ -432,6 +427,8 @@ int Select(struct tle_db *tle_db, predict_orbital_elements_t **orbital_elements_
 	}
 	n_choices = item_ind;
 	my_items[item_ind] = NULL; //terminate the menu list
+
+	mvprintw(LINES-3,46,"%d satellites",n_choices);
 
 	if (n_choices > 0) {
 		/* Create menu */
