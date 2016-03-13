@@ -2619,7 +2619,9 @@ void EditTransponderDatabase(struct tle_db *tle_db, struct transponder_db *sat_d
 	filtered_menu_from_tle_db(&menu, tle_db, menu_win);
 	filtered_menu_set_multimark(&menu, false);
 
-	DisplayTransponderEntry(&(sat_db->sats[0]), display_win);
+	if (tle_db->num_tles > 0) {
+		DisplayTransponderEntry(&(sat_db->sats[0]), display_win);
+	}
 
 	box(menu_win, 0, 0);
 
@@ -2635,7 +2637,7 @@ void EditTransponderDatabase(struct tle_db *tle_db, struct transponder_db *sat_d
 		filtered_menu_handle(&menu, c);
 		int menu_index = item_index(current_item(menu.menu));
 
-		if (c == 10) { //enter
+		if ((c == 10) && (tle_db->num_tles > 0)) { //enter
 			EditTransponderDatabaseField(&(tle_db->tles[menu_index]), editor_win, &(sat_db->sats[menu_index]));
 
 			//clear leftovers from transponder editor
@@ -2655,13 +2657,17 @@ void EditTransponderDatabase(struct tle_db *tle_db, struct transponder_db *sat_d
 		}
 
 		//display/refresh transponder entry displayer
-		DisplayTransponderEntry(&(sat_db->sats[menu_index]), display_win);
+		if (tle_db->num_tles > 0) {
+			DisplayTransponderEntry(&(sat_db->sats[menu_index]), display_win);
+		}
 		wrefresh(display_win);
 	}
 	filtered_menu_free(&menu);
 
 	//write transponder database to file
-	transponder_db_write_to_default(tle_db, sat_db);
+	if (tle_db->num_tles > 0) {
+		transponder_db_write_to_default(tle_db, sat_db);
+	}
 
 	//read transponder database from file again in order to set the flags correctly
 	transponder_db_from_search_paths(tle_db, sat_db);
