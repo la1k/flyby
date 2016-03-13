@@ -19,7 +19,7 @@
 #define FLYBY_OPT_UPLINK_VFO 203
 #define FLYBY_OPT_DOWNLINK_PORT 204
 #define FLYBY_OPT_DOWNLINK_VFO 205
-#define FLYBY_OPT_ROTCTLD_ONCE_PER_SECOND 206
+#define FLYBY_OPT_ROTCTLD_UPDATE_INTERVAL 206
 
 /**
  * Print flyby program usage to stdout.
@@ -36,7 +36,7 @@ int main(int argc, char **argv)
 	bool use_rotctl = false;
 	char rotctld_host[MAX_NUM_CHARS] = ROTCTLD_DEFAULT_HOST;
 	char rotctld_port[MAX_NUM_CHARS] = ROTCTLD_DEFAULT_PORT;
-	bool rotctld_once_per_second = false;
+	int rotctld_update_interval = 0;
 	double tracking_horizon = 0;
 
 	//rigctl uplink options
@@ -63,14 +63,14 @@ int main(int argc, char **argv)
 		{"update-tle-db",		required_argument,	0,	'u'},
 		{"tle-file",			required_argument,	0,	't'},
 		{"qth-file",			required_argument,	0,	'q'},
-		{"rotctld-host",			required_argument,	0,	'a'},
+		{"rotctld-host",		required_argument,	0,	'a'},
 		{"rotctld-port",		required_argument,	0,	FLYBY_OPT_ROTCTLD_PORT},
 		{"rotctld-horizon",		required_argument,	0,	'H'},
-		{"rotctld-once-per-second",	no_argument,		0,	FLYBY_OPT_ROTCTLD_ONCE_PER_SECOND},
+		{"rotctld-update-interval",	required_argument,	0,	FLYBY_OPT_ROTCTLD_UPDATE_INTERVAL},
 		{"rigctld-uplink-host",		required_argument,	0,	'U'},
 		{"rigctld-uplink-port",		required_argument,	0,	FLYBY_OPT_UPLINK_PORT},
 		{"rigctld-uplink-vfo",		required_argument,	0,	FLYBY_OPT_UPLINK_VFO},
-		{"rigctld-downlink-host",		required_argument,	0,	'D'},
+		{"rigctld-downlink-host",	required_argument,	0,	'D'},
 		{"rigctld-downlink-port",	required_argument,	0,	FLYBY_OPT_DOWNLINK_PORT},
 		{"rigctld-downlink-vfo",	required_argument,	0,	FLYBY_OPT_DOWNLINK_VFO},
 		{"help",			no_argument,		0,	'h'},
@@ -105,8 +105,8 @@ int main(int argc, char **argv)
 			case 'H': //horizon
 				tracking_horizon = strtod(optarg, NULL);
 				break;
-			case FLYBY_OPT_ROTCTLD_ONCE_PER_SECOND: //once per second-option
-				rotctld_once_per_second = true;
+			case FLYBY_OPT_ROTCTLD_UPDATE_INTERVAL: //once per second-option
+				rotctld_update_interval = strtod(optarg, NULL);
 				break;
 			case 'U': //uplink
 				use_rigctld_uplink = true;
@@ -173,7 +173,7 @@ int main(int argc, char **argv)
 	//connect to rotctld
 	rotctld_info_t rotctld = {0};
 	if (use_rotctl) {
-		rotctld_connect(rotctld_host, rotctld_port, rotctld_once_per_second, tracking_horizon, &rotctld);
+		rotctld_connect(rotctld_host, rotctld_port, rotctld_update_interval, tracking_horizon, &rotctld);
 	}
 
 	//connect to rigctld
@@ -278,8 +278,8 @@ void show_help(const char *name, struct option long_options[], const char *short
 			case 'H':
 				printf("=HORIZON\t\tspecify elevation threshold for when %s will start tracking an orbit", name);
 				break;
-			case FLYBY_OPT_ROTCTLD_ONCE_PER_SECOND:
-				printf("\t\tSend updates to rotctld once per second instead of when (azimuth,elevation) changes");
+			case FLYBY_OPT_ROTCTLD_UPDATE_INTERVAL:
+				printf("=SECS\tSend updates to rotctld other SECS seconds instead of when (azimuth,elevation) changes");
 				break;
 			case 'U':
 				printf("=SERVER_HOST\tconnect to specified rigctld server for uplink frequency steering");
