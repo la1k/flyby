@@ -523,7 +523,7 @@ void transponder_editor_to_db_entry(struct transponder_editor *transponder_edito
 		double downlink_start = strtod(field_buffer(line->downlink[0], 0), NULL);
 		double downlink_end = strtod(field_buffer(line->downlink[1], 0), NULL);
 
-		//add to database if transponder name is defined and there are non-zero starting frequencies
+		//add to returned database entry if transponder name is defined
 		if (strlen(temp) > 0) {
 			strncpy(db_entry->transponder_name[entry_index], temp, MAX_NUM_CHARS);
 
