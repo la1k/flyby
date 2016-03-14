@@ -2580,8 +2580,8 @@ void DisplayTransponderEntry(struct sat_db_entry *entry, WINDOW *display_window)
 		//no uplink/downlink defined
 		if ((entry->uplink_start[i] == 0.0) && (entry->downlink_start[i] == 0.0)) {
 			wattrset(display_window, COLOR_PAIR(2)|A_BOLD);
-			mvwprintw(display_window, ++row, info_col, "No valid downlink/uplink defined.");
-			mvwprintw(display_window, ++row, info_col, "(Will be ignored)");
+			mvwprintw(display_window, ++row, info_col, "Neither downlink or uplink is defined.");
+			mvwprintw(display_window, ++row, info_col, "(Will be ignored on database reload)");
 		}
 		row++;
 	}
