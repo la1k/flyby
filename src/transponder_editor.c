@@ -167,17 +167,21 @@ void transponder_editor_fill(struct transponder_editor *transponder_editor, stru
 	for (int i=0; i < db_entry->num_transponders; i++) {
 		set_field_buffer(transponder_editor->transponders[i]->name, 0, db_entry->transponder_name[i]);
 
-		snprintf(temp, MAX_NUM_CHARS, "%f", db_entry->uplink_start[i]);
-		set_field_buffer(transponder_editor->transponders[i]->uplink[0], 0, temp);
+		if (db_entry->uplink_start[i] != 0.0) {
+			snprintf(temp, MAX_NUM_CHARS, "%f", db_entry->uplink_start[i]);
+			set_field_buffer(transponder_editor->transponders[i]->uplink[0], 0, temp);
 
-		snprintf(temp, MAX_NUM_CHARS, "%f", db_entry->uplink_end[i]);
-		set_field_buffer(transponder_editor->transponders[i]->uplink[1], 0, temp);
+			snprintf(temp, MAX_NUM_CHARS, "%f", db_entry->uplink_end[i]);
+			set_field_buffer(transponder_editor->transponders[i]->uplink[1], 0, temp);
+		}
 
-		snprintf(temp, MAX_NUM_CHARS, "%f", db_entry->downlink_start[i]);
-		set_field_buffer(transponder_editor->transponders[i]->downlink[0], 0, temp);
+		if (db_entry->downlink_start[i] != 0.0) {
+			snprintf(temp, MAX_NUM_CHARS, "%f", db_entry->downlink_start[i]);
+			set_field_buffer(transponder_editor->transponders[i]->downlink[0], 0, temp);
 
-		snprintf(temp, MAX_NUM_CHARS, "%f", db_entry->downlink_end[i]);
-		set_field_buffer(transponder_editor->transponders[i]->downlink[1], 0, temp);
+			snprintf(temp, MAX_NUM_CHARS, "%f", db_entry->downlink_end[i]);
+			set_field_buffer(transponder_editor->transponders[i]->downlink[1], 0, temp);
+		}
 	}
 }
 
@@ -523,8 +527,8 @@ void transponder_editor_to_db_entry(struct transponder_editor *transponder_edito
 		double downlink_start = strtod(field_buffer(line->downlink[0], 0), NULL);
 		double downlink_end = strtod(field_buffer(line->downlink[1], 0), NULL);
 
-		//add to database if transponder name is defined and there are non-zero starting frequencies
-		if ((strlen(temp) > 0) && ((uplink_start != 0.0) || (downlink_start != 0.0))) {
+		//add to returned database entry if transponder name is defined
+		if (strlen(temp) > 0) {
 			strncpy(db_entry->transponder_name[entry_index], temp, MAX_NUM_CHARS);
 
 			if (uplink_end == 0.0) {

@@ -79,6 +79,7 @@ void transponder_db_from_search_paths(const struct tle_db *tle_db, struct transp
 
 /**
  * Read transponder database from file. Only fields matching the TLE database fields are modified.
+ * Transponders where neither uplink nor downlink are defined are ignored.
  *
  * \param db_file .db file
  * \param tle_db Previously read TLE database, for which fields from transponder database are matched
@@ -90,6 +91,11 @@ int transponder_db_from_file(const char *db_file, const struct tle_db *tle_db, s
 
 /**
  * Write transponder database to file.
+ *
+ * All satellite database entries that are specified in the boolean array are written, irregardless of whether they are empty or not.
+ *
+ * Individual transponders are not written to file if neither downlink
+ * nor uplink are well-defined.
  *
  * \param filename Filename
  * \param tle_db TLE database, used for obtaining name and satellite number of satellite
@@ -109,7 +115,7 @@ void transponder_db_to_file(const char *filename, struct tle_db *tle_db, struct 
  * of whether any transponders or squint angle variables actually are defined,
  * in order to be able to override the system database.
  *
- * Entries that are empty and only defined in XDG_DATA_HOME will not be written to file.
+ * Entries that are empty and not defined in XDG_DATA_DIRS will not be written to file.
  *
  * Since only entries corresponding to existing TLEs will be loaded into the database,
  * only such entries will be written to the user database file. If any entries
@@ -136,5 +142,13 @@ bool transponder_db_entry_equal(struct sat_db_entry *entry_1, struct sat_db_entr
  * \param source Source struct
  **/
 void transponder_db_entry_copy(struct sat_db_entry *destination, struct sat_db_entry *source);
+
+/**
+ * Check whether a transponder database entry is empty. "Empty" means that no squint angle is defined, and there are no valid transponder entries (neither uplink or downlink is defined for the transponder in question).
+ *
+ * \param entry Transponder database entry to check
+ * \return True if transponder database entry is empty, false otherwise
+ **/
+bool transponder_db_entry_empty(const struct sat_db_entry *entry);
 
 #endif

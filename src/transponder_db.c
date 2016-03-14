@@ -116,15 +116,16 @@ int transponder_db_from_file(const char *dbfile, const struct tle_db *tle_db, st
 	return 0;
 }
 
-/**
- * Check whether a transponder database entry is empty.
- *
- * \param entry Transponder database entry to check
- * \return True if transponder database entry is empty, false otherwise
- **/
 bool transponder_db_entry_empty(const struct sat_db_entry *entry)
 {
-	return (entry->num_transponders == 0) && !(entry->squintflag);
+	//check if downlink/uplinks are well-defined
+	int num_defined_entries = 0;
+	for (int i=0; i < entry->num_transponders; i++) {
+		if ((entry->downlink_start[i] != 0.0) || (entry->uplink_start[i] != 0.0)) {
+			num_defined_entries++;
+		}
+	}
+	return ((num_defined_entries == 0) && !(entry->squintflag));
 }
 
 void transponder_db_from_search_paths(const struct tle_db *tle_db, struct transponder_db *transponder_db)
@@ -136,8 +137,10 @@ void transponder_db_from_search_paths(const struct tle_db *tle_db, struct transp
 	stringsplit(data_dirs_str, &data_dirs);
 	free(data_dirs_str);
 
-	//initialize location variable
+	//initialize database
 	for (int i=0; i < MAX_NUM_SATS; i++) {
+		transponder_db->sats[i].squintflag = false;
+		transponder_db->sats[i].num_transponders = 0;
 		transponder_db->sats[i].location = LOCATION_NONE;
 	}
 
@@ -175,11 +178,13 @@ void transponder_db_to_file(const char *filename, struct tle_db *tle_db, struct 
 
 			//transponders
 			for (int j=0; j < entry->num_transponders; j++) {
-				fprintf(fd, "%s\n", entry->transponder_name[j]);
-				fprintf(fd, "%f, %f\n", entry->uplink_start[j], entry->uplink_end[j]);
-				fprintf(fd, "%f, %f\n", entry->downlink_start[j], entry->downlink_end[j]);
-				fprintf(fd, "No weekly schedule\n"); //FIXME: See issue #29.
-				fprintf(fd, "No orbital schedule\n");
+				if ((entry->uplink_start[j] != 0.0) || (entry->downlink_start[j] != 0.0)) {
+					fprintf(fd, "%s\n", entry->transponder_name[j]);
+					fprintf(fd, "%f, %f\n", entry->uplink_start[j], entry->uplink_end[j]);
+					fprintf(fd, "%f, %f\n", entry->downlink_start[j], entry->downlink_end[j]);
+					fprintf(fd, "No weekly schedule\n"); //FIXME: See issue #29.
+					fprintf(fd, "No orbital schedule\n");
+				}
 			}
 			fprintf(fd, "end\n");
 		}
@@ -207,7 +212,7 @@ void transponder_db_write_to_default(struct tle_db *tle_db, struct transponder_d
 		}
 
 		//do not write to user database if it's only defined LOCATION_DATA_HOME and has become empty
-		if ((entry->location & LOCATION_DATA_HOME) && !(entry->location & LOCATION_DATA_DIRS) && transponder_db_entry_empty(entry)) {
+		if (((entry->location & LOCATION_DATA_HOME) || (entry->location & LOCATION_NONE)) && !(entry->location & LOCATION_DATA_DIRS) && transponder_db_entry_empty(entry)) {
 			should_write[i] = false;
 		}
 	}
