@@ -79,6 +79,7 @@ void transponder_db_from_search_paths(const struct tle_db *tle_db, struct transp
 
 /**
  * Read transponder database from file. Only fields matching the TLE database fields are modified.
+ * Transponders where neither uplink nor downlink are defined are ignored.
  *
  * \param db_file .db file
  * \param tle_db Previously read TLE database, for which fields from transponder database are matched
@@ -89,7 +90,7 @@ void transponder_db_from_search_paths(const struct tle_db *tle_db, struct transp
 int transponder_db_from_file(const char *db_file, const struct tle_db *tle_db, struct transponder_db *ret_db, enum sat_db_location location_info);
 
 /**
- * Write transponder database to file.
+ * Write transponder database to file. Transponders where neither downlink nor uplink are defined are ignored (i.e. transponders with name, but with uplink _and_ downlink set to 0.0), since these are correspondingly ignored when read.
  *
  * \param filename Filename
  * \param tle_db TLE database, used for obtaining name and satellite number of satellite
@@ -109,7 +110,7 @@ void transponder_db_to_file(const char *filename, struct tle_db *tle_db, struct 
  * of whether any transponders or squint angle variables actually are defined,
  * in order to be able to override the system database.
  *
- * Entries that are empty and only defined in XDG_DATA_HOME will not be written to file.
+ * Entries that are empty and not defined in XDG_DATA_DIRS will not be written to file.
  *
  * Since only entries corresponding to existing TLEs will be loaded into the database,
  * only such entries will be written to the user database file. If any entries
