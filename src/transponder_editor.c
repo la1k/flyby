@@ -167,17 +167,21 @@ void transponder_editor_fill(struct transponder_editor *transponder_editor, stru
 	for (int i=0; i < db_entry->num_transponders; i++) {
 		set_field_buffer(transponder_editor->transponders[i]->name, 0, db_entry->transponder_name[i]);
 
-		snprintf(temp, MAX_NUM_CHARS, "%f", db_entry->uplink_start[i]);
-		set_field_buffer(transponder_editor->transponders[i]->uplink[0], 0, temp);
+		if (db_entry->uplink_start[i] != 0.0) {
+			snprintf(temp, MAX_NUM_CHARS, "%f", db_entry->uplink_start[i]);
+			set_field_buffer(transponder_editor->transponders[i]->uplink[0], 0, temp);
 
-		snprintf(temp, MAX_NUM_CHARS, "%f", db_entry->uplink_end[i]);
-		set_field_buffer(transponder_editor->transponders[i]->uplink[1], 0, temp);
+			snprintf(temp, MAX_NUM_CHARS, "%f", db_entry->uplink_end[i]);
+			set_field_buffer(transponder_editor->transponders[i]->uplink[1], 0, temp);
+		}
 
-		snprintf(temp, MAX_NUM_CHARS, "%f", db_entry->downlink_start[i]);
-		set_field_buffer(transponder_editor->transponders[i]->downlink[0], 0, temp);
+		if (db_entry->downlink_start[i] != 0.0) {
+			snprintf(temp, MAX_NUM_CHARS, "%f", db_entry->downlink_start[i]);
+			set_field_buffer(transponder_editor->transponders[i]->downlink[0], 0, temp);
 
-		snprintf(temp, MAX_NUM_CHARS, "%f", db_entry->downlink_end[i]);
-		set_field_buffer(transponder_editor->transponders[i]->downlink[1], 0, temp);
+			snprintf(temp, MAX_NUM_CHARS, "%f", db_entry->downlink_end[i]);
+			set_field_buffer(transponder_editor->transponders[i]->downlink[1], 0, temp);
+		}
 	}
 }
 
