@@ -184,11 +184,13 @@ void transponder_db_to_file(const char *filename, struct tle_db *tle_db, struct 
 
 			//transponders
 			for (int j=0; j < entry->num_transponders; j++) {
-				fprintf(fd, "%s\n", entry->transponder_name[j]);
-				fprintf(fd, "%f, %f\n", entry->uplink_start[j], entry->uplink_end[j]);
-				fprintf(fd, "%f, %f\n", entry->downlink_start[j], entry->downlink_end[j]);
-				fprintf(fd, "No weekly schedule\n"); //FIXME: See issue #29.
-				fprintf(fd, "No orbital schedule\n");
+				if ((entry->uplink_start[j] != 0.0) || (entry->downlink_start[j] != 0.0)) {
+					fprintf(fd, "%s\n", entry->transponder_name[j]);
+					fprintf(fd, "%f, %f\n", entry->uplink_start[j], entry->uplink_end[j]);
+					fprintf(fd, "%f, %f\n", entry->downlink_start[j], entry->downlink_end[j]);
+					fprintf(fd, "No weekly schedule\n"); //FIXME: See issue #29.
+					fprintf(fd, "No orbital schedule\n");
+				}
 			}
 			fprintf(fd, "end\n");
 		}
