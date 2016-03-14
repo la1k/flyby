@@ -90,7 +90,12 @@ void transponder_db_from_search_paths(const struct tle_db *tle_db, struct transp
 int transponder_db_from_file(const char *db_file, const struct tle_db *tle_db, struct transponder_db *ret_db, enum sat_db_location location_info);
 
 /**
- * Write transponder database to file. Transponders where neither downlink nor uplink are defined are ignored (i.e. transponders with name, but with uplink _and_ downlink set to 0.0), since these are correspondingly ignored when read.
+ * Write transponder database to file.
+ *
+ * All satellite database entries that are specified in the boolean array are written, irregardless of whether they are empty or not.
+ *
+ * Individual transponders are not written to file if neither downlink
+ * nor uplink are well-defined.
  *
  * \param filename Filename
  * \param tle_db TLE database, used for obtaining name and satellite number of satellite
@@ -137,5 +142,13 @@ bool transponder_db_entry_equal(struct sat_db_entry *entry_1, struct sat_db_entr
  * \param source Source struct
  **/
 void transponder_db_entry_copy(struct sat_db_entry *destination, struct sat_db_entry *source);
+
+/**
+ * Check whether a transponder database entry is empty. "Empty" means that no squint angle is defined, and there are no valid transponder entries (neither uplink or downlink is defined for the transponder in question).
+ *
+ * \param entry Transponder database entry to check
+ * \return True if transponder database entry is empty, false otherwise
+ **/
+bool transponder_db_entry_empty(const struct sat_db_entry *entry);
 
 #endif
