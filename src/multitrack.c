@@ -208,17 +208,16 @@ void multitrack_sort_listing(multitrack_listing_t *listing)
 	listing->num_nevervisible = nevervisible_counter;
 	listing->num_decayed = decayed_counter;
 
-	/*
 	//sort internally according to AOS/LOS
 	for (int i=0; i < above_horizon_counter + below_horizon_counter; i++) {
 		for (int j=0; j < above_horizon_counter + below_horizon_counter - 1; j++){
-			if (aos[satindex[j]]>aos[satindex[j+1]]) {
-				int x = satindex[j];
-				satindex[j] = satindex[j+1];
-				satindex[j+1] = x;
+			if (listing->entries[listing->sorted_index[j]]->next_aos > listing->entries[listing->sorted_index[j+1]]->next_aos) {
+				int x = listing->sorted_index[j];
+				listing->sorted_index[j] = listing->sorted_index[j+1];
+				listing->sorted_index[j+1] = x;
 			}
 		}
-	}*/
+	}
 }
 
 void multitrack_display_entry(int row, int col, multitrack_entry_t *entry)
@@ -248,25 +247,36 @@ void multitrack_handle_listing(multitrack_listing_t *listing, int input_key)
 	switch (input_key) {
 		case KEY_UP:
 			listing->selected_entry_index--;
-			if (listing->selected_entry_index < 0) listing->selected_entry_index = 0;
 			break;
 
 		case KEY_DOWN:
 			listing->selected_entry_index++;
-			if (listing->selected_entry_index >= listing->num_entries) {
-				listing->selected_entry_index = listing->num_entries-1;
-			}
 			break;
+		case KEY_PPAGE:
+			listing->selected_entry_index -= listing->num_displayed_entries;
+			break;
+		case KEY_NPAGE:
+			listing->selected_entry_index += listing->num_displayed_entries;
+			break;
+	}
+	if (listing->selected_entry_index < 0) {
+		listing->selected_entry_index = 0;
+	}
+
+	if (listing->selected_entry_index >= listing->num_entries) {
+		listing->selected_entry_index = listing->num_entries-1;
 	}
 
 	//check for scroll event
 	if (listing->selected_entry_index > listing->bottom_index) {
-		listing->bottom_index++;
-		listing->top_index++;
+		int diff = listing->selected_entry_index - listing->bottom_index;
+		listing->bottom_index += diff;
+		listing->top_index += diff;
 	}
 
 	if (listing->selected_entry_index < listing->top_index) {
-		listing->bottom_index--;
-		listing->top_index--;
+		int diff = listing->top_index - listing->selected_entry_index;
+		listing->bottom_index -= diff;
+		listing->top_index -= diff;
 	}
 }
