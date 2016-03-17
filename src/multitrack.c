@@ -139,7 +139,7 @@ void multitrack_update_entry(predict_observer_t *qth, multitrack_entry_t *entry,
 
 	//set string to display
 	char disp_string[MAX_NUM_CHARS];
-	sprintf(disp_string, " %.8s%5.1f  %5.1f %8s  %6.0f %6.0f %c %c %12s ", entry->name, obs.azimuth*180.0/M_PI, obs.elevation*180.0/M_PI, abs_pos_string, disp_altitude, disp_range, sunstat, rangestat, aos_los);
+	sprintf(disp_string, " %-13.8s%5.1f  %5.1f %8s  %6.0f %6.0f %c %c %12s ", entry->name, obs.azimuth*180.0/M_PI, obs.elevation*180.0/M_PI, abs_pos_string, disp_altitude, disp_range, sunstat, rangestat, aos_los);
 
 	//overwrite everything if orbit was decayed
 	if (orbit.decayed) {
