@@ -16,6 +16,7 @@ typedef struct {
 
 typedef struct {
 	int selected_entry_index;
+	WINDOW *window;
 
 	int num_entries;
 
@@ -36,7 +37,7 @@ typedef struct {
 
 multitrack_entry_t *multitrack_create_entry(const char *name, predict_orbital_elements_t *orbital_elements);
 
-multitrack_listing_t* multitrack_create_listing(predict_observer_t *observer, predict_orbital_elements_t **orbital_elements, struct tle_db *tle_db);
+multitrack_listing_t* multitrack_create_listing(WINDOW *window, predict_observer_t *observer, predict_orbital_elements_t **orbital_elements, struct tle_db *tle_db);
 
 void multitrack_update_entry(predict_observer_t *qth, multitrack_entry_t *entry, predict_julian_date_t time);
 

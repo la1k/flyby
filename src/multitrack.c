@@ -25,10 +25,8 @@ multitrack_entry_t *multitrack_create_entry(const char *name, predict_orbital_el
 	return entry;
 }
 
-multitrack_listing_t* multitrack_create_listing(predict_observer_t *observer, predict_orbital_elements_t **orbital_elements, struct tle_db *tle_db)
+multitrack_listing_t* multitrack_create_listing(WINDOW *window, predict_observer_t *observer, predict_orbital_elements_t **orbital_elements, struct tle_db *tle_db)
 {
-	int window_height = 10;
-
 	int num_enabled_tles = 0;
 	for (int i=0; i < tle_db->num_tles; i++) {
 		if (tle_db_entry_enabled(tle_db, i)) {
@@ -37,6 +35,11 @@ multitrack_listing_t* multitrack_create_listing(predict_observer_t *observer, pr
 	}
 
 	multitrack_listing_t *listing = (multitrack_listing_t*)malloc(sizeof(multitrack_listing_t));
+	listing->window = window;
+
+	int window_height, window_width;
+	getmaxyx(window, window_height, window_width);
+
 	listing->selected_entry_index = 0;
 	listing->qth = observer;
 	listing->num_entries = num_enabled_tles;
@@ -57,8 +60,8 @@ multitrack_listing_t* multitrack_create_listing(predict_observer_t *observer, pr
 	listing->num_nevervisible = 0;
 
 	listing->top_index = 0;
-	listing->bottom_index = listing->bottom_index + window_height;
-	listing->num_displayed_entries = window_height;
+	listing->num_displayed_entries = window_height-1;
+	listing->bottom_index = listing->bottom_index + listing->num_displayed_entries;
 
 	return listing;
 }
@@ -220,22 +223,23 @@ void multitrack_sort_listing(multitrack_listing_t *listing)
 	}
 }
 
-void multitrack_display_entry(int row, int col, multitrack_entry_t *entry)
+void multitrack_display_entry(WINDOW *window, int row, int col, multitrack_entry_t *entry)
 {
-	attrset(entry->display_attributes);
-	mvprintw(row, col, "%s", entry->display_string);
+	wattrset(window, entry->display_attributes);
+	mvwprintw(window, row, col, "%s", entry->display_string);
 }
 
 void multitrack_display_listing(multitrack_listing_t *listing)
 {
 	listing->entries[listing->sorted_index[listing->selected_entry_index]]->display_attributes = SELECTED_ATTRIBUTE;
 
-	int line = 5;
-	int col = 1;
+	int line = 0;
+	int col = 0;
 
 	for (int i=listing->top_index; i <= listing->bottom_index; i++) {
-		multitrack_display_entry(line++, col, listing->entries[listing->sorted_index[i]]);
+		multitrack_display_entry(listing->window, line++, col, listing->entries[listing->sorted_index[i]]);
 	}
+	wrefresh(listing->window);
 }
 
 void multitrack_handle_listing(multitrack_listing_t *listing, int input_key)
