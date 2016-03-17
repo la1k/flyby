@@ -162,8 +162,9 @@ void multitrack_update_listing(multitrack_listing_t *listing, predict_julian_dat
 		if (i == listing->selected_entry_index) {
 			entry->display_attributes = SELECTED_ATTRIBUTE;
 		}
+
+		listing->sorted_index[i] = i;
 	}
-	listing->sorted = false;
 }
 
 void multitrack_sort_listing(multitrack_listing_t *listing)
@@ -204,7 +205,6 @@ void multitrack_sort_listing(multitrack_listing_t *listing)
 	}
 	listing->num_nevervisible = nevervisible_counter;
 	listing->num_decayed = decayed_counter;
-	listing->sorted = true;
 
 	/*
 	//sort internally according to AOS/LOS
@@ -230,26 +230,13 @@ void multitrack_display_listing(multitrack_listing_t *listing)
 	int line = 5;
 	int col = 1;
 
-	if (listing->sorted) {
-		for (int i=0; i < listing->num_above_horizon; i++) {
-			multitrack_display_entry(line++, col, listing->entries[listing->sorted_index[i]]);
+	for (int i=0; i < listing->num_entries; i++) {
+		if ((i == listing->num_above_horizon) || (i == (listing->num_above_horizon + listing->num_below_horizon))){
+			attrset(0);
+			mvprintw(line++, 1, "     ");
 		}
-		attrset(0);
-		mvprintw((line++), 1, "                                                                   ");
-		for (int i=listing->num_above_horizon; i < (listing->num_below_horizon + listing->num_above_horizon + listing->num_nevervisible); i++) {
-			multitrack_display_entry(line++, col, listing->entries[listing->sorted_index[i]]);
-		}
-		attrset(0);
-		mvprintw((line++), 1, "                                                                   ");
-		for (int i=listing->num_above_horizon + listing->num_below_horizon + listing->num_nevervisible; i < listing->num_entries; i++) {
-			multitrack_display_entry(line++, col, listing->entries[listing->sorted_index[i]]);
-		}
-	} else {
-		for (int i=0; i < listing->num_entries; i++) {
-			multitrack_display_entry(line++, col, listing->entries[i]);
-		}
+		multitrack_display_entry(line++, col, listing->entries[listing->sorted_index[i]]);
 	}
-
 }
 
 void multitrack_handle_listing(multitrack_listing_t *listing, int input_key)

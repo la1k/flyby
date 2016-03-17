@@ -22,7 +22,6 @@ typedef struct {
 	predict_observer_t *qth;
 	multitrack_entry_t **entries;
 	int *sorted_index;
-	bool sorted;
 	int num_above_horizon;
 	int num_below_horizon;
 	int num_decayed;
