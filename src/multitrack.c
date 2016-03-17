@@ -150,7 +150,7 @@ void multitrack_update_entry(predict_observer_t *qth, multitrack_entry_t *entry,
 	//overwrite everything if orbit was decayed
 	if (orbit.decayed) {
 		entry->display_attributes = COLOR_PAIR(2);
-		sprintf(disp_string, " %-10s   ----------------       Decayed        ---------------", entry->name);
+		sprintf(disp_string, " %-10s   ----------------       Decayed        --------------- ", entry->name);
 	}
 
 	memcpy(entry->display_string, disp_string, sizeof(char)*MAX_NUM_CHARS);
@@ -234,10 +234,6 @@ void multitrack_display_listing(multitrack_listing_t *listing)
 	int col = 1;
 
 	for (int i=listing->top_index; i <= listing->bottom_index; i++) {
-		if ((i == listing->num_above_horizon) || (i == (listing->num_above_horizon + listing->num_below_horizon))){
-			attrset(0);
-			mvprintw(line++, 1, "                                                                    ");
-		}
 		multitrack_display_entry(line++, col, listing->entries[listing->sorted_index[i]]);
 	}
 }
