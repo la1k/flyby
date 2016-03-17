@@ -31,6 +31,8 @@ typedef struct {
 	int num_below_horizon;
 	int num_decayed;
 	int num_nevervisible;
+
+	int *tle_db_mapping;
 } multitrack_listing_t;
 
 #define SELECTED_ATTRIBUTE (COLOR_PAIR(2)|A_REVERSE)
@@ -48,3 +50,5 @@ void multitrack_sort_listing(multitrack_listing_t *listing);
 void multitrack_display_listing(multitrack_listing_t *listing);
 
 void multitrack_handle_listing(multitrack_listing_t *listing, int input_key);
+
+int multitrack_selected_entry(multitrack_listing_t *listing);

@@ -44,11 +44,13 @@ multitrack_listing_t* multitrack_create_listing(WINDOW *window, predict_observer
 	listing->qth = observer;
 	listing->num_entries = num_enabled_tles;
 	listing->entries = (multitrack_entry_t**)malloc(sizeof(multitrack_entry_t*)*num_enabled_tles);
+	listing->tle_db_mapping = (int*)calloc(num_enabled_tles, sizeof(int));
 
 	int j=0;
 	for (int i=0; i < tle_db->num_tles; i++) {
 		if (tle_db_entry_enabled(tle_db, i)) {
 			listing->entries[j] = multitrack_create_entry(tle_db->tles[i].name, orbital_elements[i]);
+			listing->tle_db_mapping[j] = i;
 			j++;
 		}
 	}
@@ -279,4 +281,11 @@ void multitrack_handle_listing(multitrack_listing_t *listing, int input_key)
 		listing->bottom_index -= diff;
 		listing->top_index -= diff;
 	}
+}
+
+int multitrack_selected_entry(multitrack_listing_t *listing)
+{
+	int index = listing->sorted_index[listing->selected_entry_index];
+	fprintf(stderr, "%s\n", listing->entries[index]->name);
+	return listing->tle_db_mapping[index];
 }
