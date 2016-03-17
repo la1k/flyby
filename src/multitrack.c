@@ -176,7 +176,7 @@ void multitrack_sort_listing(multitrack_listing_t *listing)
 	//those with elevation > 0 at the top
 	int above_horizon_counter = 0;
 	for (int i=0; i < num_orbits; i++){
-		if (listing->entries[i]->above_horizon) {
+		if (listing->entries[i]->above_horizon && !(listing->entries[i]->decayed)) {
 			listing->sorted_index[above_horizon_counter] = i;
 			above_horizon_counter++;
 		}
@@ -186,7 +186,7 @@ void multitrack_sort_listing(multitrack_listing_t *listing)
 	//satellites that will eventually rise above the horizon
 	int below_horizon_counter = 0;
 	for (int i=0; i < num_orbits; i++){
-		if (!(listing->entries[i]->above_horizon) && !(listing->entries[i]->never_visible)) {
+		if (!(listing->entries[i]->above_horizon) && !(listing->entries[i]->never_visible) && !(listing->entries[i]->decayed)) {
 			listing->sorted_index[below_horizon_counter + above_horizon_counter] = i;
 			below_horizon_counter++;
 		}
