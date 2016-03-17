@@ -159,10 +159,6 @@ void multitrack_update_listing(multitrack_listing_t *listing, predict_julian_dat
 	for (int i=0; i < listing->num_entries; i++) {
 		multitrack_entry_t *entry = listing->entries[i];
 		multitrack_update_entry(listing->qth, entry, time);
-		if (i == listing->selected_entry_index) {
-			entry->display_attributes = SELECTED_ATTRIBUTE;
-		}
-
 		listing->sorted_index[i] = i;
 	}
 }
@@ -227,13 +223,15 @@ void multitrack_display_entry(int row, int col, multitrack_entry_t *entry)
 
 void multitrack_display_listing(multitrack_listing_t *listing)
 {
+	listing->entries[listing->sorted_index[listing->selected_entry_index]]->display_attributes = SELECTED_ATTRIBUTE;
+
 	int line = 5;
 	int col = 1;
 
 	for (int i=0; i < listing->num_entries; i++) {
 		if ((i == listing->num_above_horizon) || (i == (listing->num_above_horizon + listing->num_below_horizon))){
 			attrset(0);
-			mvprintw(line++, 1, "     ");
+			mvprintw(line++, 1, "                                                                    ");
 		}
 		multitrack_display_entry(line++, col, listing->entries[listing->sorted_index[i]]);
 	}
@@ -249,8 +247,7 @@ void multitrack_handle_listing(multitrack_listing_t *listing, int input_key)
 
 		case KEY_DOWN:
 			listing->selected_entry_index++;
-			if (listing->selected_entry_index >= listing->num_entries) listing->selected_entry_index = listing->num_entries;
+			if (listing->selected_entry_index >= listing->num_entries) listing->selected_entry_index = listing->num_entries-1;
 			break;
 	}
-//	fprintf(stderr, "%d\n", listing->selected_entry_index);
 }

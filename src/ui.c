@@ -1819,7 +1819,7 @@ void MultiTrack(predict_observer_t *qth, predict_orbital_elements_t **input_orbi
 		}
 
 		//sort satellites before displaying them
-//		multitrack_sort_listing(listing);
+		multitrack_sort_listing(listing);
 
 		time_t epoch = time(NULL);
 		daynum=predict_to_julian(epoch);
