@@ -19,6 +19,10 @@ typedef struct {
 
 	int num_entries;
 
+	int num_displayed_entries;
+	int top_index;
+	int bottom_index;
+
 	predict_observer_t *qth;
 	multitrack_entry_t **entries;
 	int *sorted_index;

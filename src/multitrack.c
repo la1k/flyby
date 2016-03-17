@@ -27,6 +27,8 @@ multitrack_entry_t *multitrack_create_entry(const char *name, predict_orbital_el
 
 multitrack_listing_t* multitrack_create_listing(predict_observer_t *observer, predict_orbital_elements_t **orbital_elements, struct tle_db *tle_db)
 {
+	int window_height = 10;
+
 	int num_enabled_tles = 0;
 	for (int i=0; i < tle_db->num_tles; i++) {
 		if (tle_db_entry_enabled(tle_db, i)) {
@@ -53,6 +55,10 @@ multitrack_listing_t* multitrack_create_listing(predict_observer_t *observer, pr
 	listing->num_below_horizon = 0;
 	listing->num_decayed = 0;
 	listing->num_nevervisible = 0;
+
+	listing->top_index = 0;
+	listing->bottom_index = listing->bottom_index + window_height;
+	listing->num_displayed_entries = window_height;
 
 	return listing;
 }
@@ -228,7 +234,7 @@ void multitrack_display_listing(multitrack_listing_t *listing)
 	int line = 5;
 	int col = 1;
 
-	for (int i=0; i < listing->num_entries; i++) {
+	for (int i=listing->top_index; i <= listing->bottom_index; i++) {
 		if ((i == listing->num_above_horizon) || (i == (listing->num_above_horizon + listing->num_below_horizon))){
 			attrset(0);
 			mvprintw(line++, 1, "                                                                    ");
@@ -247,7 +253,20 @@ void multitrack_handle_listing(multitrack_listing_t *listing, int input_key)
 
 		case KEY_DOWN:
 			listing->selected_entry_index++;
-			if (listing->selected_entry_index >= listing->num_entries) listing->selected_entry_index = listing->num_entries-1;
+			if (listing->selected_entry_index >= listing->num_entries) {
+				listing->selected_entry_index = listing->num_entries-1;
+			}
 			break;
+	}
+
+	//check for scroll event
+	if (listing->selected_entry_index > listing->bottom_index) {
+		listing->bottom_index++;
+		listing->top_index++;
+	}
+
+	if (listing->selected_entry_index < listing->top_index) {
+		listing->bottom_index--;
+		listing->top_index--;
 	}
 }
