@@ -1748,36 +1748,10 @@ double scrk, scel;
 		return (COLOR_PAIR(2)|A_REVERSE); /* reverse */
 }
 
+#include "multitrack.h"
 void MultiTrack(predict_observer_t *qth, predict_orbital_elements_t **input_orbital_elements_array, struct tle_db *tle_db, char multitype, char disttype)
 {
-	int num_orbits = tle_db->num_tles;
-	int 		*satindex = (int*)malloc(sizeof(int)*num_orbits);
-
-	double		*aos = (double*)malloc(sizeof(double)*num_orbits);
-	double		*los = (double*)malloc(sizeof(double)*num_orbits);
-	char ans = '\0';
-
-	struct predict_observation *observations = (struct predict_observation*)malloc(sizeof(struct predict_observation)*num_orbits);
-	struct predict_orbit *orbits = (struct predict_orbit*)malloc(sizeof(struct predict_orbit)*num_orbits);
-	NCURSES_ATTR_T *attributes = (NCURSES_ATTR_T*)malloc(sizeof(NCURSES_ATTR_T)*num_orbits);
-	char **string_lines = (char**)malloc(sizeof(char*)*num_orbits);
-	for (int i=0; i < num_orbits; i++) {
-		string_lines[i] = (char*)malloc(sizeof(char)*MAX_NUM_CHARS);
-	}
-	predict_orbital_elements_t **orbital_elements_array = (predict_orbital_elements_t**)malloc(sizeof(predict_orbital_elements_t*)*num_orbits);
-	int *entry_mapping = (int*)calloc(num_orbits, sizeof(int));
-
-	//select only enabled satellites
-	int enabled_ind = 0;
-	for (int i=0; i < num_orbits; i++) {
-		if (tle_db_entry_enabled(tle_db, i)) {
-			orbital_elements_array[enabled_ind] = input_orbital_elements_array[i];
-			entry_mapping[enabled_ind] = i;
-			enabled_ind++;
-		}
-	}
-	num_orbits = enabled_ind;
-
+	int ans = 0;
 
 	curs_set(0);
 	attrset(COLOR_PAIR(6)|A_REVERSE|A_BOLD);
@@ -1802,129 +1776,16 @@ void MultiTrack(predict_observer_t *qth, predict_orbital_elements_t **input_orbi
 	predict_julian_date_t daynum = predict_to_julian(time(NULL));
 	char time_string[MAX_NUM_CHARS];
 
-	for (int x=0; x < num_orbits; x++) {
-		predict_orbit(orbital_elements_array[x], &orbits[x], daynum);
-		los[x]=0.0;
-		aos[x]=0.0;
-		satindex[x]=x;
-	}
+	multitrack_listing_t *listing = multitrack_create_listing(qth, input_orbital_elements_array, tle_db);
 
 	do {
 		attrset(COLOR_PAIR(2)|A_REVERSE);
-		mvprintw(3,28,(multitype=='m') ? " Locator " : " Lat Long");
+		mvprintw(3,28," Lat Long");
 		attrset(COLOR_PAIR(2));
-		mvprintw(12,70,(disttype=='i') ? "  (miles)" : "     (km)");
-		mvprintw(13,70,"    (GMT)");
-
-		attrset(COLOR_PAIR(4)|A_REVERSE|A_BOLD);
-		mvprintw( 9,70," Control ");
-		attrset(COLOR_PAIR(2)|A_REVERSE);
-		mvprintw(10,70," ik lm q ");
-		mvprintw(10,(disttype=='i') ? 71 : 72," ");
-		mvprintw(10,(multitype=='m') ? 75 : 74," ");
-
 
 		daynum = predict_to_julian(time(NULL));
 
-		//predict orbits
-		for (int i=0; i < num_orbits; i++){
-			struct predict_orbit *orbit = &(orbits[i]);
-
-			struct predict_observation obs;
-			predict_orbit(orbital_elements_array[i], orbit, daynum);
-			predict_observe_orbit(qth, orbit, &obs);
-
-			//sun status
-			char sunstat;
-			if (!orbit->eclipsed) {
-				if (obs.visible) {
-					sunstat='V';
-				} else {
-					sunstat='D';
-				}
-			} else {
-				sunstat='N';
-			}
-
-			//satellite approaching status
-			char rangestat;
-			if (fabs(obs.range_rate) < 0.1) {
-				rangestat = '=';
-			} else if (obs.range_rate < 0.0) {
-				rangestat = '/';
-			} else if (obs.range_rate > 0.0) {
-				rangestat = '\\';
-			}
-
-			//set text formatting attributes according to satellite state, set AOS/LOS string
-			bool can_predict = !predict_is_geostationary(orbital_elements_array[i]) && predict_aos_happens(orbital_elements_array[i], qth->latitude) && !(orbits[i].decayed);
-			char aos_los[MAX_NUM_CHARS] = {0};
-			if (obs.elevation >= 0) {
-				//different colours according to range and elevation
-				attributes[i] = MultiColours(obs.range, obs.elevation*180/M_PI);
-
-				if (predict_is_geostationary(orbital_elements_array[i])){
-					sprintf(aos_los, "*GeoS*");
-				} else {
-					time_t epoch = predict_from_julian(los[i] - daynum);
-					strftime(aos_los, MAX_NUM_CHARS, "%M:%S", gmtime(&epoch)); //time until LOS
-				}
-			} else if ((obs.elevation < 0) && can_predict) {
-				if ((aos[i]-daynum) < 0.00694) {
-					//satellite is close, set bold
-					attributes[i] = COLOR_PAIR(2);
-					time_t epoch = predict_from_julian(aos[i] - daynum);
-					strftime(aos_los, MAX_NUM_CHARS, "%M:%S", gmtime(&epoch)); //minutes and seconds left until AOS
-				} else {
-					//satellite is far, set normal coloring
-					attributes[i] = COLOR_PAIR(4);
-					time_t epoch = predict_from_julian(aos[i]);
-					strftime(aos_los, MAX_NUM_CHARS, "%j.%H:%M:%S", gmtime(&epoch)); //time for AOS
-				}
-			} else if (!can_predict) {
-				attributes[i] = COLOR_PAIR(3);
-				sprintf(aos_los, "*GeoS-NoAOS*");
-			}
-
-			char abs_pos_string[MAX_NUM_CHARS] = {0};
-			if (multitype == 'm') {
-				getMaidenHead(orbit->latitude*180.0/M_PI, orbit->longitude*180.0/M_PI, abs_pos_string);
-			} else {
-				sprintf(abs_pos_string, "%3.0f  %3.0f", orbit->latitude*180.0/M_PI, orbit->longitude*180.0/M_PI);
-			}
-
-			/* Calculate Next Event (AOS/LOS) Times */
-			if (can_predict && (daynum > los[i]) && (obs.elevation > 0)) {
-				los[i]= predict_next_los(qth, orbital_elements_array[i], daynum);
-			}
-
-			if (can_predict && (daynum > aos[i])) {
-				if (obs.elevation < 0) {
-					aos[i] = predict_next_aos(qth, orbital_elements_array[i], daynum);
-				}
-			}
-
-			//altitude and range in km/miles
-			double disp_altitude = orbit->altitude;
-			double disp_range = obs.range;
-			if (disttype == 'i') {
-				disp_altitude = disp_altitude*KM_TO_MI;
-				disp_range = disp_range*KM_TO_MI;
-			}
-
-			//set string to display
-			char disp_string[MAX_NUM_CHARS];
-			sprintf(disp_string, " %-13s%5.1f  %5.1f %8s  %6.0f %6.0f %c %c %12s ", Abbreviate(tle_db->tles[entry_mapping[i]].name, 12), obs.azimuth*180.0/M_PI, obs.elevation*180.0/M_PI, abs_pos_string, disp_altitude, disp_range, sunstat, rangestat, aos_los);
-
-			//overwrite everything if orbit was decayed
-			if (orbit->decayed) {
-				attributes[i] = COLOR_PAIR(2);
-				sprintf(disp_string, " %-10s   ----------------       Decayed        ---------------", Abbreviate(tle_db->tles[entry_mapping[i]].name,9));
-			}
-
-			memcpy(string_lines[i], disp_string, sizeof(char)*MAX_NUM_CHARS);
-			observations[i] = obs;
-		}
+		multitrack_update_listing(listing, daynum);
 
 		//predict and observe sun and moon
 		struct predict_observation sun;
@@ -1951,111 +1812,31 @@ void MultiTrack(predict_observer_t *qth, predict_orbital_elements_t **input_orbi
 			attrset(COLOR_PAIR(1));
 		mvprintw(21,70,"%-7.2fAz",moon.azimuth*180.0/M_PI);
 		mvprintw(22,70,"%+-6.2f El",moon.elevation*180.0/M_PI);
-
+	
+		if (tle_db->num_tles == 0) {
+			mvprintw(5, 1, "Satellite list is empty. Are any satellites enabled?");
+			mvprintw(5, 1, "(Go back to main menu and press 'W')");
+		}
 
 		//sort satellites before displaying them
-
-		//those with elevation > 0 at the top
-		int above_horizon_counter = 0;
-		for (int i=0; i < num_orbits; i++){
-			if (observations[i].elevation > 0) {
-				satindex[above_horizon_counter] = i;
-				above_horizon_counter++;
-			}
-		}
-
-		//satellites that will eventually rise above the horizon
-		int below_horizon_counter = 0;
-		for (int i=0; i < num_orbits; i++){
-			bool will_be_visible = !(orbits[i].decayed) && predict_aos_happens(orbital_elements_array[i], qth->latitude) && !predict_is_geostationary(orbital_elements_array[i]);
-			if ((observations[i].elevation <= 0) && will_be_visible) {
-				satindex[below_horizon_counter + above_horizon_counter] = i;
-				below_horizon_counter++;
-			}
-		}
-
-		//satellites that will never be visible, with decayed orbits last
-		int nevervisible_counter = 0;
-		int decayed_counter = 0;
-		for (int i=0; i < num_orbits; i++){
-			bool never_visible = !predict_aos_happens(orbital_elements_array[i], qth->latitude) || predict_is_geostationary(orbital_elements_array[i]);
-			if ((observations[i].elevation <= 0) && never_visible && !(orbits[i].decayed)) {
-				satindex[below_horizon_counter + above_horizon_counter + nevervisible_counter] = i;
-				nevervisible_counter++;
-			} else if (orbits[i].decayed) {
-				satindex[num_orbits - 1 - decayed_counter] = i;
-				decayed_counter++;
-			}
-		}
-
-		//sort internally according to AOS/LOS
-		for (int i=0; i < above_horizon_counter + below_horizon_counter; i++) {
-			for (int j=0; j < above_horizon_counter + below_horizon_counter - 1; j++){
-				if (aos[satindex[j]]>aos[satindex[j+1]]) {
-					int x = satindex[j];
-					satindex[j] = satindex[j+1];
-					satindex[j+1] = x;
-				}
-			}
-		}
-
-		attrset(COLOR_PAIR(6)|A_REVERSE|A_BOLD);
+//		multitrack_sort_listing(listing);
 
 		time_t epoch = time(NULL);
 		daynum=predict_to_julian(epoch);
 		strftime(time_string, MAX_NUM_CHARS, "%a %d%b%y %j.%H%M%S", gmtime(&epoch));
 		mvprintw(1,54,"%s",time_string);
-		mvprintw(1,35,"(%d/%d in view)  ", above_horizon_counter, num_orbits);
 
 		//display satellites
-		int line = 5;
-		for (int i=0; i < above_horizon_counter; i++) {
-			attrset(attributes[satindex[i]]);
-			mvprintw((line++), 1, "%s", string_lines[satindex[i]]);
-		}
-		attrset(0);
-		mvprintw((line++), 1, "                                                                   ");
-		for (int i=above_horizon_counter; i < (below_horizon_counter + above_horizon_counter + nevervisible_counter); i++) {
-			attrset(attributes[satindex[i]]);
-			mvprintw((line++), 1, "%s", string_lines[satindex[i]]);
-		}
-		attrset(0);
-		mvprintw((line++), 1, "                                                                   ");
-		for (int i=above_horizon_counter + below_horizon_counter + nevervisible_counter; i < num_orbits; i++) {
-			attrset(attributes[satindex[i]]);
-			mvprintw((line++), 1, "%s", string_lines[satindex[i]]);
-		}
-
-		if (num_orbits == 0) {
-			mvprintw((line++), 1, "Satellite list is empty. Are any satellites enabled?");
-			mvprintw((line++), 1, "(Go back to main menu and press 'W')");
-		}
-
+		multitrack_display_listing(listing);
 		refresh();
 		halfdelay(HALF_DELAY_TIME);  // Increase if CPU load is too high
-		ans=tolower(getch());
-
-		if (ans=='m') multitype='m';
-		if (ans=='l') multitype='l';
-		if (ans=='k') disttype ='k';
-		if (ans=='i') disttype ='i';
-
+		ans=getch();
+		if (ans != -1) {
+			multitrack_handle_listing(listing, ans);
+		}
 	} while (ans!='q' && ans!=27);
 
 	cbreak();
-
-	free(satindex);
-	free(aos);
-	free(los);
-	free(observations);
-	free(attributes);
-	for (int i=0; i < tle_db->num_tles; i++) {
-		free(string_lines[i]);
-	}
-	free(orbits);
-	free(string_lines);
-	free(orbital_elements_array);
-	free(entry_mapping);
 }
 
 void Illumination(const char *name, predict_orbital_elements_t *orbital_elements)
