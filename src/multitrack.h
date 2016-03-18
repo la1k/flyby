@@ -35,7 +35,7 @@ typedef struct {
 	int *tle_db_mapping;
 } multitrack_listing_t;
 
-#define SELECTED_ATTRIBUTE (COLOR_PAIR(2)|A_REVERSE)
+#define SELECTED_ATTRIBUTE (COLOR_PAIR(6)|A_REVERSE)
 
 multitrack_entry_t *multitrack_create_entry(const char *name, predict_orbital_elements_t *orbital_elements);
 
