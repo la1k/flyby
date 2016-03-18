@@ -2484,91 +2484,110 @@ void RunFlybyUI(bool new_user, const char *qthfile, predict_observer_t *observer
 		char *tle[2] = {tle_db->tles[i].line1, tle_db->tles[i].line2};
 		orbital_elements_array[i] = predict_parse_tle(tle);
 	}
+	predict_julian_date_t curr_time = predict_to_julian(time(NULL));
+
+	//prepare multitrack window
+	WINDOW *sat_list_win = newwin(22, 68, 3, 0);
+	multitrack_listing_t *listing = multitrack_create_listing(sat_list_win, observer, orbital_elements_array, tle_db);
 
 	/* Display main menu and handle keyboard input */
 	int indx = 0;
-	char key;
-	do {
-		MainMenu();
-		key=getch();
+	int key = 0;
+	bool should_run = true;
+	while (should_run) {
+		curr_time = predict_to_julian(time(NULL));
 
-		switch (key) {
-			case 'p':
-			case 'v':
-				Print("","",0);
-				PrintVisible("","");
-				indx=Select(tle_db, orbital_elements_array);
+		//update satellite listing
+		multitrack_update_listing(listing, curr_time);
+		multitrack_sort_listing(listing);
+		multitrack_display_listing(listing);
 
-				if (indx!=-1) {
-					Predict(tle_db->tles[indx].name, orbital_elements_array[indx], observer, key);
+		//get input character
+		refresh();
+		halfdelay(HALF_DELAY_TIME);  // Increase if CPU load is too high
+		key = getch();
+		if (key != -1) {
+			bool handled = multitrack_handle_listing(listing, key);
+
+			if (!handled) {
+				switch (key) {
+					case 'p':
+					case 'v':
+						Print("","",0);
+						PrintVisible("","");
+						indx=Select(tle_db, orbital_elements_array);
+
+						if (indx!=-1) {
+							Predict(tle_db->tles[indx].name, orbital_elements_array[indx], observer, key);
+						}
+
+						break;
+
+					case 'n':
+						Print("","",0);
+						PredictSunMoon(PREDICT_MOON, observer);
+						break;
+
+					case 'o':
+						Print("","",0);
+						PredictSunMoon(PREDICT_SUN, observer);
+						break;
+
+					case 'u':
+						AutoUpdate("", tle_db, orbital_elements_array);
+						break;
+
+					case 'd':
+						ShowOrbitData(tle_db, orbital_elements_array);
+						break;
+
+					case 'g':
+						QthEdit(qthfile, observer);
+						break;
+
+					case 't':
+					case 'T':
+						indx=Select(tle_db, orbital_elements_array);
+
+						if (indx!=-1) {
+							SingleTrack(indx, orbital_elements_array, observer, sat_db, tle_db, rotctld, downlink, uplink);
+						}
+
+						break;
+
+					case 'i':
+						ProgramInfo(qthfile, tle_db, sat_db, rotctld);
+						break;
+
+					case 's':
+						indx=Select(tle_db, orbital_elements_array);
+
+						if (indx!=-1) {
+							Print("","",0);
+
+							Illumination(tle_db->tles[indx].name, orbital_elements_array[indx]);
+						}
+
+						break;
+
+					case 'w':
+					case 'W':
+						EditWhitelist(tle_db);
+						break;
+					case 'E':
+					case 'e':
+						EditTransponderDatabase(tle_db, sat_db);
+						break;
+					case 27:
+					case 'q':
+						should_run = false;
+						break;
 				}
-
-				break;
-
-			case 'n':
-				Print("","",0);
-				PredictSunMoon(PREDICT_MOON, observer);
-				break;
-
-			case 'o':
-				Print("","",0);
-				PredictSunMoon(PREDICT_SUN, observer);
-				break;
-
-			case 'u':
-				AutoUpdate("", tle_db, orbital_elements_array);
-				break;
-
-			case 'd':
-				ShowOrbitData(tle_db, orbital_elements_array);
-				break;
-
-			case 'g':
-				QthEdit(qthfile, observer);
-				break;
-
-			case 't':
-			case 'T':
-				indx=Select(tle_db, orbital_elements_array);
-
-				if (indx!=-1) {
-					SingleTrack(indx, orbital_elements_array, observer, sat_db, tle_db, rotctld, downlink, uplink);
-				}
-
-				break;
-
-			case 'm':
-			case 'l':
-
-				MultiTrack(observer, orbital_elements_array, tle_db, key, 'k');
-				break;
-
-			case 'i':
-				ProgramInfo(qthfile, tle_db, sat_db, rotctld);
-				break;
-
-			case 's':
-				indx=Select(tle_db, orbital_elements_array);
-
-				if (indx!=-1) {
-					Print("","",0);
-
-					Illumination(tle_db->tles[indx].name, orbital_elements_array[indx]);
-				}
-
-				break;
-
-			case 'w':
-			case 'W':
-				EditWhitelist(tle_db);
-				break;
-			case 'E':
-			case 'e':
-				EditTransponderDatabase(tle_db, sat_db);
-				break;
+				clear();
+				refresh();
+			}
 		}
-
-	} while (key!='q' && key!=27);
+	}
 
 	curs_set(1);
 	bkgdset(COLOR_PAIR(1));

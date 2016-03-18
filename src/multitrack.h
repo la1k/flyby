@@ -51,6 +51,6 @@ void multitrack_sort_listing(multitrack_listing_t *listing);
 
 void multitrack_display_listing(multitrack_listing_t *listing);
 
-void multitrack_handle_listing(multitrack_listing_t *listing, int input_key);
+bool multitrack_handle_listing(multitrack_listing_t *listing, int input_key);
 
 int multitrack_selected_entry(multitrack_listing_t *listing);

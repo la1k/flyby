@@ -282,21 +282,25 @@ void multitrack_display_listing(multitrack_listing_t *listing)
 	wrefresh(listing->window);
 }
 
-void multitrack_handle_listing(multitrack_listing_t *listing, int input_key)
+bool multitrack_handle_listing(multitrack_listing_t *listing, int input_key)
 {
+	bool handled = false;
 	switch (input_key) {
 		case KEY_UP:
 			listing->selected_entry_index--;
+			handled = true;
 			break;
-
 		case KEY_DOWN:
 			listing->selected_entry_index++;
+			handled = true;
 			break;
 		case KEY_PPAGE:
 			listing->selected_entry_index -= listing->num_displayed_entries;
+			handled = true;
 			break;
 		case KEY_NPAGE:
 			listing->selected_entry_index += listing->num_displayed_entries;
+			handled = true;
 			break;
 	}
 	if (listing->selected_entry_index < 0) {
@@ -319,6 +323,7 @@ void multitrack_handle_listing(multitrack_listing_t *listing, int input_key)
 		listing->bottom_index -= diff;
 		listing->top_index -= diff;
 	}
+	return handled;
 }
 
 int multitrack_selected_entry(multitrack_listing_t *listing)
