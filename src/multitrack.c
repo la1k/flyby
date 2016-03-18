@@ -242,7 +242,7 @@ void multitrack_print_scrollbar(multitrack_listing_t *listing)
 	//print scrollarea
 	for (int i=0; i < scrollarea_height; i++) {
 		int row = i+1;
-		wattrset(listing->window, COLOR_PAIR(2)|A_REVERSE);
+		wattrset(listing->window, COLOR_PAIR(8));
 		mvwprintw(listing->window, row, listing->window_width-2, "  ");
 	}
 
@@ -250,24 +250,31 @@ void multitrack_print_scrollbar(multitrack_listing_t *listing)
 	int scrollbar_placement = (listing->top_index*1.0/(listing->num_entries - listing->num_displayed_entries - 1))*(scrollarea_height - scrollbar_height);
 	for (int i=scrollbar_placement; i < scrollbar_height+scrollbar_placement; i++) {
 		int row = i+1;
-		wattrset(listing->window, COLOR_PAIR(6)|A_REVERSE);
+		wattrset(listing->window, COLOR_PAIR(8)|A_REVERSE);
 		mvwprintw(listing->window, row, listing->window_width-2, "  ");
 	}
 }
 
 void multitrack_display_listing(multitrack_listing_t *listing)
 {
-	listing->entries[listing->sorted_index[listing->selected_entry_index]]->display_attributes = SELECTED_ATTRIBUTE;
+	if (listing->num_entries > 0) {
+		listing->entries[listing->sorted_index[listing->selected_entry_index]]->display_attributes = SELECTED_ATTRIBUTE;
 
-	int line = 1;
-	int col = 1;
+		int line = 1;
+		int col = 1;
 
-	for (int i=listing->top_index; ((i <= listing->bottom_index) && (i < listing->num_entries)); i++) {
-		multitrack_display_entry(listing->window, line++, col, listing->entries[listing->sorted_index[i]]);
-	}
+		for (int i=listing->top_index; ((i <= listing->bottom_index) && (i < listing->num_entries)); i++) {
+			multitrack_display_entry(listing->window, line++, col, listing->entries[listing->sorted_index[i]]);
+		}
 
-	if (listing->num_entries > listing->num_displayed_entries) {
-		multitrack_print_scrollbar(listing);
+		if (listing->num_entries > listing->num_displayed_entries) {
+			multitrack_print_scrollbar(listing);
+		}
+	} else {
+		wattrset(listing->window, COLOR_PAIR(1));
+		mvwprintw(listing->window, 5, 2, "Satellite list is empty. Are any satellites enabled?");
+		mvwprintw(listing->window, 6, 2, "(Go back to main menu and press 'W')");
+
 	}
 	wrefresh(listing->window);
 }

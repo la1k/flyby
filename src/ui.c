@@ -1765,19 +1765,20 @@ void MultiTrack(predict_observer_t *qth, predict_orbital_elements_t **input_orbi
 
 	mvprintw(3,0,"  Satellite     Azim   Elev  Lat Long    Alt  Range     Next AOS/LOS            ");
 
+	/*
 	attrset(COLOR_PAIR(4)|A_REVERSE|A_BOLD);
 	mvprintw(5,70,"   QTH   ");
 	attrset(COLOR_PAIR(2));
 	mvprintw(6,70,"%9s",Abbreviate(qth->name,9));
 	char maidenstr[9];
 	getMaidenHead(qth->latitude*180.0/M_PI, -qth->longitude*180.0/M_PI, maidenstr);
-	mvprintw(7,70,"%9s",maidenstr);
+	mvprintw(7,70,"%9s",maidenstr);*/
 
 	predict_julian_date_t daynum = predict_to_julian(time(NULL));
 	char time_string[MAX_NUM_CHARS];
 
 	attrset(COLOR_PAIR(4));
-	WINDOW *sat_list_win = newwin(20, 71, 4, 0);
+	WINDOW *sat_list_win = newwin(20, 72, 4, 0);
 	wrefresh(sat_list_win);
 	multitrack_listing_t *listing = multitrack_create_listing(sat_list_win, qth, input_orbital_elements_array, tle_db);
 
@@ -1798,6 +1799,7 @@ void MultiTrack(predict_observer_t *qth, predict_orbital_elements_t **input_orbi
 		predict_observe_moon(qth, daynum, &moon);
 
 		//display sun and moon
+		/*
 		attrset(COLOR_PAIR(4)|A_REVERSE|A_BOLD);
 		mvprintw(16,70,"   Sun   ");
 		mvprintw(20,70,"   Moon  ");
@@ -1815,12 +1817,8 @@ void MultiTrack(predict_observer_t *qth, predict_orbital_elements_t **input_orbi
 			attrset(COLOR_PAIR(1));
 		mvprintw(21,70,"%-7.2fAz",moon.azimuth*180.0/M_PI);
 		mvprintw(22,70,"%+-6.2f El",moon.elevation*180.0/M_PI);
+		*/
 	
-		if (tle_db->num_tles == 0) {
-			mvprintw(5, 1, "Satellite list is empty. Are any satellites enabled?");
-			mvprintw(5, 1, "(Go back to main menu and press 'W')");
-		}
-
 		//sort satellites before displaying them
 		multitrack_sort_listing(listing);
 
@@ -2479,6 +2477,7 @@ void RunFlybyUI(bool new_user, const char *qthfile, predict_observer_t *observer
 	init_pair(5,COLOR_WHITE,COLOR_RED);
 	init_pair(6,COLOR_RED,COLOR_WHITE);
 	init_pair(7,COLOR_CYAN,COLOR_RED);
+	init_pair(8,COLOR_BLUE,COLOR_CYAN);
 
 	if (new_user) {
 		NewUser();
