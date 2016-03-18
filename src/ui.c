@@ -1776,8 +1776,10 @@ void MultiTrack(predict_observer_t *qth, predict_orbital_elements_t **input_orbi
 	predict_julian_date_t daynum = predict_to_julian(time(NULL));
 	char time_string[MAX_NUM_CHARS];
 
-	WINDOW *sat_list = newwin(20, 100, 5, 1);
-	multitrack_listing_t *listing = multitrack_create_listing(sat_list, qth, input_orbital_elements_array, tle_db);
+	attrset(COLOR_PAIR(4));
+	WINDOW *sat_list_win = newwin(20, 71, 4, 0);
+	wrefresh(sat_list_win);
+	multitrack_listing_t *listing = multitrack_create_listing(sat_list_win, qth, input_orbital_elements_array, tle_db);
 
 	do {
 		attrset(COLOR_PAIR(2)|A_REVERSE);

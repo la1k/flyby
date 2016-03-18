@@ -39,6 +39,8 @@ multitrack_listing_t* multitrack_create_listing(WINDOW *window, predict_observer
 
 	int window_height, window_width;
 	getmaxyx(window, window_height, window_width);
+	listing->window_height = window_height;
+	listing->window_width = window_width;
 
 	listing->selected_entry_index = 0;
 	listing->qth = observer;
@@ -62,7 +64,7 @@ multitrack_listing_t* multitrack_create_listing(WINDOW *window, predict_observer
 	listing->num_nevervisible = 0;
 
 	listing->top_index = 0;
-	listing->num_displayed_entries = window_height-1;
+	listing->num_displayed_entries = window_height-2;
 	listing->bottom_index = listing->bottom_index + listing->num_displayed_entries;
 
 	return listing;
@@ -166,7 +168,8 @@ void multitrack_update_entry(predict_observer_t *qth, multitrack_entry_t *entry,
 	entry->never_visible = !predict_aos_happens(entry->orbital_elements, qth->latitude) || (predict_is_geostationary(entry->orbital_elements) && (obs.elevation <= 0.0));
 }
 
-void multitrack_update_listing(multitrack_listing_t *listing, predict_julian_date_t time) {
+void multitrack_update_listing(multitrack_listing_t *listing, predict_julian_date_t time)
+{
 	for (int i=0; i < listing->num_entries; i++) {
 		multitrack_entry_t *entry = listing->entries[i];
 		multitrack_update_entry(listing->qth, entry, time);
@@ -231,15 +234,40 @@ void multitrack_display_entry(WINDOW *window, int row, int col, multitrack_entry
 	mvwprintw(window, row, col, "%s", entry->display_string);
 }
 
+void multitrack_print_scrollbar(multitrack_listing_t *listing)
+{
+	int scrollarea_height = listing->window_height-1;
+	int scrollbar_height = ((listing->num_displayed_entries*1.0)/(listing->num_entries*1.0))*scrollarea_height;
+
+	//print scrollarea
+	for (int i=0; i < scrollarea_height; i++) {
+		int row = i+1;
+		wattrset(listing->window, COLOR_PAIR(2)|A_REVERSE);
+		mvwprintw(listing->window, row, listing->window_width-2, "  ");
+	}
+
+	//print scrollbar
+	int scrollbar_placement = (listing->top_index*1.0/(listing->num_entries - listing->num_displayed_entries - 1))*(scrollarea_height - scrollbar_height);
+	for (int i=scrollbar_placement; i < scrollbar_height+scrollbar_placement; i++) {
+		int row = i+1;
+		wattrset(listing->window, COLOR_PAIR(6)|A_REVERSE);
+		mvwprintw(listing->window, row, listing->window_width-2, "  ");
+	}
+}
+
 void multitrack_display_listing(multitrack_listing_t *listing)
 {
 	listing->entries[listing->sorted_index[listing->selected_entry_index]]->display_attributes = SELECTED_ATTRIBUTE;
 
-	int line = 0;
-	int col = 0;
+	int line = 1;
+	int col = 1;
 
-	for (int i=listing->top_index; i <= listing->bottom_index; i++) {
+	for (int i=listing->top_index; ((i <= listing->bottom_index) && (i < listing->num_entries)); i++) {
 		multitrack_display_entry(listing->window, line++, col, listing->entries[listing->sorted_index[i]]);
+	}
+
+	if (listing->num_entries > listing->num_displayed_entries) {
+		multitrack_print_scrollbar(listing);
 	}
 	wrefresh(listing->window);
 }

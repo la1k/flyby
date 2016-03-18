@@ -16,6 +16,8 @@ typedef struct {
 
 typedef struct {
 	int selected_entry_index;
+	int window_height;
+	int window_width;
 	WINDOW *window;
 
 	int num_entries;
