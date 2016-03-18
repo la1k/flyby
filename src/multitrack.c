@@ -64,7 +64,7 @@ multitrack_listing_t* multitrack_create_listing(WINDOW *window, predict_observer
 	listing->num_nevervisible = 0;
 
 	listing->top_index = 0;
-	listing->num_displayed_entries = window_height-2;
+	listing->num_displayed_entries = window_height-4;
 	listing->bottom_index = listing->bottom_index + listing->num_displayed_entries;
 
 	return listing;
@@ -152,12 +152,12 @@ void multitrack_update_entry(predict_observer_t *qth, multitrack_entry_t *entry,
 
 	//set string to display
 	char disp_string[MAX_NUM_CHARS];
-	sprintf(disp_string, " %-13.8s%5.1f  %5.1f %8s  %6.0f %6.0f %c %c %12s ", entry->name, obs.azimuth*180.0/M_PI, obs.elevation*180.0/M_PI, abs_pos_string, disp_altitude, disp_range, sunstat, rangestat, aos_los);
+	sprintf(disp_string, " %-10.8s%5.1f  %5.1f %8s%6.0f %6.0f %c %c %12s ", entry->name, obs.azimuth*180.0/M_PI, obs.elevation*180.0/M_PI, abs_pos_string, disp_altitude, disp_range, sunstat, rangestat, aos_los);
 
 	//overwrite everything if orbit was decayed
 	if (orbit.decayed) {
 		entry->display_attributes = COLOR_PAIR(2);
-		sprintf(disp_string, " %-10s   ----------------       Decayed        --------------- ", entry->name);
+		sprintf(disp_string, " %-10s ----------------     Decayed       --------------- ", entry->name);
 	}
 
 	memcpy(entry->display_string, disp_string, sizeof(char)*MAX_NUM_CHARS);
@@ -236,12 +236,13 @@ void multitrack_display_entry(WINDOW *window, int row, int col, multitrack_entry
 
 void multitrack_print_scrollbar(multitrack_listing_t *listing)
 {
-	int scrollarea_height = listing->window_height-1;
+	int scrollarea_offset = 2;
+	int scrollarea_height = listing->window_height-3;
 	int scrollbar_height = ((listing->num_displayed_entries*1.0)/(listing->num_entries*1.0))*scrollarea_height;
 
 	//print scrollarea
 	for (int i=0; i < scrollarea_height; i++) {
-		int row = i+1;
+		int row = i+scrollarea_offset;
 		wattrset(listing->window, COLOR_PAIR(8));
 		mvwprintw(listing->window, row, listing->window_width-2, "  ");
 	}
@@ -249,7 +250,7 @@ void multitrack_print_scrollbar(multitrack_listing_t *listing)
 	//print scrollbar
 	int scrollbar_placement = (listing->top_index*1.0/(listing->num_entries - listing->num_displayed_entries - 1))*(scrollarea_height - scrollbar_height);
 	for (int i=scrollbar_placement; i < scrollbar_height+scrollbar_placement; i++) {
-		int row = i+1;
+		int row = i+scrollarea_offset;
 		wattrset(listing->window, COLOR_PAIR(8)|A_REVERSE);
 		mvwprintw(listing->window, row, listing->window_width-2, "  ");
 	}
@@ -257,10 +258,13 @@ void multitrack_print_scrollbar(multitrack_listing_t *listing)
 
 void multitrack_display_listing(multitrack_listing_t *listing)
 {
+	wattrset(listing->window, COLOR_PAIR(2)|A_REVERSE);
+	mvwprintw(listing->window, 0, 1, " Satellite  Azim   Elev Lat Long   Alt   Range     Next AOS/LOS    ");
+
 	if (listing->num_entries > 0) {
 		listing->entries[listing->sorted_index[listing->selected_entry_index]]->display_attributes = SELECTED_ATTRIBUTE;
 
-		int line = 1;
+		int line = 2;
 		int col = 1;
 
 		for (int i=listing->top_index; ((i <= listing->bottom_index) && (i < listing->num_entries)); i++) {
@@ -274,7 +278,6 @@ void multitrack_display_listing(multitrack_listing_t *listing)
 		wattrset(listing->window, COLOR_PAIR(1));
 		mvwprintw(listing->window, 5, 2, "Satellite list is empty. Are any satellites enabled?");
 		mvwprintw(listing->window, 6, 2, "(Go back to main menu and press 'W')");
-
 	}
 	wrefresh(listing->window);
 }

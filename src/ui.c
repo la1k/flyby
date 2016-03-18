@@ -1761,10 +1761,6 @@ void MultiTrack(predict_observer_t *qth, predict_orbital_elements_t **input_orbi
 	mvprintw(1,0,"  flyby Real-Time Multi-Tracking                                                ");
 	mvprintw(2,0,"                                                                                ");
 
-	attrset(COLOR_PAIR(2)|A_REVERSE);
-
-	mvprintw(3,0,"  Satellite     Azim   Elev  Lat Long    Alt  Range     Next AOS/LOS            ");
-
 	/*
 	attrset(COLOR_PAIR(4)|A_REVERSE|A_BOLD);
 	mvprintw(5,70,"   QTH   ");
@@ -1778,13 +1774,10 @@ void MultiTrack(predict_observer_t *qth, predict_orbital_elements_t **input_orbi
 	char time_string[MAX_NUM_CHARS];
 
 	attrset(COLOR_PAIR(4));
-	WINDOW *sat_list_win = newwin(20, 72, 4, 0);
-	wrefresh(sat_list_win);
+	WINDOW *sat_list_win = newwin(22, 68, 3, 0);
 	multitrack_listing_t *listing = multitrack_create_listing(sat_list_win, qth, input_orbital_elements_array, tle_db);
 
 	do {
-		attrset(COLOR_PAIR(2)|A_REVERSE);
-		mvprintw(3,28," Lat Long");
 		attrset(COLOR_PAIR(2));
 
 		daynum = predict_to_julian(time(NULL));
@@ -1792,11 +1785,11 @@ void MultiTrack(predict_observer_t *qth, predict_orbital_elements_t **input_orbi
 		multitrack_update_listing(listing, daynum);
 
 		//predict and observe sun and moon
-		struct predict_observation sun;
+		/*struct predict_observation sun;
 		predict_observe_sun(qth, daynum, &sun);
 
 		struct predict_observation moon;
-		predict_observe_moon(qth, daynum, &moon);
+		predict_observe_moon(qth, daynum, &moon);*/
 
 		//display sun and moon
 		/*
@@ -2477,7 +2470,7 @@ void RunFlybyUI(bool new_user, const char *qthfile, predict_observer_t *observer
 	init_pair(5,COLOR_WHITE,COLOR_RED);
 	init_pair(6,COLOR_RED,COLOR_WHITE);
 	init_pair(7,COLOR_CYAN,COLOR_RED);
-	init_pair(8,COLOR_BLUE,COLOR_CYAN);
+	init_pair(8,COLOR_RED,COLOR_YELLOW);
 
 	if (new_user) {
 		NewUser();
@@ -2493,14 +2486,11 @@ void RunFlybyUI(bool new_user, const char *qthfile, predict_observer_t *observer
 	}
 
 	/* Display main menu and handle keyboard input */
-	MainMenu();
 	int indx = 0;
 	char key;
 	do {
+		MainMenu();
 		key=getch();
-
-		if (key!='T')
-			key=tolower(key);
 
 		switch (key) {
 			case 'p':
@@ -2513,34 +2503,28 @@ void RunFlybyUI(bool new_user, const char *qthfile, predict_observer_t *observer
 					Predict(tle_db->tles[indx].name, orbital_elements_array[indx], observer, key);
 				}
 
-				MainMenu();
 				break;
 
 			case 'n':
 				Print("","",0);
 				PredictSunMoon(PREDICT_MOON, observer);
-				MainMenu();
 				break;
 
 			case 'o':
 				Print("","",0);
 				PredictSunMoon(PREDICT_SUN, observer);
-				MainMenu();
 				break;
 
 			case 'u':
 				AutoUpdate("", tle_db, orbital_elements_array);
-				MainMenu();
 				break;
 
 			case 'd':
 				ShowOrbitData(tle_db, orbital_elements_array);
-				MainMenu();
 				break;
 
 			case 'g':
 				QthEdit(qthfile, observer);
-				MainMenu();
 				break;
 
 			case 't':
@@ -2551,19 +2535,16 @@ void RunFlybyUI(bool new_user, const char *qthfile, predict_observer_t *observer
 					SingleTrack(indx, orbital_elements_array, observer, sat_db, tle_db, rotctld, downlink, uplink);
 				}
 
-				MainMenu();
 				break;
 
 			case 'm':
 			case 'l':
 
 				MultiTrack(observer, orbital_elements_array, tle_db, key, 'k');
-				MainMenu();
 				break;
 
 			case 'i':
 				ProgramInfo(qthfile, tle_db, sat_db, rotctld);
-				MainMenu();
 				break;
 
 			case 's':
@@ -2575,18 +2556,15 @@ void RunFlybyUI(bool new_user, const char *qthfile, predict_observer_t *observer
 					Illumination(tle_db->tles[indx].name, orbital_elements_array[indx]);
 				}
 
-				MainMenu();
 				break;
 
 			case 'w':
 			case 'W':
 				EditWhitelist(tle_db);
-				MainMenu();
 				break;
 			case 'E':
 			case 'e':
 				EditTransponderDatabase(tle_db, sat_db);
-				MainMenu();
 				break;
 		}
 
