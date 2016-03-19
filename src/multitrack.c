@@ -47,17 +47,18 @@ multitrack_listing_t* multitrack_create_listing(WINDOW *window, predict_observer
 	listing->num_entries = num_enabled_tles;
 	listing->entries = (multitrack_entry_t**)malloc(sizeof(multitrack_entry_t*)*num_enabled_tles);
 	listing->tle_db_mapping = (int*)calloc(num_enabled_tles, sizeof(int));
+	listing->sorted_index = (int*)calloc(tle_db->num_tles, sizeof(int));
 
 	int j=0;
 	for (int i=0; i < tle_db->num_tles; i++) {
 		if (tle_db_entry_enabled(tle_db, i)) {
 			listing->entries[j] = multitrack_create_entry(tle_db->tles[i].name, orbital_elements[i]);
 			listing->tle_db_mapping[j] = i;
+			listing->sorted_index[j] = j;
 			j++;
 		}
 	}
 
-	listing->sorted_index = (int*)calloc(tle_db->num_tles, sizeof(int));
 	listing->num_above_horizon = 0;
 	listing->num_below_horizon = 0;
 	listing->num_decayed = 0;
@@ -173,7 +174,6 @@ void multitrack_update_listing(multitrack_listing_t *listing, predict_julian_dat
 	for (int i=0; i < listing->num_entries; i++) {
 		multitrack_entry_t *entry = listing->entries[i];
 		multitrack_update_entry(listing->qth, entry, time);
-		listing->sorted_index[i] = i;
 	}
 }
 

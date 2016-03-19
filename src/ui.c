@@ -2527,11 +2527,13 @@ void RunFlybyUI(bool new_user, const char *qthfile, predict_observer_t *observer
 	while (should_run) {
 		curr_time = predict_to_julian(time(NULL));
 
-		//update satellite listing
 		multitrack_update_listing(listing, curr_time);
-		multitrack_sort_listing(listing);
+		if (!option_selector_visible) {
+			multitrack_sort_listing(listing);
+		}
 		multitrack_display_listing(listing);
 
+		//refresh option selector
 		if (option_selector_visible) {
 			mvwin(option_win, multitrack_selected_window_row(listing) + 6, 2);
 			unpost_menu(option_selector);
@@ -2545,6 +2547,7 @@ void RunFlybyUI(bool new_user, const char *qthfile, predict_observer_t *observer
 		key = getch();
 		if (key != -1) {
 			if (option_selector_visible) {
+				//handle keys from option selector
 				switch (key) {
 					case 'q':
 					case 27:
