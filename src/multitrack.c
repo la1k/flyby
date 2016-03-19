@@ -10,6 +10,7 @@
 
 int MultiColours(double range, double elevation);
 
+#define MULTITRACK_PRINT_OFFSET 2 //row offset from window start at which to start printing
 
 multitrack_entry_t *multitrack_create_entry(const char *name, predict_orbital_elements_t *orbital_elements)
 {
@@ -41,7 +42,7 @@ multitrack_listing_t* multitrack_create_listing(WINDOW *window, predict_observer
 	listing->sorted_index = NULL;
 
 	listing->qth = observer;
-	listing->num_displayed_entries = window_height-4;
+	listing->num_displayed_entries = window_height-MULTITRACK_PRINT_OFFSET;
 
 	multitrack_refresh_tles(listing, orbital_elements, tle_db);
 
@@ -106,7 +107,7 @@ void multitrack_refresh_tles(multitrack_listing_t *listing, predict_orbital_elem
 
 	listing->selected_entry_index = 0;
 	listing->top_index = 0;
-	listing->bottom_index = listing->top_index + listing->num_displayed_entries;
+	listing->bottom_index = listing->top_index + listing->num_displayed_entries - 1;
 
 	listing->num_above_horizon = 0;
 	listing->num_below_horizon = 0;
@@ -280,8 +281,8 @@ void multitrack_display_entry(WINDOW *window, int row, int col, multitrack_entry
 
 void multitrack_print_scrollbar(multitrack_listing_t *listing)
 {
-	int scrollarea_offset = 2;
-	int scrollarea_height = listing->window_height-3;
+	int scrollarea_offset = MULTITRACK_PRINT_OFFSET;
+	int scrollarea_height = listing->window_height-MULTITRACK_PRINT_OFFSET;
 	int scrollbar_height = ((listing->num_displayed_entries*1.0)/(listing->num_entries*1.0))*scrollarea_height;
 
 	//print scrollarea
@@ -310,7 +311,7 @@ void multitrack_display_listing(multitrack_listing_t *listing)
 		listing->entries[selected_index]->display_attributes = SELECTED_ATTRIBUTE;
 		listing->entries[selected_index]->display_string[0] = SELECTED_MARKER;
 
-		int line = 2;
+		int line = MULTITRACK_PRINT_OFFSET;
 		int col = 1;
 
 		for (int i=listing->top_index; ((i <= listing->bottom_index) && (i < listing->num_entries)); i++) {

@@ -2284,7 +2284,7 @@ void RunFlybyUI(bool new_user, const char *qthfile, predict_observer_t *observer
 
 	//prepare multitrack window
 	int sat_list_win_height = 22;
-	int sat_list_win_row = 3;
+	int sat_list_win_row = 1;
 	int sat_list_win_width = 67;
 	WINDOW *sat_list_win = newwin(sat_list_win_height, sat_list_win_width, sat_list_win_row, 0);
 	multitrack_listing_t *listing = multitrack_create_listing(sat_list_win, observer, orbital_elements_array, tle_db);
@@ -2334,7 +2334,7 @@ void RunFlybyUI(bool new_user, const char *qthfile, predict_observer_t *observer
 		curr_time = predict_to_julian(time(NULL));
 
 		MainMenu(sat_list_win_row + sat_list_win_height + 1);
-		PrintSunMoon(sat_list_win_height + sat_list_win_row - 8, sat_list_win_width+1, observer, curr_time);
+		PrintSunMoon(sat_list_win_height + sat_list_win_row - 7, sat_list_win_width+1, observer, curr_time);
 		PrintQth(sat_list_win_row + 2, sat_list_win_width+1, observer);
 
 		//refresh satellite list
