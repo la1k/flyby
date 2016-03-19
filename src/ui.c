@@ -2410,7 +2410,7 @@ void RunFlybyUI(bool new_user, const char *qthfile, predict_observer_t *observer
 
 	int max_width, max_height;
 	getmaxyx(option_win, max_height, max_width);
-	set_menu_sub(option_selector, derwin(option_win, max_height, max_width, 0, 0));
+	set_menu_sub(option_selector, derwin(option_win, max_height, max_width-1, 0, 1));
 	set_menu_format(option_selector, max_height, 1);
 
 	set_menu_mark(option_selector, "");
@@ -2434,6 +2434,7 @@ void RunFlybyUI(bool new_user, const char *qthfile, predict_observer_t *observer
 		//refresh option selector
 		if (option_selector_visible) {
 			mvwin(option_win, multitrack_selected_window_row(listing) + 6, 2);
+			wbkgd(option_win, COLOR_PAIR(4)|A_REVERSE);
 			unpost_menu(option_selector);
 			post_menu(option_selector);
 			wrefresh(option_win);
@@ -2453,6 +2454,7 @@ void RunFlybyUI(bool new_user, const char *qthfile, predict_observer_t *observer
 					case 10:
 					case KEY_LEFT:
 						option_selector_visible = false;
+						wbkgd(option_win, COLOR_PAIR(1));
 						werase(option_win);
 						wrefresh(option_win);
 						break;
