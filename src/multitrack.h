@@ -54,3 +54,5 @@ void multitrack_display_listing(multitrack_listing_t *listing);
 bool multitrack_handle_listing(multitrack_listing_t *listing, int input_key);
 
 int multitrack_selected_entry(multitrack_listing_t *listing);
+
+int multitrack_selected_window_row(multitrack_listing_t *listing);

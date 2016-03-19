@@ -329,6 +329,10 @@ bool multitrack_handle_listing(multitrack_listing_t *listing, int input_key)
 int multitrack_selected_entry(multitrack_listing_t *listing)
 {
 	int index = listing->sorted_index[listing->selected_entry_index];
-	fprintf(stderr, "%s\n", listing->entries[index]->name);
 	return listing->tle_db_mapping[index];
+}
+
+int multitrack_selected_window_row(multitrack_listing_t *listing)
+{
+	return listing->selected_entry_index - listing->top_index;
 }
