@@ -106,11 +106,10 @@ void PredictSunMoon(enum celestial_object object, predict_observer_t *qth);
 /* This function permits displays a satellite's orbital
  * data.  The age of the satellite data is also provided.
  *
- * \param num_orbits Number of orbits
- * \param tle_db TLE database
- * \param orbital_elements_array List of rbital elements
+ * \param name Satellite name
+ * \param orbital_elements Orbital elements
  **/
-void ShowOrbitData(struct tle_db *tle_db, predict_orbital_elements_t **orbital_elements_array);
+void ShowOrbitData(const char *name, predict_orbital_elements_t *orbital_elements);
 
 /**
  * Edit QTH information and save to file.

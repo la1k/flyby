@@ -1061,95 +1061,89 @@ bool KbEdit(int x, int y, int num_characters, char *output_string)
 	return filled;
 }
 
-void ShowOrbitData(struct tle_db *tle_db, predict_orbital_elements_t **orbital_elements_array)
+void ShowOrbitData(const char *name, predict_orbital_elements_t *orbital_elements)
 {
-	int c, x, namelength, age;
+	int c, namelength, age;
 	double an_period, no_period, sma, c1, e2, satepoch;
 	char days[5];
 
-	x=Select(tle_db, orbital_elements_array);
+	if (orbital_elements->mean_motion!=0.0) {
+		bkgdset(COLOR_PAIR(2)|A_BOLD);
+		clear();
+		sma=331.25*exp(log(1440.0/orbital_elements->mean_motion)*(2.0/3.0));
+		an_period=1440.0/orbital_elements->mean_motion;
+		c1=cos(orbital_elements->inclination*M_PI/180.0);
+		e2=1.0-(orbital_elements->eccentricity*orbital_elements->eccentricity);
+		no_period=(an_period*360.0)/(360.0+(4.97*pow((EARTH_RADIUS_KM/sma),3.5)*((5.0*c1*c1)-1.0)/(e2*e2))/orbital_elements->mean_motion);
+		satepoch=DayNum(1,0,orbital_elements->epoch_year)+orbital_elements->epoch_day;
+		age=(int)rint(predict_to_julian(time(NULL))-satepoch);
 
-	while (x!=-1) {
-		predict_orbital_elements_t *orbital_elements = orbital_elements_array[x];
-		if (orbital_elements->mean_motion!=0.0) {
-			bkgdset(COLOR_PAIR(2)|A_BOLD);
-			clear();
-			sma=331.25*exp(log(1440.0/orbital_elements->mean_motion)*(2.0/3.0));
-			an_period=1440.0/orbital_elements->mean_motion;
-			c1=cos(orbital_elements->inclination*M_PI/180.0);
-			e2=1.0-(orbital_elements->eccentricity*orbital_elements->eccentricity);
-			no_period=(an_period*360.0)/(360.0+(4.97*pow((EARTH_RADIUS_KM/sma),3.5)*((5.0*c1*c1)-1.0)/(e2*e2))/orbital_elements->mean_motion);
-			satepoch=DayNum(1,0,orbital_elements->epoch_year)+orbital_elements->epoch_day;
-			age=(int)rint(predict_to_julian(time(NULL))-satepoch);
+		if (age==1)
+			strcpy(days,"day");
+		else
+			strcpy(days,"days");
 
-			if (age==1)
-				strcpy(days,"day");
-			else
-				strcpy(days,"days");
+		namelength=strlen(name);
 
-			namelength=strlen(tle_db->tles[x].name);
+		printw("\n");
 
-			printw("\n");
+		for (c=41; c>namelength; c-=2)
+			printw(" ");
 
-			for (c=41; c>namelength; c-=2)
-				printw(" ");
+		bkgdset(COLOR_PAIR(3)|A_BOLD);
+		attrset(COLOR_PAIR(6)|A_REVERSE|A_BOLD);
+		clear();
 
-			bkgdset(COLOR_PAIR(3)|A_BOLD);
-			attrset(COLOR_PAIR(6)|A_REVERSE|A_BOLD);
-			clear();
+		mvprintw(0,0,"                                                                                ");
+		mvprintw(1,0,"  flyby Orbital Data                                                            ");
+		mvprintw(2,0,"                                                                                ");
 
-			mvprintw(0,0,"                                                                                ");
-			mvprintw(1,0,"  flyby Orbital Data                                                            ");
-			mvprintw(2,0,"                                                                                ");
+		mvprintw(1,25,"(%ld) %s", orbital_elements->satellite_number, name);
 
-			mvprintw(1,25,"(%ld) %s", orbital_elements->satellite_number, tle_db->tles[x].name);
+		attrset(COLOR_PAIR(4)|A_BOLD);
+		mvprintw( 4, 4,"Data Issued        : ");
+		mvprintw( 5, 4,"Reference Epoch    : ");
+		mvprintw( 6, 4,"Inclination        : ");
+		mvprintw( 7, 4,"RAAN               : ");
+		mvprintw( 8, 4,"Eccentricity       : ");
+		mvprintw( 9, 4,"Arg of Perigee     : ");
+		mvprintw(10, 4,"Mean Anomaly       : ");
+		mvprintw(11, 4,"Mean Motion        : ");
+		mvprintw(12, 4,"Decay Rate         : ");
+		mvprintw(13, 4,"Nddot/6 Drag       : ");
+		mvprintw(14, 4,"Bstar Drag Factor  : ");
+		mvprintw(15, 4,"Semi-Major Axis    : ");
+		mvprintw(16, 4,"Apogee Altitude    : ");
+		mvprintw(17, 4,"Perigee Altitude   : ");
+		mvprintw(18, 4,"Anomalistic Period : ");
+		mvprintw(19, 4,"Nodal Period       : ");
+		mvprintw(20, 4,"Orbit Number       : ");
+		mvprintw(21, 4,"Element Set Number : ");
 
-			attrset(COLOR_PAIR(4)|A_BOLD);
-			mvprintw( 4, 4,"Data Issued        : ");
-			mvprintw( 5, 4,"Reference Epoch    : ");
-			mvprintw( 6, 4,"Inclination        : ");
-			mvprintw( 7, 4,"RAAN               : ");
-			mvprintw( 8, 4,"Eccentricity       : ");
-			mvprintw( 9, 4,"Arg of Perigee     : ");
-			mvprintw(10, 4,"Mean Anomaly       : ");
-			mvprintw(11, 4,"Mean Motion        : ");
-			mvprintw(12, 4,"Decay Rate         : ");
-			mvprintw(13, 4,"Nddot/6 Drag       : ");
-			mvprintw(14, 4,"Bstar Drag Factor  : ");
-			mvprintw(15, 4,"Semi-Major Axis    : ");
-			mvprintw(16, 4,"Apogee Altitude    : ");
-			mvprintw(17, 4,"Perigee Altitude   : ");
-			mvprintw(18, 4,"Anomalistic Period : ");
-			mvprintw(19, 4,"Nodal Period       : ");
-			mvprintw(20, 4,"Orbit Number       : ");
-			mvprintw(21, 4,"Element Set Number : ");
+		attrset(COLOR_PAIR(2)|A_BOLD);
+		mvprintw( 4,25,"%d %s ago",age,days);
+		mvprintw( 5,25,"%02d %.8f",orbital_elements->epoch_year,orbital_elements->epoch_day);
+		mvprintw( 6,25,"%.4f deg",orbital_elements->inclination);
+		mvprintw( 7,25,"%.4f deg",orbital_elements->right_ascension);
+		mvprintw( 8,25,"%g",orbital_elements->eccentricity);
+		mvprintw( 9,25,"%.4f deg",orbital_elements->argument_of_perigee);
+		mvprintw(10,25,"%.4f deg",orbital_elements->mean_anomaly);
+		mvprintw(11,25,"%.8f rev/day",orbital_elements->mean_motion);
+		mvprintw(12,25,"%g rev/day/day",orbital_elements->derivative_mean_motion);
+		mvprintw(13,25,"%g rev/day/day/day",orbital_elements->second_derivative_mean_motion);
+		mvprintw(14,25,"%g 1/earth radii",orbital_elements->bstar_drag_term);
+		mvprintw(15,25,"%.4f km",sma);
+		mvprintw(16,25,"%.4f km",sma*(1.0+orbital_elements->eccentricity)-EARTH_RADIUS_KM);
+		mvprintw(17,25,"%.4f km",sma*(1.0-orbital_elements->eccentricity)-EARTH_RADIUS_KM);
+		mvprintw(18,25,"%.4f mins",an_period);
+		mvprintw(19,25,"%.4f mins",no_period);
+		mvprintw(20,25,"%ld",orbital_elements->revolutions_at_epoch);
+		mvprintw(21,25,"%ld",orbital_elements->element_number);
 
-			attrset(COLOR_PAIR(2)|A_BOLD);
-			mvprintw( 4,25,"%d %s ago",age,days);
-			mvprintw( 5,25,"%02d %.8f",orbital_elements->epoch_year,orbital_elements->epoch_day);
-			mvprintw( 6,25,"%.4f deg",orbital_elements->inclination);
-			mvprintw( 7,25,"%.4f deg",orbital_elements->right_ascension);
-			mvprintw( 8,25,"%g",orbital_elements->eccentricity);
-			mvprintw( 9,25,"%.4f deg",orbital_elements->argument_of_perigee);
-			mvprintw(10,25,"%.4f deg",orbital_elements->mean_anomaly);
-			mvprintw(11,25,"%.8f rev/day",orbital_elements->mean_motion);
-			mvprintw(12,25,"%g rev/day/day",orbital_elements->derivative_mean_motion);
-			mvprintw(13,25,"%g rev/day/day/day",orbital_elements->second_derivative_mean_motion);
-			mvprintw(14,25,"%g 1/earth radii",orbital_elements->bstar_drag_term);
-			mvprintw(15,25,"%.4f km",sma);
-			mvprintw(16,25,"%.4f km",sma*(1.0+orbital_elements->eccentricity)-EARTH_RADIUS_KM);
-			mvprintw(17,25,"%.4f km",sma*(1.0-orbital_elements->eccentricity)-EARTH_RADIUS_KM);
-			mvprintw(18,25,"%.4f mins",an_period);
-			mvprintw(19,25,"%.4f mins",no_period);
-			mvprintw(20,25,"%ld",orbital_elements->revolutions_at_epoch);
-			mvprintw(21,25,"%ld",orbital_elements->element_number);
-
-			attrset(COLOR_PAIR(3)|A_BOLD);
-			refresh();
-			AnyKey();
-		}
-		x=Select(tle_db, orbital_elements_array);
-	 };
+		attrset(COLOR_PAIR(3)|A_BOLD);
+		refresh();
+		AnyKey();
+	}
 }
 
 void QthEdit(const char *qthfile, predict_observer_t *qth)
@@ -2452,6 +2446,9 @@ void EditTransponderDatabase(struct tle_db *tle_db, struct transponder_db *sat_d
 	transponder_db_from_search_paths(tle_db, sat_db);
 }
 
+#define NUM_OPTIONS 7
+enum sub_menu_options {OPTION_SINGLETRACK, OPTION_PREDICT, OPTION_PREDICT_VISIBLE, OPTION_DISPLAY_ORBITAL_DATA, OPTION_SOLAR_ILLUMINATION, OPTION_EDIT_TRANSPONDER};
+
 void RunFlybyUI(bool new_user, const char *qthfile, predict_observer_t *observer, struct tle_db *tle_db, struct transponder_db *sat_db, rotctld_info_t *rotctld, rigctld_info_t *downlink, rigctld_info_t *uplink)
 {
 	/* Start ncurses */
@@ -2491,21 +2488,28 @@ void RunFlybyUI(bool new_user, const char *qthfile, predict_observer_t *observer
 	multitrack_listing_t *listing = multitrack_create_listing(sat_list_win, observer, orbital_elements_array, tle_db);
 
 	//prepare option selector window
-	WINDOW *option_win = newwin(5, 22, 0, 0);
+	WINDOW *option_win = newwin(6, 30, 0, 0);
 	wattrset(option_win, COLOR_PAIR(1)|A_REVERSE);
 	werase(option_win);
 	wrefresh(option_win);
-	/*mvwprintw(option_win, 0, 0, " Track satellite        ");
-	mvwprintw(option_win, 1, 0, " Predict passes         ");
-	mvwprintw(option_win, 2, 0, " Predict visible passes ");
-	mvwprintw(option_win, 3, 0, " Display orbital data   ");*/
 	bool option_selector_visible = false;
-	ITEM *options[6] = {new_item("Track satellite", ""),
-			    new_item("Predict passes", ""),
-			    new_item("Predict visible passes", ""),
-			    new_item("Display orbital data", ""),
-			    new_item("Edit transponders", ""),
-			    NULL};
+	ITEM *options[NUM_OPTIONS] =  {new_item("Track satellite", ""),
+				      new_item("Predict passes", ""),
+				      new_item("Predict visible passes", ""),
+				      new_item("Display orbital data", ""),
+				      new_item("Edit transponders", ""),
+				      new_item("Solar illumination prediction", ""),
+				      NULL};
+	int item_types[NUM_OPTIONS] = {OPTION_SINGLETRACK,
+				      OPTION_PREDICT,
+				      OPTION_PREDICT_VISIBLE,
+				      OPTION_DISPLAY_ORBITAL_DATA,
+				      OPTION_EDIT_TRANSPONDER,
+				      OPTION_SOLAR_ILLUMINATION};
+	for (int i=0; i < NUM_OPTIONS; i++) {
+		set_item_userptr(options[i], &(item_types[i]));
+	}
+
 	MENU *option_selector = new_menu(options);
 	set_menu_back(option_selector,COLOR_PAIR(1)|A_REVERSE);
 	set_menu_fore(option_selector,COLOR_PAIR(4)|A_REVERSE);
@@ -2521,7 +2525,6 @@ void RunFlybyUI(bool new_user, const char *qthfile, predict_observer_t *observer
 	post_menu(option_selector);
 
 	/* Display main menu and handle keyboard input */
-	int indx = 0;
 	int key = 0;
 	bool should_run = true;
 	while (should_run) {
@@ -2546,11 +2549,13 @@ void RunFlybyUI(bool new_user, const char *qthfile, predict_observer_t *observer
 		halfdelay(HALF_DELAY_TIME);  // Increase if CPU load is too high
 		key = getch();
 		if (key != -1) {
+			cbreak(); //turn off halfdelay
 			if (option_selector_visible) {
 				//handle keys from option selector
 				switch (key) {
 					case 'q':
 					case 27:
+					case 10:
 					case KEY_LEFT:
 						option_selector_visible = false;
 						werase(option_win);
@@ -2563,6 +2568,34 @@ void RunFlybyUI(bool new_user, const char *qthfile, predict_observer_t *observer
 						menu_driver(option_selector, REQ_DOWN_ITEM);
 						break;
 				}
+
+				if (key == 10) {
+					int satellite_index = multitrack_selected_entry(listing);
+					int option = *((int*)item_userptr(current_item(option_selector)));
+					switch (option) {
+						case OPTION_SINGLETRACK:
+							SingleTrack(satellite_index, orbital_elements_array, observer, sat_db, tle_db, rotctld, downlink, uplink);
+							break;
+						case OPTION_PREDICT_VISIBLE:
+							PrintVisible("","");
+							Predict(tle_db->tles[satellite_index].name, orbital_elements_array[satellite_index], observer, 'v');
+						case OPTION_PREDICT:
+							Print("","",0);
+							Predict(tle_db->tles[satellite_index].name, orbital_elements_array[satellite_index], observer, 'p');
+							break;
+						case OPTION_DISPLAY_ORBITAL_DATA:
+							ShowOrbitData(tle_db->tles[satellite_index].name, orbital_elements_array[satellite_index]);
+							break;
+						case OPTION_EDIT_TRANSPONDER:
+							break;
+						case OPTION_SOLAR_ILLUMINATION:
+							Print("","",0);
+							Illumination(tle_db->tles[satellite_index].name, orbital_elements_array[satellite_index]);
+							break;
+					}
+					clear();
+					refresh();
+				}
 			} else {
 				bool handled = multitrack_handle_listing(listing, key);
 				if ((key == 10) || (key == KEY_RIGHT)) {
@@ -2574,14 +2607,6 @@ void RunFlybyUI(bool new_user, const char *qthfile, predict_observer_t *observer
 					switch (key) {
 						case 'p':
 						case 'v':
-							Print("","",0);
-							PrintVisible("","");
-							indx=Select(tle_db, orbital_elements_array);
-
-							if (indx!=-1) {
-								Predict(tle_db->tles[indx].name, orbital_elements_array[indx], observer, key);
-							}
-
 							break;
 
 						case 'n':
@@ -2599,7 +2624,6 @@ void RunFlybyUI(bool new_user, const char *qthfile, predict_observer_t *observer
 							break;
 
 						case 'd':
-							ShowOrbitData(tle_db, orbital_elements_array);
 							break;
 
 						case 'g':
@@ -2608,12 +2632,6 @@ void RunFlybyUI(bool new_user, const char *qthfile, predict_observer_t *observer
 
 						case 't':
 						case 'T':
-							indx=Select(tle_db, orbital_elements_array);
-
-							if (indx!=-1) {
-								SingleTrack(indx, orbital_elements_array, observer, sat_db, tle_db, rotctld, downlink, uplink);
-							}
-
 							break;
 
 						case 'i':
@@ -2621,14 +2639,6 @@ void RunFlybyUI(bool new_user, const char *qthfile, predict_observer_t *observer
 							break;
 
 						case 's':
-							indx=Select(tle_db, orbital_elements_array);
-
-							if (indx!=-1) {
-								Print("","",0);
-
-								Illumination(tle_db->tles[indx].name, orbital_elements_array[indx]);
-							}
-
 							break;
 
 						case 'w':
