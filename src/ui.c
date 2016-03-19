@@ -1811,7 +1811,7 @@ void MultiTrack(predict_observer_t *qth, predict_orbital_elements_t **input_orbi
 		mvprintw(21,70,"%-7.2fAz",moon.azimuth*180.0/M_PI);
 		mvprintw(22,70,"%+-6.2f El",moon.elevation*180.0/M_PI);
 		*/
-	
+
 		//sort satellites before displaying them
 		multitrack_sort_listing(listing);
 
@@ -2490,6 +2490,36 @@ void RunFlybyUI(bool new_user, const char *qthfile, predict_observer_t *observer
 	WINDOW *sat_list_win = newwin(22, 68, 3, 0);
 	multitrack_listing_t *listing = multitrack_create_listing(sat_list_win, observer, orbital_elements_array, tle_db);
 
+	//prepare option selector window
+	WINDOW *option_win = newwin(5, 22, 0, 0);
+	wattrset(option_win, COLOR_PAIR(1)|A_REVERSE);
+	werase(option_win);
+	wrefresh(option_win);
+	/*mvwprintw(option_win, 0, 0, " Track satellite        ");
+	mvwprintw(option_win, 1, 0, " Predict passes         ");
+	mvwprintw(option_win, 2, 0, " Predict visible passes ");
+	mvwprintw(option_win, 3, 0, " Display orbital data   ");*/
+	bool option_selector_visible = false;
+	ITEM *options[6] = {new_item("Track satellite", ""),
+			    new_item("Predict passes", ""),
+			    new_item("Predict visible passes", ""),
+			    new_item("Display orbital data", ""),
+			    new_item("Edit transponders", ""),
+			    NULL};
+	MENU *option_selector = new_menu(options);
+	set_menu_back(option_selector,COLOR_PAIR(1)|A_REVERSE);
+	set_menu_fore(option_selector,COLOR_PAIR(4)|A_REVERSE);
+	set_menu_win(option_selector, option_win);
+
+	int max_width, max_height;
+	getmaxyx(option_win, max_height, max_width);
+	set_menu_sub(option_selector, derwin(option_win, max_height, max_width, 0, 0));
+	set_menu_format(option_selector, max_height, 1);
+
+	set_menu_mark(option_selector, "");
+	menu_opts_off(option_selector, O_ONEVALUE);
+	post_menu(option_selector);
+
 	/* Display main menu and handle keyboard input */
 	int indx = 0;
 	int key = 0;
@@ -2502,89 +2532,118 @@ void RunFlybyUI(bool new_user, const char *qthfile, predict_observer_t *observer
 		multitrack_sort_listing(listing);
 		multitrack_display_listing(listing);
 
+		if (option_selector_visible) {
+			mvwin(option_win, multitrack_selected_window_row(listing) + 6, 2);
+			unpost_menu(option_selector);
+			post_menu(option_selector);
+			wrefresh(option_win);
+		}
+
 		//get input character
 		refresh();
 		halfdelay(HALF_DELAY_TIME);  // Increase if CPU load is too high
 		key = getch();
 		if (key != -1) {
-			bool handled = multitrack_handle_listing(listing, key);
-
-			if (!handled) {
+			if (option_selector_visible) {
 				switch (key) {
-					case 'p':
-					case 'v':
-						Print("","",0);
-						PrintVisible("","");
-						indx=Select(tle_db, orbital_elements_array);
-
-						if (indx!=-1) {
-							Predict(tle_db->tles[indx].name, orbital_elements_array[indx], observer, key);
-						}
-
-						break;
-
-					case 'n':
-						Print("","",0);
-						PredictSunMoon(PREDICT_MOON, observer);
-						break;
-
-					case 'o':
-						Print("","",0);
-						PredictSunMoon(PREDICT_SUN, observer);
-						break;
-
-					case 'u':
-						AutoUpdate("", tle_db, orbital_elements_array);
-						break;
-
-					case 'd':
-						ShowOrbitData(tle_db, orbital_elements_array);
-						break;
-
-					case 'g':
-						QthEdit(qthfile, observer);
-						break;
-
-					case 't':
-					case 'T':
-						indx=Select(tle_db, orbital_elements_array);
-
-						if (indx!=-1) {
-							SingleTrack(indx, orbital_elements_array, observer, sat_db, tle_db, rotctld, downlink, uplink);
-						}
-
-						break;
-
-					case 'i':
-						ProgramInfo(qthfile, tle_db, sat_db, rotctld);
-						break;
-
-					case 's':
-						indx=Select(tle_db, orbital_elements_array);
-
-						if (indx!=-1) {
-							Print("","",0);
-
-							Illumination(tle_db->tles[indx].name, orbital_elements_array[indx]);
-						}
-
-						break;
-
-					case 'w':
-					case 'W':
-						EditWhitelist(tle_db);
-						break;
-					case 'E':
-					case 'e':
-						EditTransponderDatabase(tle_db, sat_db);
-						break;
-					case 27:
 					case 'q':
-						should_run = false;
+					case 27:
+					case KEY_LEFT:
+						option_selector_visible = false;
+						werase(option_win);
+						wrefresh(option_win);
+						break;
+					case KEY_UP:
+						menu_driver(option_selector, REQ_UP_ITEM);
+						break;
+					case KEY_DOWN:
+						menu_driver(option_selector, REQ_DOWN_ITEM);
 						break;
 				}
-				clear();
-				refresh();
+			} else {
+				bool handled = multitrack_handle_listing(listing, key);
+				if ((key == 10) || (key == KEY_RIGHT)) {
+					option_selector_visible = true;
+					handled = true;
+				}
+
+				if (!handled) {
+					switch (key) {
+						case 'p':
+						case 'v':
+							Print("","",0);
+							PrintVisible("","");
+							indx=Select(tle_db, orbital_elements_array);
+
+							if (indx!=-1) {
+								Predict(tle_db->tles[indx].name, orbital_elements_array[indx], observer, key);
+							}
+
+							break;
+
+						case 'n':
+							Print("","",0);
+							PredictSunMoon(PREDICT_MOON, observer);
+							break;
+
+						case 'o':
+							Print("","",0);
+							PredictSunMoon(PREDICT_SUN, observer);
+							break;
+
+						case 'u':
+							AutoUpdate("", tle_db, orbital_elements_array);
+							break;
+
+						case 'd':
+							ShowOrbitData(tle_db, orbital_elements_array);
+							break;
+
+						case 'g':
+							QthEdit(qthfile, observer);
+							break;
+
+						case 't':
+						case 'T':
+							indx=Select(tle_db, orbital_elements_array);
+
+							if (indx!=-1) {
+								SingleTrack(indx, orbital_elements_array, observer, sat_db, tle_db, rotctld, downlink, uplink);
+							}
+
+							break;
+
+						case 'i':
+							ProgramInfo(qthfile, tle_db, sat_db, rotctld);
+							break;
+
+						case 's':
+							indx=Select(tle_db, orbital_elements_array);
+
+							if (indx!=-1) {
+								Print("","",0);
+
+								Illumination(tle_db->tles[indx].name, orbital_elements_array[indx]);
+							}
+
+							break;
+
+						case 'w':
+						case 'W':
+							EditWhitelist(tle_db);
+							break;
+						case 'E':
+						case 'e':
+							EditTransponderDatabase(tle_db, sat_db);
+							break;
+						case 27:
+						case 'q':
+							should_run = false;
+							break;
+					}
+					clear();
+					refresh();
+				}
 			}
 		}
 	}
