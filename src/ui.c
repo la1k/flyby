@@ -383,127 +383,6 @@ void AutoUpdate(const char *string, struct tle_db *tle_db, predict_orbital_eleme
 	}
 }
 
-int Select(struct tle_db *tle_db, predict_orbital_elements_t **orbital_elements_array)
-{
-	int num_orbits = tle_db->num_tles;
-	ITEM **my_items;
-	int c;
-	MENU *my_menu;
-	WINDOW *my_menu_win;
-	int n_choices, i, j = -1;
-
-	attrset(COLOR_PAIR(6)|A_REVERSE|A_BOLD);
-	clear();
-
-	mvprintw(0,0,"                                                                                ");
-	mvprintw(1,0,"  flyby Satellite Selector                                                      ");
-	mvprintw(2,0,"                                                                                ");
-
-	attrset(COLOR_PAIR(3)|A_BOLD);
-	mvprintw( 5,46,"Use cursor keys to move up/down");
-	mvprintw( 6,46,"the list and then select with ");
-	mvprintw( 7,46,"the 'Enter' key.");
-	mvprintw( 9,46,"Press 'q' to return to menu.");
-
-	/* Create the window to be associated with the menu */
-	my_menu_win = newwin(LINES-5, 40, 4, 4);
-	keypad(my_menu_win, TRUE);
-	wattrset(my_menu_win, COLOR_PAIR(4));
-
-	/* Print a border around the main window and print a title */
-#if	!defined (__CYGWIN32__)
-	box(my_menu_win, 0, 0);
-#endif
-
-	/* Create items */
-	my_items = (ITEM **)calloc(num_orbits + 1, sizeof(ITEM *));
-
-	int item_ind = 0;
-	for(i = 0; i < num_orbits; ++i) {
-		if (tle_db_entry_enabled(tle_db, i)) {
-			my_items[item_ind] = new_item(tle_db->tles[i].name, orbital_elements_array[i]->designator);
-			item_ind++;
-		}
-	}
-	n_choices = item_ind;
-	my_items[item_ind] = NULL; //terminate the menu list
-
-	mvprintw(LINES-3,46,"%d satellites",n_choices);
-
-	if (n_choices > 0) {
-		/* Create menu */
-		my_menu = new_menu((ITEM **)my_items);
-
-		set_menu_back(my_menu,COLOR_PAIR(1));
-		set_menu_fore(my_menu,COLOR_PAIR(5)|A_BOLD);
-
-		/* Set main window and sub window */
-		set_menu_win(my_menu, my_menu_win);
-		set_menu_sub(my_menu, derwin(my_menu_win, LINES-7, 38, 2, 1));
-		set_menu_format(my_menu, LINES-9, 1);
-
-		/* Set menu mark to the string " * " */
-		set_menu_mark(my_menu, " * ");
-
-		/* Post the menu */
-		post_menu(my_menu);
-
-		refresh();
-		wrefresh(my_menu_win);
-
-		bool should_run = true;
-		bool should_exit = false;
-		while (should_run) {
-			c = wgetch(my_menu_win);
-			switch(c) {
-				case 'q':
-					should_run = false;
-					should_exit = true;
-					break;
-				case KEY_DOWN:
-					menu_driver(my_menu, REQ_DOWN_ITEM);
-					break;
-				case KEY_UP:
-					menu_driver(my_menu, REQ_UP_ITEM);
-					break;
-				case KEY_NPAGE:
-					menu_driver(my_menu, REQ_SCR_DPAGE);
-					break;
-				case KEY_PPAGE:
-					menu_driver(my_menu, REQ_SCR_UPAGE);
-					break;
-				case 10: /* Enter */
-					pos_menu_cursor(my_menu);
-					should_run = false;
-					break;
-			}
-			wrefresh(my_menu_win);
-		}
-
-		if (!should_exit) {
-			for (i=0, j=0; i<num_orbits; i++)
-				if (strcmp(item_name(current_item(my_menu)),tle_db->tles[i].name)==0)
-					j = i;
-		}
-
-		/* Unpost and free all the memory taken up */
-		unpost_menu(my_menu);
-		free_menu(my_menu);
-	} else {
-		refresh();
-		wrefresh(my_menu_win);
-		c = wgetch(my_menu_win);
-		j = -1;
-	}
-
-	for(i = 0; i < n_choices; ++i) {
-		free_item(my_items[i]);
-	}
-	free(my_items);
-
-	return j;
-}
-
 long DayNum(m,d,y)
 int  m, d, y;
 {
@@ -2511,7 +2390,7 @@ void RunFlybyUI(bool new_user, const char *qthfile, predict_observer_t *observer
 				      new_item("Predict passes", ""),
 				      new_item("Predict visible passes", ""),
 				      new_item("Display orbital data", ""),
-				      new_item("Edit transponders", ""),
+				      new_item("Show transponders", ""),
 				      new_item("Solar illumination prediction", ""),
 				      NULL};
 	int item_types[NUM_OPTIONS] = {OPTION_SINGLETRACK,
@@ -2618,10 +2497,6 @@ void RunFlybyUI(bool new_user, const char *qthfile, predict_observer_t *observer
 
 				if (!handled) {
 					switch (key) {
-						case 'p':
-						case 'v':
-							break;
-
 						case 'n':
 							PredictSunMoon(PREDICT_MOON, observer);
 							break;
@@ -2634,27 +2509,18 @@ void RunFlybyUI(bool new_user, const char *qthfile, predict_observer_t *observer
 							AutoUpdate("", tle_db, orbital_elements_array);
 							break;
 
-						case 'd':
-							break;
-
 						case 'g':
 							QthEdit(qthfile, observer);
-							break;
-
-						case 't':
-						case 'T':
 							break;
 
 						case 'i':
 							ProgramInfo(qthfile, tle_db, sat_db, rotctld);
 							break;
 
-						case 's':
-							break;
-
 						case 'w':
 						case 'W':
 							EditWhitelist(tle_db);
+							multitrack_refresh_tles(listing, orbital_elements_array, tle_db);
 							break;
 						case 'E':
 						case 'e':

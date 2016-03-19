@@ -44,6 +44,8 @@ multitrack_entry_t *multitrack_create_entry(const char *name, predict_orbital_el
 
 multitrack_listing_t* multitrack_create_listing(WINDOW *window, predict_observer_t *observer, predict_orbital_elements_t **orbital_elements, struct tle_db *tle_db);
 
+void multitrack_refresh_tles(multitrack_listing_t *listing, predict_orbital_elements_t **orbital_elements, struct tle_db *tle_db);
+
 void multitrack_update_entry(predict_observer_t *qth, multitrack_entry_t *entry, predict_julian_date_t time);
 
 void multitrack_update_listing(multitrack_listing_t *listing, predict_julian_date_t time);

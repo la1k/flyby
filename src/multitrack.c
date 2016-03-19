@@ -27,13 +27,6 @@ multitrack_entry_t *multitrack_create_entry(const char *name, predict_orbital_el
 
 multitrack_listing_t* multitrack_create_listing(WINDOW *window, predict_observer_t *observer, predict_orbital_elements_t **orbital_elements, struct tle_db *tle_db)
 {
-	int num_enabled_tles = 0;
-	for (int i=0; i < tle_db->num_tles; i++) {
-		if (tle_db_entry_enabled(tle_db, i)) {
-			num_enabled_tles++;
-		}
-	}
-
 	multitrack_listing_t *listing = (multitrack_listing_t*)malloc(sizeof(multitrack_listing_t));
 	listing->window = window;
 
@@ -42,33 +35,84 @@ multitrack_listing_t* multitrack_create_listing(WINDOW *window, predict_observer
 	listing->window_height = window_height;
 	listing->window_width = window_width;
 
-	listing->selected_entry_index = 0;
-	listing->qth = observer;
-	listing->num_entries = num_enabled_tles;
-	listing->entries = (multitrack_entry_t**)malloc(sizeof(multitrack_entry_t*)*num_enabled_tles);
-	listing->tle_db_mapping = (int*)calloc(num_enabled_tles, sizeof(int));
-	listing->sorted_index = (int*)calloc(tle_db->num_tles, sizeof(int));
+	listing->num_entries = 0;
+	listing->entries = NULL;
+	listing->tle_db_mapping = NULL;
+	listing->sorted_index = NULL;
 
-	int j=0;
+	listing->qth = observer;
+	listing->num_displayed_entries = window_height-4;
+
+	multitrack_refresh_tles(listing, orbital_elements, tle_db);
+
+	return listing;
+}
+
+void multitrack_free_entry(multitrack_entry_t **entry)
+{
+	free((*entry)->name);
+	free(*entry);
+	*entry = NULL;
+}
+
+void multitrack_free_entries(multitrack_listing_t *listing)
+{
+	if (listing->entries != NULL) {
+		for (int i=0; i < listing->num_entries; i++) {
+			multitrack_free_entry(&(listing->entries[i]));
+		}
+		free(listing->entries);
+		listing->entries = NULL;
+	}
+	if (listing->tle_db_mapping != NULL) {
+		free(listing->tle_db_mapping);
+		listing->tle_db_mapping = NULL;
+	}
+	if (listing->sorted_index != NULL) {
+		free(listing->sorted_index);
+		listing->sorted_index = NULL;
+	}
+	listing->num_entries = 0;
+}
+
+void multitrack_refresh_tles(multitrack_listing_t *listing, predict_orbital_elements_t **orbital_elements, struct tle_db *tle_db)
+{
+	multitrack_free_entries(listing);
+
+	int num_enabled_tles = 0;
 	for (int i=0; i < tle_db->num_tles; i++) {
 		if (tle_db_entry_enabled(tle_db, i)) {
-			listing->entries[j] = multitrack_create_entry(tle_db->tles[i].name, orbital_elements[i]);
-			listing->tle_db_mapping[j] = i;
-			listing->sorted_index[j] = j;
-			j++;
+			num_enabled_tles++;
 		}
 	}
+
+	listing->num_entries = num_enabled_tles;
+
+	if (listing->num_entries > 0) {
+		listing->entries = (multitrack_entry_t**)malloc(sizeof(multitrack_entry_t*)*num_enabled_tles);
+		listing->tle_db_mapping = (int*)calloc(num_enabled_tles, sizeof(int));
+		listing->sorted_index = (int*)calloc(tle_db->num_tles, sizeof(int));
+
+		int j=0;
+		for (int i=0; i < tle_db->num_tles; i++) {
+			if (tle_db_entry_enabled(tle_db, i)) {
+				listing->entries[j] = multitrack_create_entry(tle_db->tles[i].name, orbital_elements[i]);
+				listing->tle_db_mapping[j] = i;
+				listing->sorted_index[j] = j;
+				j++;
+			}
+		}
+	}
+
+	listing->selected_entry_index = 0;
+	listing->top_index = 0;
+	listing->bottom_index = listing->top_index + listing->num_displayed_entries;
 
 	listing->num_above_horizon = 0;
 	listing->num_below_horizon = 0;
 	listing->num_decayed = 0;
 	listing->num_nevervisible = 0;
 
-	listing->top_index = 0;
-	listing->num_displayed_entries = window_height-4;
-	listing->bottom_index = listing->bottom_index + listing->num_displayed_entries;
-
-	return listing;
 }
 
 void multitrack_update_entry(predict_observer_t *qth, multitrack_entry_t *entry, predict_julian_date_t time)
