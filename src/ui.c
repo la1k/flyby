@@ -1913,84 +1913,32 @@ void EditWhitelist(struct tle_db *tle_db)
 	free_field(field[0]);
 }
 
-void MainMenu()
+void PrintMainMenuOption(int row, int col, char key, const char *description)
 {
-	/* Start-up menu.  Your wish is my command. :-) */
-
-	Banner();
 	attrset(COLOR_PAIR(6)|A_REVERSE|A_BOLD);
-	mvprintw( 9,2," P ");
+	mvprintw(row,col," %c ", key);
 	attrset(COLOR_PAIR(3)|A_BOLD);
-	mvprintw( 9,6," Predict Satellite Passes");
+	mvprintw(row,col+4," %s", description);
+}
 
-	attrset(COLOR_PAIR(6)|A_REVERSE|A_BOLD);
-	mvprintw(11,2," V ");
-	attrset(COLOR_PAIR(3)|A_BOLD);
-	mvprintw(11,6," Predict Visible Passes");
+void MainMenu(int row)
+{
+	int column_1 = 2;
+	int column_2 = 41;
 
-	attrset(COLOR_PAIR(6)|A_REVERSE|A_BOLD);
-	mvprintw(13,2," S ");
-	attrset(COLOR_PAIR(3)|A_BOLD);
-	mvprintw(13,6," Solar Illumination Predictions");
-
-	attrset(COLOR_PAIR(6)|A_REVERSE|A_BOLD);
-	mvprintw(15,2," N ");
-	attrset(COLOR_PAIR(3)|A_BOLD);
-	mvprintw(15,6," Lunar Pass Predictions");
-
-	attrset(COLOR_PAIR(6)|A_REVERSE|A_BOLD);
-	mvprintw(17,2," O ");
-	attrset(COLOR_PAIR(3)|A_BOLD);
-	mvprintw(17,6," Solar Pass Predictions");
-
-	attrset(COLOR_PAIR(6)|A_REVERSE|A_BOLD);
-	mvprintw(19,2," T ");
-	attrset(COLOR_PAIR(3)|A_BOLD);
-	mvprintw(19,6," Single Satellite Tracking Mode");
-
-	attrset(COLOR_PAIR(6)|A_REVERSE|A_BOLD);
-	mvprintw(21,2," M ");
-	attrset(COLOR_PAIR(3)|A_BOLD);
-	mvprintw(21,6," Multi-Satellite Tracking Mode");
-
-
-	attrset(COLOR_PAIR(6)|A_REVERSE|A_BOLD);
-	mvprintw( 9,41," I ");
-	attrset(COLOR_PAIR(3)|A_BOLD);
-	mvprintw( 9,45," Program Information");
-
-	attrset(COLOR_PAIR(6)|A_REVERSE|A_BOLD);
-	mvprintw(11,41," G ");
-	attrset(COLOR_PAIR(3)|A_BOLD);
-	mvprintw(11,45," Edit Ground Station Information");
-
-	attrset(COLOR_PAIR(6)|A_REVERSE|A_BOLD);
-	mvprintw(13,41," D ");
-	attrset(COLOR_PAIR(3)|A_BOLD);
-	mvprintw(13,45," Display Satellite Orbital Data");
-
-	attrset(COLOR_PAIR(6)|A_REVERSE|A_BOLD);
-	mvprintw(15,41," U ");
-	attrset(COLOR_PAIR(3)|A_BOLD);
-	mvprintw(15,45," Update Sat Elements From File");
-
-	attrset(COLOR_PAIR(6)|A_REVERSE|A_BOLD);
-	mvprintw(17,41," W ");
-	attrset(COLOR_PAIR(3)|A_BOLD);
-	mvprintw(17,45," Enable/disable satellites");
-
-	attrset(COLOR_PAIR(6)|A_REVERSE|A_BOLD);
-	mvprintw(19,41," E ");
-	attrset(COLOR_PAIR(3)|A_BOLD);
-	mvprintw(19,45," Edit transponder database");
-
-	attrset(COLOR_PAIR(6)|A_REVERSE|A_BOLD);
-	mvprintw(21,41," Q ");
-	attrset(COLOR_PAIR(3)|A_BOLD);
-	mvprintw(21,45," Exit flyby");
+	PrintMainMenuOption(row, column_1, 'W', "Enable/Disable Satellites");
+	PrintMainMenuOption(row, column_2, 'G', "Edit Ground Station Information");
+	row += 2;
+	PrintMainMenuOption(row, column_1, 'E', "Edit Transponder Database");
+	PrintMainMenuOption(row, column_2, 'I', "Program Information");
+	row += 2;
+	PrintMainMenuOption(row, column_1, 'O', "Solar Pass Predictions");
+	PrintMainMenuOption(row, column_2, 'N', "Lunar Pass Predictions");
+	row += 2;
+	PrintMainMenuOption(row, column_1, 'U', "Update Sat Elements From File");
+	PrintMainMenuOption(row, column_2, 'Q', "Exit flyby");
 
 	refresh();
-
 }
 
 void ProgramInfo(const char *qthfile, struct tle_db *tle_db, struct transponder_db *transponder_db, rotctld_info_t *rotctld)
@@ -2331,7 +2279,6 @@ void RunFlybyUI(bool new_user, const char *qthfile, predict_observer_t *observer
 	set_menu_format(option_selector, max_height, 1);
 
 	set_menu_mark(option_selector, "");
-	menu_opts_off(option_selector, O_ONEVALUE);
 	post_menu(option_selector);
 
 	refresh();
@@ -2342,6 +2289,7 @@ void RunFlybyUI(bool new_user, const char *qthfile, predict_observer_t *observer
 	while (should_run) {
 		curr_time = predict_to_julian(time(NULL));
 
+		//refresh satellite list
 		multitrack_update_listing(listing, curr_time);
 		if (!option_selector_visible) {
 			multitrack_sort_listing(listing);
@@ -2356,6 +2304,8 @@ void RunFlybyUI(bool new_user, const char *qthfile, predict_observer_t *observer
 			post_menu(option_selector);
 			wrefresh(option_win);
 		}
+
+		MainMenu(26);
 
 		//get input character
 		refresh();
@@ -2383,6 +2333,7 @@ void RunFlybyUI(bool new_user, const char *qthfile, predict_observer_t *observer
 						break;
 				}
 
+				//run satellite-specific options
 				if (key == 10) {
 					int satellite_index = multitrack_selected_entry(listing);
 					int option = *((int*)item_userptr(current_item(option_selector)));
@@ -2410,12 +2361,14 @@ void RunFlybyUI(bool new_user, const char *qthfile, predict_observer_t *observer
 					refresh();
 				}
 			} else {
+				//handle input to satellite list
 				bool handled = multitrack_handle_listing(listing, key);
 				if ((key == 10) || (key == KEY_RIGHT)) {
 					option_selector_visible = listing->num_entries;
 					handled = true;
 				}
 
+				//handle all other, global options
 				if (!handled) {
 					switch (key) {
 						case 'n':

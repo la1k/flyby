@@ -153,11 +153,6 @@ void MultiTrack(predict_observer_t *qth, predict_orbital_elements_t **orbital_el
  **/
 void Illumination(const char *name, predict_orbital_elements_t *orbital_elements);
 
-/*
- * Print the main menu to screen.
- **/
-void MainMenu();
-
 /**
  * Display program information.
  **/
