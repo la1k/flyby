@@ -19,6 +19,7 @@ typedef struct {
 	int window_height;
 	int window_width;
 	WINDOW *window;
+	WINDOW *header_window;
 
 	int num_entries;
 
@@ -39,6 +40,7 @@ typedef struct {
 
 #define SELECTED_ATTRIBUTE (COLOR_PAIR(6)|A_REVERSE)
 #define SELECTED_MARKER '-'
+#define MULTITRACK_PRINT_OFFSET 0 //row offset from window start at which to start printing
 
 multitrack_entry_t *multitrack_create_entry(const char *name, predict_orbital_elements_t *orbital_elements);
 

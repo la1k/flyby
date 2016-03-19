@@ -2284,7 +2284,7 @@ void RunFlybyUI(bool new_user, const char *qthfile, predict_observer_t *observer
 
 	//prepare multitrack window
 	int sat_list_win_height = 22;
-	int sat_list_win_row = 1;
+	int sat_list_win_row = 2;
 	int sat_list_win_width = 67;
 	WINDOW *sat_list_win = newwin(sat_list_win_height, sat_list_win_width, sat_list_win_row, 0);
 	multitrack_listing_t *listing = multitrack_create_listing(sat_list_win, observer, orbital_elements_array, tle_db);
@@ -2340,13 +2340,13 @@ void RunFlybyUI(bool new_user, const char *qthfile, predict_observer_t *observer
 		//refresh satellite list
 		multitrack_update_listing(listing, curr_time);
 		if (!option_selector_visible) {
-			multitrack_sort_listing(listing);
+			multitrack_sort_listing(listing); //freeze sorting when option selector is hovering over a satellite
 		}
 		multitrack_display_listing(listing);
 
 		//refresh option selector
 		if (option_selector_visible) {
-			mvwin(option_win, multitrack_selected_window_row(listing) + sat_list_win_row + 3, 2);
+			mvwin(option_win, multitrack_selected_window_row(listing) + sat_list_win_row + MULTITRACK_PRINT_OFFSET + 1, 2);
 			wbkgd(option_win, COLOR_PAIR(4)|A_REVERSE);
 			unpost_menu(option_selector);
 			post_menu(option_selector);

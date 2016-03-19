@@ -10,8 +10,6 @@
 
 int MultiColours(double range, double elevation);
 
-#define MULTITRACK_PRINT_OFFSET 2 //row offset from window start at which to start printing
-
 multitrack_entry_t *multitrack_create_entry(const char *name, predict_orbital_elements_t *orbital_elements)
 {
 	multitrack_entry_t *entry = (multitrack_entry_t*)malloc(sizeof(multitrack_entry_t));
@@ -40,6 +38,10 @@ multitrack_listing_t* multitrack_create_listing(WINDOW *window, predict_observer
 	listing->entries = NULL;
 	listing->tle_db_mapping = NULL;
 	listing->sorted_index = NULL;
+
+	//prepare window for header printing
+	int window_row = getbegy(listing->window);
+	listing->header_window = newwin(1, COLS, window_row-2, 0);
 
 	listing->qth = observer;
 	listing->num_displayed_entries = window_height-MULTITRACK_PRINT_OFFSET;
@@ -301,11 +303,15 @@ void multitrack_print_scrollbar(multitrack_listing_t *listing)
 	}
 }
 
+#define HEADER_STYLE COLOR_PAIR(2)|A_REVERSE
 void multitrack_display_listing(multitrack_listing_t *listing)
 {
-	wattrset(listing->window, COLOR_PAIR(2)|A_REVERSE);
-	mvwprintw(listing->window, 0, 1, " Satellite  Azim   Elev Lat Long   Alt   Range     Next AOS/LOS   ");
+	//show header
+	wbkgd(listing->header_window, HEADER_STYLE);
+	wattrset(listing->header_window, HEADER_STYLE);
+	mvwprintw(listing->header_window, 0, 0, " Satellite  Azim   Elev Lat Long   Alt   Range     Next AOS/LOS   ");
 
+	//show entries
 	if (listing->num_entries > 0) {
 		int selected_index = listing->sorted_index[listing->selected_entry_index];
 		listing->entries[selected_index]->display_attributes = SELECTED_ATTRIBUTE;
@@ -327,6 +333,7 @@ void multitrack_display_listing(multitrack_listing_t *listing)
 		mvwprintw(listing->window, 6, 2, "(Go back to main menu and press 'W')");
 	}
 	wrefresh(listing->window);
+	wrefresh(listing->header_window);
 }
 
 bool multitrack_handle_listing(multitrack_listing_t *listing, int input_key)
