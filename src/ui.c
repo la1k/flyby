@@ -2146,15 +2146,15 @@ void EditTransponderDatabase(int start_index, struct tle_db *tle_db, struct tran
 	filtered_menu_from_tle_db(&menu, tle_db, menu_win);
 	filtered_menu_set_multimark(&menu, false);
 
-	if (tle_db->num_tles > 0) {
-		DisplayTransponderEntry(&(sat_db->sats[0]), display_win);
-	}
-
 	if (start_index >= menu.num_displayed_entries) {
 		start_index = menu.num_displayed_entries-1;
 	}
 	if (start_index < 0) {
 		start_index = 0;
+	}
+
+	if (tle_db->num_tles > 0) {
+		DisplayTransponderEntry(&(sat_db->sats[start_index]), display_win);
 	}
 
 	set_current_item(menu.menu, menu.displayed_entries[start_index]);
