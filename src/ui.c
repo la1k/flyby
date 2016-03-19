@@ -2289,6 +2289,8 @@ void RunFlybyUI(bool new_user, const char *qthfile, predict_observer_t *observer
 	while (should_run) {
 		curr_time = predict_to_julian(time(NULL));
 
+		MainMenu(26);
+
 		//refresh satellite list
 		multitrack_update_listing(listing, curr_time);
 		if (!option_selector_visible) {
@@ -2304,8 +2306,6 @@ void RunFlybyUI(bool new_user, const char *qthfile, predict_observer_t *observer
 			post_menu(option_selector);
 			wrefresh(option_win);
 		}
-
-		MainMenu(26);
 
 		//get input character
 		refresh();
