@@ -262,7 +262,9 @@ void multitrack_display_listing(multitrack_listing_t *listing)
 	mvwprintw(listing->window, 0, 1, " Satellite  Azim   Elev Lat Long   Alt   Range     Next AOS/LOS    ");
 
 	if (listing->num_entries > 0) {
-		listing->entries[listing->sorted_index[listing->selected_entry_index]]->display_attributes = SELECTED_ATTRIBUTE;
+		int selected_index = listing->sorted_index[listing->selected_entry_index];
+		listing->entries[selected_index]->display_attributes = SELECTED_ATTRIBUTE;
+		listing->entries[selected_index]->display_string[0] = '-';
 
 		int line = 2;
 		int col = 1;
