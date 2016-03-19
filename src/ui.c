@@ -2302,12 +2302,14 @@ void RunFlybyUI(bool new_user, const char *qthfile, predict_observer_t *observer
 				      new_item("Show transponders", ""),
 				      new_item("Solar illumination prediction", ""),
 				      NULL};
+
 	int item_types[NUM_OPTIONS] = {OPTION_SINGLETRACK,
 				      OPTION_PREDICT,
 				      OPTION_PREDICT_VISIBLE,
 				      OPTION_DISPLAY_ORBITAL_DATA,
 				      OPTION_EDIT_TRANSPONDER,
 				      OPTION_SOLAR_ILLUMINATION};
+
 	for (int i=0; i < NUM_OPTIONS; i++) {
 		set_item_userptr(options[i], &(item_types[i]));
 	}
