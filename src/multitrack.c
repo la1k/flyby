@@ -10,6 +10,49 @@
 
 int MultiColours(double range, double elevation);
 
+//header (Satellite Azim Elev ...) color style
+#define HEADER_STYLE COLOR_PAIR(2)|A_REVERSE
+
+//color attributes of selected entry in satellite listing
+#define MULTITRACK_SELECTED_ATTRIBUTE (COLOR_PAIR(6)|A_REVERSE)
+
+//marker of menu item
+#define MULTITRACK_SELECTED_MARKER '-'
+
+/**
+ * Create entry in multitrack satellite listing.
+ *
+ * \param name Satellite name
+ * \param orbital_elements Orbital elements of satellite, created from TLE
+ * \return Multitrack entry
+ **/
+multitrack_entry_t *multitrack_create_entry(const char *name, predict_orbital_elements_t *orbital_elements);
+
+/**
+ * Print scrollbar for satellite listing.
+ *
+ * \param listing Satellite listing
+ **/
+void multitrack_print_scrollbar(multitrack_listing_t *listing);
+/**
+ * Display entry in satellite listing.
+ *
+ * \param window Window to display entry in
+ * \param row Row
+ * \param col Column
+ * \param entry Satellite entry
+ **/
+void multitrack_display_entry(WINDOW *window, int row, int col, multitrack_entry_t *entry);
+
+/**
+ * Update display strings and status in satellite entry.
+ *
+ * \param qth QTH coordinates
+ * \param entry Multitrack entry
+ * \param time Time at which satellite status should be calculated
+ **/
+void multitrack_update_entry(predict_observer_t *qth, multitrack_entry_t *entry, predict_julian_date_t time);
+
 multitrack_entry_t *multitrack_create_entry(const char *name, predict_orbital_elements_t *orbital_elements)
 {
 	multitrack_entry_t *entry = (multitrack_entry_t*)malloc(sizeof(multitrack_entry_t));
@@ -44,7 +87,7 @@ multitrack_listing_t* multitrack_create_listing(WINDOW *window, predict_observer
 	listing->header_window = newwin(1, COLS, window_row-2, 0);
 
 	listing->qth = observer;
-	listing->num_displayed_entries = window_height-MULTITRACK_PRINT_OFFSET;
+	listing->displayed_entries_per_page = window_height-MULTITRACK_PRINT_OFFSET;
 
 	multitrack_refresh_tles(listing, orbital_elements, tle_db);
 
@@ -109,7 +152,7 @@ void multitrack_refresh_tles(multitrack_listing_t *listing, predict_orbital_elem
 
 	listing->selected_entry_index = 0;
 	listing->top_index = 0;
-	listing->bottom_index = listing->top_index + listing->num_displayed_entries - 1;
+	listing->bottom_index = listing->top_index + listing->displayed_entries_per_page - 1;
 
 	listing->num_above_horizon = 0;
 	listing->num_below_horizon = 0;
@@ -285,7 +328,7 @@ void multitrack_print_scrollbar(multitrack_listing_t *listing)
 {
 	int scrollarea_offset = MULTITRACK_PRINT_OFFSET;
 	int scrollarea_height = listing->window_height-MULTITRACK_PRINT_OFFSET;
-	int scrollbar_height = ((listing->num_displayed_entries*1.0)/(listing->num_entries*1.0))*scrollarea_height;
+	int scrollbar_height = ((listing->displayed_entries_per_page*1.0)/(listing->num_entries*1.0))*scrollarea_height;
 
 	//print scrollarea
 	for (int i=0; i < scrollarea_height; i++) {
@@ -295,7 +338,7 @@ void multitrack_print_scrollbar(multitrack_listing_t *listing)
 	}
 
 	//print scrollbar
-	int scrollbar_placement = (listing->top_index*1.0/(listing->num_entries - listing->num_displayed_entries - 1))*(scrollarea_height - scrollbar_height);
+	int scrollbar_placement = (listing->top_index*1.0/(listing->num_entries - listing->displayed_entries_per_page - 1))*(scrollarea_height - scrollbar_height);
 	for (int i=scrollbar_placement; i < scrollbar_height+scrollbar_placement; i++) {
 		int row = i+scrollarea_offset;
 		wattrset(listing->window, COLOR_PAIR(8)|A_REVERSE);
@@ -303,7 +346,6 @@ void multitrack_print_scrollbar(multitrack_listing_t *listing)
 	}
 }
 
-#define HEADER_STYLE COLOR_PAIR(2)|A_REVERSE
 void multitrack_display_listing(multitrack_listing_t *listing)
 {
 	//show header
@@ -314,8 +356,8 @@ void multitrack_display_listing(multitrack_listing_t *listing)
 	//show entries
 	if (listing->num_entries > 0) {
 		int selected_index = listing->sorted_index[listing->selected_entry_index];
-		listing->entries[selected_index]->display_attributes = SELECTED_ATTRIBUTE;
-		listing->entries[selected_index]->display_string[0] = SELECTED_MARKER;
+		listing->entries[selected_index]->display_attributes = MULTITRACK_SELECTED_ATTRIBUTE;
+		listing->entries[selected_index]->display_string[0] = MULTITRACK_SELECTED_MARKER;
 
 		int line = MULTITRACK_PRINT_OFFSET;
 		int col = 1;
@@ -324,7 +366,7 @@ void multitrack_display_listing(multitrack_listing_t *listing)
 			multitrack_display_entry(listing->window, line++, col, listing->entries[listing->sorted_index[i]]);
 		}
 
-		if (listing->num_entries > listing->num_displayed_entries) {
+		if (listing->num_entries > listing->displayed_entries_per_page) {
 			multitrack_print_scrollbar(listing);
 		}
 	} else {
@@ -349,14 +391,16 @@ bool multitrack_handle_listing(multitrack_listing_t *listing, int input_key)
 			handled = true;
 			break;
 		case KEY_PPAGE:
-			listing->selected_entry_index -= listing->num_displayed_entries;
+			listing->selected_entry_index -= listing->displayed_entries_per_page;
 			handled = true;
 			break;
 		case KEY_NPAGE:
-			listing->selected_entry_index += listing->num_displayed_entries;
+			listing->selected_entry_index += listing->displayed_entries_per_page;
 			handled = true;
 			break;
 	}
+
+	//adjust index according to limits
 	if (listing->selected_entry_index < 0) {
 		listing->selected_entry_index = 0;
 	}
@@ -371,7 +415,6 @@ bool multitrack_handle_listing(multitrack_listing_t *listing, int input_key)
 		listing->bottom_index += diff;
 		listing->top_index += diff;
 	}
-
 	if (listing->selected_entry_index < listing->top_index) {
 		int diff = listing->top_index - listing->selected_entry_index;
 		listing->bottom_index -= diff;
