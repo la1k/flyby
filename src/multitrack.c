@@ -303,7 +303,7 @@ void multitrack_print_scrollbar(multitrack_listing_t *listing)
 void multitrack_display_listing(multitrack_listing_t *listing)
 {
 	wattrset(listing->window, COLOR_PAIR(2)|A_REVERSE);
-	mvwprintw(listing->window, 0, 1, " Satellite  Azim   Elev Lat Long   Alt   Range     Next AOS/LOS    ");
+	mvwprintw(listing->window, 0, 1, " Satellite  Azim   Elev Lat Long   Alt   Range     Next AOS/LOS   ");
 
 	if (listing->num_entries > 0) {
 		int selected_index = listing->sorted_index[listing->selected_entry_index];

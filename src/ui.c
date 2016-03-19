@@ -2206,7 +2206,7 @@ void EditTransponderDatabase(int start_index, struct tle_db *tle_db, struct tran
 	transponder_db_from_search_paths(tle_db, sat_db);
 }
 
-void PrintSunMoon(int row, predict_observer_t *qth, predict_julian_date_t daynum)
+void PrintSunMoon(int row, int col, predict_observer_t *qth, predict_julian_date_t daynum)
 {
 	struct predict_observation sun;
 	predict_observe_sun(qth, daynum, &sun);
@@ -2215,33 +2215,33 @@ void PrintSunMoon(int row, predict_observer_t *qth, predict_julian_date_t daynum
 	predict_observe_moon(qth, daynum, &moon);
 
 	attrset(COLOR_PAIR(4)|A_REVERSE|A_BOLD);
-	mvprintw(row,70,"   Sun   ");
-	mvprintw(row+4,70,"   Moon  ");
+	mvprintw(row,col,"   Sun   ");
+	mvprintw(row+4,col,"   Moon  ");
 	if (sun.elevation > 0.0)
 		attrset(COLOR_PAIR(3)|A_BOLD);
 	else
 		attrset(COLOR_PAIR(2));
-	mvprintw(row+1,70,"%-7.2fAz",sun.azimuth*180.0/M_PI);
-	mvprintw(row+2,70,"%+-6.2f El",sun.elevation*180.0/M_PI);
+	mvprintw(row+1,col,"%-7.2fAz",sun.azimuth*180.0/M_PI);
+	mvprintw(row+2,col,"%+-6.2f El",sun.elevation*180.0/M_PI);
 
 	attrset(COLOR_PAIR(3)|A_BOLD);
 	if (moon.elevation > 0.0)
 		attrset(COLOR_PAIR(1)|A_BOLD);
 	else
 		attrset(COLOR_PAIR(1));
-	mvprintw(row+5,70,"%-7.2fAz",moon.azimuth*180.0/M_PI);
-	mvprintw(row+6,70,"%+-6.2f El",moon.elevation*180.0/M_PI);
+	mvprintw(row+5,col,"%-7.2fAz",moon.azimuth*180.0/M_PI);
+	mvprintw(row+6,col,"%+-6.2f El",moon.elevation*180.0/M_PI);
 }
 
-void PrintQth(int row, predict_observer_t *qth)
+void PrintQth(int row, int col, predict_observer_t *qth)
 {
 	attrset(COLOR_PAIR(4)|A_REVERSE|A_BOLD);
-	mvprintw(row++,70,"   QTH   ");
+	mvprintw(row++,col,"   QTH   ");
 	attrset(COLOR_PAIR(2));
-	mvprintw(row++,70,"%9s",Abbreviate(qth->name,9));
+	mvprintw(row++,col,"%9s",Abbreviate(qth->name,9));
 	char maidenstr[9];
 	getMaidenHead(qth->latitude*180.0/M_PI, -qth->longitude*180.0/M_PI, maidenstr);
-	mvprintw(row++,70,"%9s",maidenstr);
+	mvprintw(row++,col,"%9s",maidenstr);
 }
 
 
@@ -2285,7 +2285,8 @@ void RunFlybyUI(bool new_user, const char *qthfile, predict_observer_t *observer
 	//prepare multitrack window
 	int sat_list_win_height = 22;
 	int sat_list_win_row = 3;
-	WINDOW *sat_list_win = newwin(sat_list_win_height, 68, sat_list_win_row, 0);
+	int sat_list_win_width = 67;
+	WINDOW *sat_list_win = newwin(sat_list_win_height, sat_list_win_width, sat_list_win_row, 0);
 	multitrack_listing_t *listing = multitrack_create_listing(sat_list_win, observer, orbital_elements_array, tle_db);
 
 	//prepare option selector window
@@ -2333,8 +2334,8 @@ void RunFlybyUI(bool new_user, const char *qthfile, predict_observer_t *observer
 		curr_time = predict_to_julian(time(NULL));
 
 		MainMenu(sat_list_win_row + sat_list_win_height + 1);
-		PrintSunMoon(sat_list_win_height + sat_list_win_row - 8, observer, curr_time);
-		PrintQth(sat_list_win_row + 2, observer);
+		PrintSunMoon(sat_list_win_height + sat_list_win_row - 8, sat_list_win_width+1, observer, curr_time);
+		PrintQth(sat_list_win_row + 2, sat_list_win_width+1, observer);
 
 		//refresh satellite list
 		multitrack_update_listing(listing, curr_time);
