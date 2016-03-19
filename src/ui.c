@@ -2578,6 +2578,7 @@ void RunFlybyUI(bool new_user, const char *qthfile, predict_observer_t *observer
 							break;
 						case OPTION_PREDICT_VISIBLE:
 							PrintVisible("","");
+							Print("","",0);
 							Predict(tle_db->tles[satellite_index].name, orbital_elements_array[satellite_index], observer, 'v');
 						case OPTION_PREDICT:
 							Print("","",0);
