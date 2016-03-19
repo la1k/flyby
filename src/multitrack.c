@@ -96,6 +96,7 @@ multitrack_listing_t* multitrack_create_listing(WINDOW *window, predict_observer
 
 void multitrack_free_entry(multitrack_entry_t **entry)
 {
+	predict_destroy_orbital_elements((*entry)->orbital_elements);
 	free((*entry)->name);
 	free(*entry);
 	*entry = NULL;
