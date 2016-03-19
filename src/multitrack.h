@@ -38,6 +38,7 @@ typedef struct {
 } multitrack_listing_t;
 
 #define SELECTED_ATTRIBUTE (COLOR_PAIR(6)|A_REVERSE)
+#define SELECTED_MARKER '-'
 
 multitrack_entry_t *multitrack_create_entry(const char *name, predict_orbital_elements_t *orbital_elements);
 

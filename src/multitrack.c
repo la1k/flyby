@@ -264,7 +264,7 @@ void multitrack_display_listing(multitrack_listing_t *listing)
 	if (listing->num_entries > 0) {
 		int selected_index = listing->sorted_index[listing->selected_entry_index];
 		listing->entries[selected_index]->display_attributes = SELECTED_ATTRIBUTE;
-		listing->entries[selected_index]->display_string[0] = '-';
+		listing->entries[selected_index]->display_string[0] = SELECTED_MARKER;
 
 		int line = 2;
 		int col = 1;
