@@ -80,20 +80,18 @@ typedef struct {
  *
  * \param window Display window
  * \param observer QTH coordinates
- * \param orbital_elements Orbital elements array
  * \param tle_db TLE database
  * \return Multitrack satellite listing
  **/
-multitrack_listing_t* multitrack_create_listing(WINDOW *window, predict_observer_t *observer, predict_orbital_elements_t **orbital_elements, struct tle_db *tle_db);
+multitrack_listing_t* multitrack_create_listing(WINDOW *window, predict_observer_t *observer, struct tle_db *tle_db);
 
 /**
  * Update satellite listing according to the `enabled`-flag within the TLE database (i.e. hide satellites that are disabled, show satellites that are enabled).
  *
  * \param listing Multitrack satellite listing
- * \param orbital_elements Array over orbital elements
  * \param tle_db TLE database
  **/
-void multitrack_refresh_tles(multitrack_listing_t *listing, predict_orbital_elements_t **orbital_elements, struct tle_db *tle_db);
+void multitrack_refresh_tles(multitrack_listing_t *listing, struct tle_db *tle_db);
 
 /**
  * Update satellite listing.

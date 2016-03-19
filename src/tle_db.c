@@ -406,6 +406,25 @@ bool tle_db_entry_enabled(const struct tle_db *db, int tle_index)
 	return false;
 }
 
+predict_orbital_elements_t *tle_db_entry_to_orbital_elements(const struct tle_db *db, int tle_index)
+{
+	if ((tle_index < db->num_tles) && (tle_index >= 0)) {
+		const struct tle_db_entry *entry = &(db->tles[tle_index]);
+		char *tle[2] = {(char*)(entry->line1), (char*)(entry->line2)};
+		return predict_parse_tle(tle);
+	} else {
+		return NULL;
+	}
+}
+
+const char *tle_db_entry_name(const struct tle_db *db, int tle_index)
+{
+	if ((tle_index < db->num_tles) && (tle_index >= 0)) {
+		return db->tles[tle_index].name;
+	}
+	return NULL;
+}
+
 void whitelist_from_file(const char *file, struct tle_db *db)
 {
 	for (int i=0; i < db->num_tles; i++) {

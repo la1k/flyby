@@ -2287,7 +2287,7 @@ void RunFlybyUI(bool new_user, const char *qthfile, predict_observer_t *observer
 	int sat_list_win_row = 2;
 	int sat_list_win_width = 67;
 	WINDOW *sat_list_win = newwin(sat_list_win_height, sat_list_win_width, sat_list_win_row, 0);
-	multitrack_listing_t *listing = multitrack_create_listing(sat_list_win, observer, orbital_elements_array, tle_db);
+	multitrack_listing_t *listing = multitrack_create_listing(sat_list_win, observer, tle_db);
 
 	//prepare option selector window
 	WINDOW *option_win = newwin(6, 30, 0, 0);
@@ -2440,7 +2440,7 @@ void RunFlybyUI(bool new_user, const char *qthfile, predict_observer_t *observer
 						case 'w':
 						case 'W':
 							EditWhitelist(tle_db);
-							multitrack_refresh_tles(listing, orbital_elements_array, tle_db);
+							multitrack_refresh_tles(listing, tle_db);
 							break;
 						case 'E':
 						case 'e':
