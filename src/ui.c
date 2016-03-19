@@ -56,6 +56,7 @@
 #include "ui.h"
 #include "qth_config.h"
 #include "transponder_editor.h"
+#include "multitrack.h"
 
 #define EARTH_RADIUS_KM		6.378137E3		/* WGS 84 Earth radius km */
 #define HALF_DELAY_TIME	5
@@ -808,6 +809,7 @@ void Predict(const char *name, predict_orbital_elements_t *orbital_elements, pre
 		beep();
 		bkgdset(COLOR_PAIR(7)|A_BOLD);
 		AnyKey();
+		bkgdset(COLOR_PAIR(1));
 		refresh();
 	}
 }
@@ -1622,91 +1624,6 @@ double scrk, scel;
 			return (COLOR_PAIR(1)|A_REVERSE); /* white */
 	else
 		return (COLOR_PAIR(2)|A_REVERSE); /* reverse */
-}
-
-#include "multitrack.h"
-void MultiTrack(predict_observer_t *qth, predict_orbital_elements_t **input_orbital_elements_array, struct tle_db *tle_db, char multitype, char disttype)
-{
-	int ans = 0;
-
-	curs_set(0);
-	attrset(COLOR_PAIR(6)|A_REVERSE|A_BOLD);
-	clear();
-
-	mvprintw(0,0,"                                                                                ");
-	mvprintw(1,0,"  flyby Real-Time Multi-Tracking                                                ");
-	mvprintw(2,0,"                                                                                ");
-
-	/*
-	attrset(COLOR_PAIR(4)|A_REVERSE|A_BOLD);
-	mvprintw(5,70,"   QTH   ");
-	attrset(COLOR_PAIR(2));
-	mvprintw(6,70,"%9s",Abbreviate(qth->name,9));
-	char maidenstr[9];
-	getMaidenHead(qth->latitude*180.0/M_PI, -qth->longitude*180.0/M_PI, maidenstr);
-	mvprintw(7,70,"%9s",maidenstr);*/
-
-	predict_julian_date_t daynum = predict_to_julian(time(NULL));
-	char time_string[MAX_NUM_CHARS];
-
-	attrset(COLOR_PAIR(4));
-	WINDOW *sat_list_win = newwin(22, 68, 3, 0);
-	multitrack_listing_t *listing = multitrack_create_listing(sat_list_win, qth, input_orbital_elements_array, tle_db);
-
-	do {
-		attrset(COLOR_PAIR(2));
-
-		daynum = predict_to_julian(time(NULL));
-
-		multitrack_update_listing(listing, daynum);
-
-		//predict and observe sun and moon
-		/*struct predict_observation sun;
-		predict_observe_sun(qth, daynum, &sun);
-
-		struct predict_observation moon;
-		predict_observe_moon(qth, daynum, &moon);*/
-
-		//display sun and moon
-		/*
-		attrset(COLOR_PAIR(4)|A_REVERSE|A_BOLD);
-		mvprintw(16,70,"   Sun   ");
-		mvprintw(20,70,"   Moon  ");
-		if (sun.elevation > 0.0)
-			attrset(COLOR_PAIR(3)|A_BOLD);
-		else
-			attrset(COLOR_PAIR(2));
-		mvprintw(17,70,"%-7.2fAz",sun.azimuth*180.0/M_PI);
-		mvprintw(18,70,"%+-6.2f El",sun.elevation*180.0/M_PI);
-
-		attrset(COLOR_PAIR(3)|A_BOLD);
-		if (moon.elevation > 0.0)
-			attrset(COLOR_PAIR(1)|A_BOLD);
-		else
-			attrset(COLOR_PAIR(1));
-		mvprintw(21,70,"%-7.2fAz",moon.azimuth*180.0/M_PI);
-		mvprintw(22,70,"%+-6.2f El",moon.elevation*180.0/M_PI);
-		*/
-
-		//sort satellites before displaying them
-		multitrack_sort_listing(listing);
-
-		time_t epoch = time(NULL);
-		daynum=predict_to_julian(epoch);
-		strftime(time_string, MAX_NUM_CHARS, "%a %d%b%y %j.%H%M%S", gmtime(&epoch));
-		mvprintw(1,54,"%s",time_string);
-
-		//display satellites
-		multitrack_display_listing(listing);
-		refresh();
-		halfdelay(HALF_DELAY_TIME);  // Increase if CPU load is too high
-		ans=getch();
-		if (ans != -1) {
-			multitrack_handle_listing(listing, ans);
-		}
-	} while (ans!='q' && ans!=27);
-
-	cbreak();
 }
 
 void Illumination(const char *name, predict_orbital_elements_t *orbital_elements)
