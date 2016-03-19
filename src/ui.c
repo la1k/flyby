@@ -817,6 +817,8 @@ int PrintVisible(const char *title, const char *string)
 
 void Predict(const char *name, predict_orbital_elements_t *orbital_elements, predict_observer_t *qth, char mode)
 {
+	Print("","",0);
+	PrintVisible("","");
 	bool should_quit = false;
 	bool should_break = false;
 	char data_string[MAX_NUM_CHARS];
@@ -956,6 +958,7 @@ void PredictSunMoon(enum celestial_object object, predict_observer_t *qth)
 			strcpy(name_str, "the Moon");
 		break;
 	}
+	Print("","",0);
 
 	int iaz, iel, lastel=0;
 	char string[MAX_NUM_CHARS], quit=0;
@@ -1833,6 +1836,8 @@ void Illumination(const char *name, predict_orbital_elements_t *orbital_elements
 	int eclipses, minutes, quit, breakout=0, count;
 	char string1[MAX_NUM_CHARS], string[MAX_NUM_CHARS], datestring[MAX_NUM_CHARS];
 
+	Print("","",0);
+
 	oneminute=1.0/(24.0*60.0);
 
 	predict_julian_date_t daynum = floor(GetStartTime(name));
@@ -2577,11 +2582,9 @@ void RunFlybyUI(bool new_user, const char *qthfile, predict_observer_t *observer
 							SingleTrack(satellite_index, orbital_elements_array, observer, sat_db, tle_db, rotctld, downlink, uplink);
 							break;
 						case OPTION_PREDICT_VISIBLE:
-							PrintVisible("","");
-							Print("","",0);
 							Predict(tle_db->tles[satellite_index].name, orbital_elements_array[satellite_index], observer, 'v');
+							break;
 						case OPTION_PREDICT:
-							Print("","",0);
 							Predict(tle_db->tles[satellite_index].name, orbital_elements_array[satellite_index], observer, 'p');
 							break;
 						case OPTION_DISPLAY_ORBITAL_DATA:
@@ -2590,7 +2593,6 @@ void RunFlybyUI(bool new_user, const char *qthfile, predict_observer_t *observer
 						case OPTION_EDIT_TRANSPONDER:
 							break;
 						case OPTION_SOLAR_ILLUMINATION:
-							Print("","",0);
 							Illumination(tle_db->tles[satellite_index].name, orbital_elements_array[satellite_index]);
 							break;
 					}
@@ -2611,12 +2613,10 @@ void RunFlybyUI(bool new_user, const char *qthfile, predict_observer_t *observer
 							break;
 
 						case 'n':
-							Print("","",0);
 							PredictSunMoon(PREDICT_MOON, observer);
 							break;
 
 						case 'o':
-							Print("","",0);
 							PredictSunMoon(PREDICT_SUN, observer);
 							break;
 
