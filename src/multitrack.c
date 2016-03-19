@@ -84,7 +84,7 @@ multitrack_listing_t* multitrack_create_listing(WINDOW *window, predict_observer
 
 	//prepare window for header printing
 	int window_row = getbegy(listing->window);
-	listing->header_window = newwin(1, COLS, window_row-2, 0);
+	listing->header_window = newwin(1, window_width+11, window_row-2, 0);
 
 	listing->qth = observer;
 	listing->displayed_entries_per_page = window_height-MULTITRACK_PRINT_OFFSET;

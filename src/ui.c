@@ -1915,32 +1915,35 @@ void EditWhitelist(struct tle_db *tle_db)
 	free_field(field[0]);
 }
 
-void PrintMainMenuOption(int row, int col, char key, const char *description)
+#define MAIN_MENU_BACKGROUND_STYLE COLOR_PAIR(4)|A_REVERSE
+int PrintMainMenuOption(WINDOW *window, int row, int col, char key, const char *description)
 {
-	attrset(COLOR_PAIR(6)|A_REVERSE|A_BOLD);
-	mvprintw(row,col," %c ", key);
-	attrset(COLOR_PAIR(3)|A_BOLD);
-	mvprintw(row,col+4," %s", description);
+	wattrset(window, COLOR_PAIR(1));
+	mvwprintw(window, row,col,"%c", key);
+	wattrset(window, MAIN_MENU_BACKGROUND_STYLE);
+	mvwprintw(window, row,col+1,"%s", description);
+	return col + 1 + strlen(description);
 }
 
-void MainMenu(int row)
+void PrintMainMenu(WINDOW *window)
 {
-	int column_1 = 2;
-	int column_2 = 41;
+	int row = 0;
+	int column = 0;
 
-	PrintMainMenuOption(row, column_1, 'W', "Enable/Disable Satellites");
-	PrintMainMenuOption(row, column_2, 'G', "Edit Ground Station Information");
-	row += 2;
-	PrintMainMenuOption(row, column_1, 'E', "Edit Transponder Database");
-	PrintMainMenuOption(row, column_2, 'I', "Program Information");
-	row += 2;
-	PrintMainMenuOption(row, column_1, 'O', "Solar Pass Predictions");
-	PrintMainMenuOption(row, column_2, 'N', "Lunar Pass Predictions");
-	row += 2;
-	PrintMainMenuOption(row, column_1, 'U', "Update Sat Elements From File");
-	PrintMainMenuOption(row, column_2, 'Q', "Exit flyby");
+	column = PrintMainMenuOption(window, row, column, 'W', "Enable/Disable Satellites");
+	column = PrintMainMenuOption(window, row, column, 'G', "Edit Ground Station      ");
+	column = PrintMainMenuOption(window, row, column, 'E', "Edit Transponder Database");
+	column = 0;
+	row++;
+	column = PrintMainMenuOption(window, row, column, 'I', "Program Information      ");
+	column = PrintMainMenuOption(window, row, column, 'O', "Solar Pass Predictions   ");
+	column = PrintMainMenuOption(window, row, column, 'N', "Lunar Pass Predictions   ");
+	column = 0;
+	row++;
+	column = PrintMainMenuOption(window, row, column, 'U', "Update Sat Elements                                ");
+	column = PrintMainMenuOption(window, row, column, 'Q', "Exit flyby               ");
 
-	refresh();
+	wrefresh(window);
 }
 
 void ProgramInfo(const char *qthfile, struct tle_db *tle_db, struct transponder_db *transponder_db, rotctld_info_t *rotctld)
@@ -2327,6 +2330,8 @@ void RunFlybyUI(bool new_user, const char *qthfile, predict_observer_t *observer
 	set_menu_mark(option_selector, "");
 	post_menu(option_selector);
 
+	WINDOW *main_menu_win = newwin(3, COLS, sat_list_win_row + sat_list_win_height + 1, 0);
+
 	refresh();
 
 	/* Display main menu and handle keyboard input */
@@ -2335,9 +2340,9 @@ void RunFlybyUI(bool new_user, const char *qthfile, predict_observer_t *observer
 	while (should_run) {
 		curr_time = predict_to_julian(time(NULL));
 
-		MainMenu(sat_list_win_row + sat_list_win_height + 1);
+		PrintMainMenu(main_menu_win);
 		PrintSunMoon(sat_list_win_height + sat_list_win_row - 7, sat_list_win_width+1, observer, curr_time);
-		PrintQth(sat_list_win_row + 2, sat_list_win_width+1, observer);
+		PrintQth(sat_list_win_row + MULTITRACK_PRINT_OFFSET, sat_list_win_width+1, observer);
 
 		//refresh satellite list
 		multitrack_update_listing(listing, curr_time);
