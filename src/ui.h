@@ -192,10 +192,11 @@ void DisplayTransponderEntry(struct sat_db_entry *entry, WINDOW *display_window)
 /**
  * Edit entries in transponder database. Updates user database defined in XDG_DATA_HOME on exit.
  *
+ * \param start_index Selected index in the menu
  * \param tle_db TLE database, used for satellite names and numbers
  * \param sat_db Satellite database to edit
  **/
-void EditTransponderDatabase(struct tle_db *tle_db, struct transponder_db *sat_db);
+void EditTransponderDatabase(int start_index, struct tle_db *tle_db, struct transponder_db *sat_db);
 
 /**
  * Run flyby UI.

@@ -2367,7 +2367,7 @@ void DisplayTransponderEntry(struct sat_db_entry *entry, WINDOW *display_window)
 	}
 }
 
-void EditTransponderDatabase(struct tle_db *tle_db, struct transponder_db *sat_db)
+void EditTransponderDatabase(int start_index, struct tle_db *tle_db, struct transponder_db *sat_db)
 {
 	//print header
 	attrset(COLOR_PAIR(6)|A_REVERSE|A_BOLD);
@@ -2400,6 +2400,15 @@ void EditTransponderDatabase(struct tle_db *tle_db, struct transponder_db *sat_d
 	if (tle_db->num_tles > 0) {
 		DisplayTransponderEntry(&(sat_db->sats[0]), display_win);
 	}
+
+	if (start_index >= menu.num_displayed_entries) {
+		start_index = menu.num_displayed_entries-1;
+	}
+	if (start_index < 0) {
+		start_index = 0;
+	}
+
+	set_current_item(menu.menu, menu.displayed_entries[start_index]);
 
 	box(menu_win, 0, 0);
 
@@ -2591,6 +2600,7 @@ void RunFlybyUI(bool new_user, const char *qthfile, predict_observer_t *observer
 							ShowOrbitData(tle_db->tles[satellite_index].name, orbital_elements_array[satellite_index]);
 							break;
 						case OPTION_EDIT_TRANSPONDER:
+							EditTransponderDatabase(satellite_index, tle_db, sat_db);
 							break;
 						case OPTION_SOLAR_ILLUMINATION:
 							Illumination(tle_db->tles[satellite_index].name, orbital_elements_array[satellite_index]);
@@ -2648,7 +2658,7 @@ void RunFlybyUI(bool new_user, const char *qthfile, predict_observer_t *observer
 							break;
 						case 'E':
 						case 'e':
-							EditTransponderDatabase(tle_db, sat_db);
+							EditTransponderDatabase(0, tle_db, sat_db);
 							break;
 						case 27:
 						case 'q':
