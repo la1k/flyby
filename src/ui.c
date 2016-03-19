@@ -2566,7 +2566,7 @@ void RunFlybyUI(bool new_user, const char *qthfile, predict_observer_t *observer
 			} else {
 				bool handled = multitrack_handle_listing(listing, key);
 				if ((key == 10) || (key == KEY_RIGHT)) {
-					option_selector_visible = true;
+					option_selector_visible = listing->num_entries;
 					handled = true;
 				}
 
