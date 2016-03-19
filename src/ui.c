@@ -2417,6 +2417,8 @@ void RunFlybyUI(bool new_user, const char *qthfile, predict_observer_t *observer
 	menu_opts_off(option_selector, O_ONEVALUE);
 	post_menu(option_selector);
 
+	refresh();
+
 	/* Display main menu and handle keyboard input */
 	int key = 0;
 	bool should_run = true;
