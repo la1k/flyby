@@ -2247,10 +2247,6 @@ void PrintQth(int row, int col, predict_observer_t *qth)
 	mvprintw(row++,col,"%9s",maidenstr);
 }
 
-
-#define NUM_OPTIONS 7
-enum sub_menu_options {OPTION_SINGLETRACK, OPTION_PREDICT, OPTION_PREDICT_VISIBLE, OPTION_DISPLAY_ORBITAL_DATA, OPTION_SOLAR_ILLUMINATION, OPTION_EDIT_TRANSPONDER};
-
 void RunFlybyUI(bool new_user, const char *qthfile, predict_observer_t *observer, struct tle_db *tle_db, struct transponder_db *sat_db, rotctld_info_t *rotctld, rigctld_info_t *downlink, rigctld_info_t *uplink)
 {
 	/* Start ncurses */
@@ -2292,44 +2288,7 @@ void RunFlybyUI(bool new_user, const char *qthfile, predict_observer_t *observer
 	WINDOW *sat_list_win = newwin(sat_list_win_height, sat_list_win_width, sat_list_win_row, 0);
 	multitrack_listing_t *listing = multitrack_create_listing(sat_list_win, observer, tle_db);
 
-	//prepare option selector window
-	WINDOW *option_win = newwin(6, 30, 0, 0);
-	wattrset(option_win, COLOR_PAIR(1)|A_REVERSE);
-	werase(option_win);
-	wrefresh(option_win);
-	bool option_selector_visible = false;
-	ITEM *options[NUM_OPTIONS] =  {new_item("Track satellite", ""),
-				      new_item("Predict passes", ""),
-				      new_item("Predict visible passes", ""),
-				      new_item("Display orbital data", ""),
-				      new_item("Show transponders", ""),
-				      new_item("Solar illumination prediction", ""),
-				      NULL};
-
-	int item_types[NUM_OPTIONS] = {OPTION_SINGLETRACK,
-				      OPTION_PREDICT,
-				      OPTION_PREDICT_VISIBLE,
-				      OPTION_DISPLAY_ORBITAL_DATA,
-				      OPTION_EDIT_TRANSPONDER,
-				      OPTION_SOLAR_ILLUMINATION};
-
-	for (int i=0; i < NUM_OPTIONS; i++) {
-		set_item_userptr(options[i], &(item_types[i]));
-	}
-
-	MENU *option_selector = new_menu(options);
-	set_menu_back(option_selector,COLOR_PAIR(1)|A_REVERSE);
-	set_menu_fore(option_selector,COLOR_PAIR(4)|A_REVERSE);
-	set_menu_win(option_selector, option_win);
-
-	int max_width, max_height;
-	getmaxyx(option_win, max_height, max_width);
-	set_menu_sub(option_selector, derwin(option_win, max_height, max_width-1, 0, 1));
-	set_menu_format(option_selector, max_height, 1);
-
-	set_menu_mark(option_selector, "");
-	post_menu(option_selector);
-
+	//window for printing main menu options
 	WINDOW *main_menu_win = newwin(3, COLS, sat_list_win_row + sat_list_win_height + 1, 0);
 
 	refresh();
@@ -2346,19 +2305,7 @@ void RunFlybyUI(bool new_user, const char *qthfile, predict_observer_t *observer
 
 		//refresh satellite list
 		multitrack_update_listing(listing, curr_time);
-		if (!option_selector_visible) {
-			multitrack_sort_listing(listing); //freeze sorting when option selector is hovering over a satellite
-		}
 		multitrack_display_listing(listing);
-
-		//refresh option selector
-		if (option_selector_visible) {
-			mvwin(option_win, multitrack_selected_window_row(listing) + sat_list_win_row + MULTITRACK_PRINT_OFFSET + 1, 2);
-			wbkgd(option_win, COLOR_PAIR(4)|A_REVERSE);
-			unpost_menu(option_selector);
-			post_menu(option_selector);
-			wrefresh(option_win);
-		}
 
 		//get input character
 		refresh();
@@ -2366,61 +2313,40 @@ void RunFlybyUI(bool new_user, const char *qthfile, predict_observer_t *observer
 		key = getch();
 		if (key != -1) {
 			cbreak(); //turn off halfdelay
-			if (option_selector_visible) {
-				//handle keys from option selector
-				switch (key) {
-					case 'q':
-					case 27:
-					case 10:
-					case KEY_LEFT:
-						option_selector_visible = false;
-						wbkgd(option_win, COLOR_PAIR(1));
-						werase(option_win);
-						wrefresh(option_win);
-						break;
-					case KEY_UP:
-						menu_driver(option_selector, REQ_UP_ITEM);
-						break;
-					case KEY_DOWN:
-						menu_driver(option_selector, REQ_DOWN_ITEM);
-						break;
-				}
 
-				//run satellite-specific options
-				if (key == 10) {
-					int satellite_index = multitrack_selected_entry(listing);
-					int option = *((int*)item_userptr(current_item(option_selector)));
-					switch (option) {
-						case OPTION_SINGLETRACK:
-							SingleTrack(satellite_index, orbital_elements_array, observer, sat_db, tle_db, rotctld, downlink, uplink);
-							break;
-						case OPTION_PREDICT_VISIBLE:
-							Predict(tle_db->tles[satellite_index].name, orbital_elements_array[satellite_index], observer, 'v');
-							break;
-						case OPTION_PREDICT:
-							Predict(tle_db->tles[satellite_index].name, orbital_elements_array[satellite_index], observer, 'p');
-							break;
-						case OPTION_DISPLAY_ORBITAL_DATA:
-							ShowOrbitData(tle_db->tles[satellite_index].name, orbital_elements_array[satellite_index]);
-							break;
-						case OPTION_EDIT_TRANSPONDER:
-							EditTransponderDatabase(satellite_index, tle_db, sat_db);
-							break;
-						case OPTION_SOLAR_ILLUMINATION:
-							Illumination(tle_db->tles[satellite_index].name, orbital_elements_array[satellite_index]);
-							break;
-					}
-					clear();
-					refresh();
-				}
-			} else {
-				//handle input to satellite list
-				bool handled = multitrack_handle_listing(listing, key);
-				if ((key == 10) || (key == KEY_RIGHT)) {
-					option_selector_visible = listing->num_entries;
-					handled = true;
-				}
+			//handle input to satellite list
+			bool handled = multitrack_handle_listing(listing, key);
 
+			//option in the option submenu is selected, run UI subfunctions
+			if (listing->option_selector->option_selected) {
+				listing->option_selector->option_selected = false;
+				int option = multitrack_option_selector_get_option(listing->option_selector);
+				int satellite_index = multitrack_selected_entry(listing);
+				switch (option) {
+					case OPTION_SINGLETRACK:
+						SingleTrack(satellite_index, orbital_elements_array, observer, sat_db, tle_db, rotctld, downlink, uplink);
+						break;
+					case OPTION_PREDICT_VISIBLE:
+						Predict(tle_db->tles[satellite_index].name, orbital_elements_array[satellite_index], observer, 'v');
+						break;
+					case OPTION_PREDICT:
+						Predict(tle_db->tles[satellite_index].name, orbital_elements_array[satellite_index], observer, 'p');
+						break;
+					case OPTION_DISPLAY_ORBITAL_DATA:
+						ShowOrbitData(tle_db->tles[satellite_index].name, orbital_elements_array[satellite_index]);
+						break;
+					case OPTION_EDIT_TRANSPONDER:
+						EditTransponderDatabase(satellite_index, tle_db, sat_db);
+						break;
+					case OPTION_SOLAR_ILLUMINATION:
+						Illumination(tle_db->tles[satellite_index].name, orbital_elements_array[satellite_index]);
+						break;
+				}
+				clear();
+				refresh();
+			}
+
+			if (!handled) {
 				//handle all other, global options
 				if (!handled) {
 					switch (key) {

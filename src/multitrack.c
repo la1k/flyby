@@ -53,6 +53,25 @@ void multitrack_display_entry(WINDOW *window, int row, int col, multitrack_entry
  **/
 void multitrack_update_entry(predict_observer_t *qth, multitrack_entry_t *entry, predict_julian_date_t time);
 
+/**
+ * Sort satellite listing in different categories: Currently above horizon, below horizon but will rise, will never rise above horizon, decayed satellites. The satellites below the horizon are sorted internally according to AOS times.
+ *
+ * \param listing Satellite listing
+ **/
+void multitrack_sort_listing(multitrack_listing_t *listing);
+
+multitrack_option_selector_t* multitrack_option_selector_create();
+
+void multitrack_option_selector_hide(multitrack_option_selector_t *option_selector);
+
+void multitrack_option_selector_show(multitrack_option_selector_t *option_selector);
+
+bool multitrack_option_selector_visible(multitrack_option_selector_t *option_selector);
+
+void multitrack_option_selector_display(int row, multitrack_option_selector_t *option_selector);
+
+bool multitrack_option_selector_handle(multitrack_option_selector_t *option_selector, int input_key);
+
 multitrack_entry_t *multitrack_create_entry(const char *name, predict_orbital_elements_t *orbital_elements)
 {
 	multitrack_entry_t *entry = (multitrack_entry_t*)malloc(sizeof(multitrack_entry_t));
@@ -85,11 +104,14 @@ multitrack_listing_t* multitrack_create_listing(WINDOW *window, predict_observer
 	//prepare window for header printing
 	int window_row = getbegy(listing->window);
 	listing->header_window = newwin(1, window_width+11, window_row-2, 0);
+	listing->window_row = window_row;
 
 	listing->qth = observer;
 	listing->displayed_entries_per_page = window_height-MULTITRACK_PRINT_OFFSET;
 
 	multitrack_refresh_tles(listing, tle_db);
+
+	listing->option_selector = multitrack_option_selector_create();
 
 	return listing;
 }
@@ -267,6 +289,10 @@ void multitrack_update_listing(multitrack_listing_t *listing, predict_julian_dat
 		multitrack_entry_t *entry = listing->entries[i];
 		multitrack_update_entry(listing->qth, entry, time);
 	}
+
+	if (!multitrack_option_selector_visible(listing->option_selector)) {
+		multitrack_sort_listing(listing); //freeze sorting when option selector is hovering over a satellite
+	}
 }
 
 void multitrack_sort_listing(multitrack_listing_t *listing)
@@ -378,51 +404,66 @@ void multitrack_display_listing(multitrack_listing_t *listing)
 	}
 	wrefresh(listing->window);
 	wrefresh(listing->header_window);
+
+	//refresh option selector
+	int option_selector_row = multitrack_selected_window_row(listing) + listing->window_row + MULTITRACK_PRINT_OFFSET + 1;
+	multitrack_option_selector_display(option_selector_row, listing->option_selector);
 }
 
 bool multitrack_handle_listing(multitrack_listing_t *listing, int input_key)
 {
-	bool handled = false;
-	switch (input_key) {
-		case KEY_UP:
-			listing->selected_entry_index--;
-			handled = true;
-			break;
-		case KEY_DOWN:
-			listing->selected_entry_index++;
-			handled = true;
-			break;
-		case KEY_PPAGE:
-			listing->selected_entry_index -= listing->displayed_entries_per_page;
-			handled = true;
-			break;
-		case KEY_NPAGE:
-			listing->selected_entry_index += listing->displayed_entries_per_page;
-			handled = true;
-			break;
-	}
+	if (multitrack_option_selector_visible(listing->option_selector)) {
+		return multitrack_option_selector_handle(listing->option_selector, input_key);
+	} else {
+		bool handled = false;
+		switch (input_key) {
+			case KEY_UP:
+				listing->selected_entry_index--;
+				handled = true;
+				break;
+			case KEY_DOWN:
+				listing->selected_entry_index++;
+				handled = true;
+				break;
+			case KEY_PPAGE:
+				listing->selected_entry_index -= listing->displayed_entries_per_page;
+				handled = true;
+				break;
+			case KEY_NPAGE:
+				listing->selected_entry_index += listing->displayed_entries_per_page;
+				handled = true;
+				break;
+			case 10:
+			case KEY_RIGHT:
+				if (listing->num_entries > 0) {
+					multitrack_option_selector_show(listing->option_selector);
+				}
+				handled = true;
+				break;
+		}
 
-	//adjust index according to limits
-	if (listing->selected_entry_index < 0) {
-		listing->selected_entry_index = 0;
-	}
+		//adjust index according to limits
+		if (listing->selected_entry_index < 0) {
+			listing->selected_entry_index = 0;
+		}
 
-	if (listing->selected_entry_index >= listing->num_entries) {
-		listing->selected_entry_index = listing->num_entries-1;
-	}
+		if (listing->selected_entry_index >= listing->num_entries) {
+			listing->selected_entry_index = listing->num_entries-1;
+		}
 
-	//check for scroll event
-	if (listing->selected_entry_index > listing->bottom_index) {
-		int diff = listing->selected_entry_index - listing->bottom_index;
-		listing->bottom_index += diff;
-		listing->top_index += diff;
+		//check for scroll event
+		if (listing->selected_entry_index > listing->bottom_index) {
+			int diff = listing->selected_entry_index - listing->bottom_index;
+			listing->bottom_index += diff;
+			listing->top_index += diff;
+		}
+		if (listing->selected_entry_index < listing->top_index) {
+			int diff = listing->top_index - listing->selected_entry_index;
+			listing->bottom_index -= diff;
+			listing->top_index -= diff;
+		}
+		return handled;
 	}
-	if (listing->selected_entry_index < listing->top_index) {
-		int diff = listing->top_index - listing->selected_entry_index;
-		listing->bottom_index -= diff;
-		listing->top_index -= diff;
-	}
-	return handled;
 }
 
 int multitrack_selected_entry(multitrack_listing_t *listing)
@@ -434,4 +475,118 @@ int multitrack_selected_entry(multitrack_listing_t *listing)
 int multitrack_selected_window_row(multitrack_listing_t *listing)
 {
 	return listing->selected_entry_index - listing->top_index;
+}
+
+#define NUM_OPTIONS 7
+
+multitrack_option_selector_t* multitrack_option_selector_create()
+{
+	multitrack_option_selector_t *option_selector = (multitrack_option_selector_t*)malloc(sizeof(multitrack_option_selector_t));
+
+	//prepare option selector window
+	WINDOW *option_win = newwin(6, 30, 0, 0);
+	wattrset(option_win, COLOR_PAIR(1)|A_REVERSE);
+	werase(option_win);
+	wrefresh(option_win);
+	option_selector->window = option_win;
+
+	//prepare ITEMs
+	ITEM *options[NUM_OPTIONS] =  {new_item("Track satellite", ""),
+				      new_item("Predict passes", ""),
+				      new_item("Predict visible passes", ""),
+				      new_item("Display orbital data", ""),
+				      new_item("Show transponders", ""),
+				      new_item("Solar illumination prediction", ""),
+				      NULL};
+
+	int item_types[NUM_OPTIONS] = {OPTION_SINGLETRACK,
+				      OPTION_PREDICT,
+				      OPTION_PREDICT_VISIBLE,
+				      OPTION_DISPLAY_ORBITAL_DATA,
+				      OPTION_EDIT_TRANSPONDER,
+				      OPTION_SOLAR_ILLUMINATION};
+	option_selector->items = (ITEM**)malloc(sizeof(ITEM*)*NUM_OPTIONS);
+	option_selector->item_types = (int*)malloc(sizeof(int)*NUM_OPTIONS);
+	for (int i=0; i < NUM_OPTIONS; i++) {
+		option_selector->items[i] = options[i];
+		option_selector->item_types[i] = item_types[i];
+		set_item_userptr(option_selector->items[i], &(option_selector->item_types[i]));
+	}
+
+	//prepare MENU
+	MENU *menu = new_menu(option_selector->items);
+	set_menu_back(menu,COLOR_PAIR(1)|A_REVERSE);
+	set_menu_fore(menu,COLOR_PAIR(4)|A_REVERSE);
+	set_menu_win(menu, option_win);
+
+	int max_width, max_height;
+	getmaxyx(option_win, max_height, max_width);
+	set_menu_sub(menu, derwin(option_win, max_height, max_width-1, 0, 1));
+	set_menu_format(menu, max_height, 1);
+
+	set_menu_mark(menu, "");
+	post_menu(menu);
+	option_selector->menu = menu;
+	option_selector->visible = false;
+	option_selector->option_selected = false;
+	return option_selector;
+}
+
+void multitrack_option_selector_hide(multitrack_option_selector_t *option_selector)
+{
+	option_selector->visible = false;
+	wbkgd(option_selector->window, COLOR_PAIR(1));
+	werase(option_selector->window);
+	wrefresh(option_selector->window);
+}
+
+void multitrack_option_selector_show(multitrack_option_selector_t *option_selector)
+{
+	option_selector->visible = true;
+}
+
+bool multitrack_option_selector_visible(multitrack_option_selector_t *option_selector)
+{
+	return option_selector->visible;
+}
+
+void multitrack_option_selector_display(int row, multitrack_option_selector_t *option_selector)
+{
+	if (option_selector->visible) {
+		mvwin(option_selector->window, row, 2);
+		wbkgd(option_selector->window, COLOR_PAIR(4)|A_REVERSE);
+		unpost_menu(option_selector->menu);
+		post_menu(option_selector->menu);
+		wrefresh(option_selector->window);
+	}
+}
+
+bool multitrack_option_selector_handle(multitrack_option_selector_t *option_selector, int input_key)
+{
+	bool handled = false;
+	switch (input_key) {
+		case 10:
+			option_selector->option_selected = true;
+		case 'q':
+		case 27:
+		case KEY_LEFT:
+			multitrack_option_selector_hide(option_selector);
+			handled = true;
+			break;
+		case KEY_UP:
+			menu_driver(option_selector->menu, REQ_UP_ITEM);
+			handled = true;
+			break;
+		case KEY_DOWN:
+			menu_driver(option_selector->menu, REQ_DOWN_ITEM);
+			handled = true;
+			break;
+	}
+	return handled;
+}
+
+int multitrack_option_selector_get_option(multitrack_option_selector_t *option_selector)
+{
+	int option = *((int*)item_userptr(current_item(option_selector->menu)));
+	return option;
 }

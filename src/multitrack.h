@@ -1,6 +1,9 @@
 #ifndef MULTITRACK_H_DEFINED
 #define MULTITRACK_H_DEFINED
 
+#include "ncurses.h"
+#include "menu.h"
+
 /**
  * Structs and functions used for showing a navigateable real-time satellite listing.
  **/
@@ -31,6 +34,17 @@ typedef struct {
 	int display_attributes;
 } multitrack_entry_t;
 
+enum sub_menu_options {OPTION_SINGLETRACK, OPTION_PREDICT, OPTION_PREDICT_VISIBLE, OPTION_DISPLAY_ORBITAL_DATA, OPTION_SOLAR_ILLUMINATION, OPTION_EDIT_TRANSPONDER};
+
+typedef struct {
+	MENU *menu;
+	WINDOW *window;
+	bool visible;
+	ITEM **items;
+	int *item_types;
+	bool option_selected;
+} multitrack_option_selector_t;
+
 /**
  * Satellite listing, used for providing a live overview of the current status of the satellites, and for
  * providing a selection menu for these satellites.
@@ -50,6 +64,7 @@ typedef struct {
 	int bottom_index;
 	///Number of satellites per scrolled view
 	int displayed_entries_per_page;
+	int window_row;
 	///Height of display window
 	int window_height;
 	///Width of display window
@@ -70,6 +85,8 @@ typedef struct {
 	int num_decayed;
 	///Mapping from indices in multitrack_entry_t array to indices in the TLE database array
 	int *tle_db_mapping;
+	///Submenu for selecting options on selected satellite
+	multitrack_option_selector_t *option_selector;
 } multitrack_listing_t;
 
 ///Row offset from window start at which to start printing
@@ -100,13 +117,6 @@ void multitrack_refresh_tles(multitrack_listing_t *listing, struct tle_db *tle_d
  * \param time Time at which satellite listing should be calculated
  **/
 void multitrack_update_listing(multitrack_listing_t *listing, predict_julian_date_t time);
-
-/**
- * Sort satellite listing in different categories: Currently above horizon, below horizon but will rise, will never rise above horizon, decayed satellites. The satellites below the horizon are sorted internally according to AOS times.
- *
- * \param listing Satellite listing
- **/
-void multitrack_sort_listing(multitrack_listing_t *listing);
 
 /**
  * Print satellite listing and refresh associated windows.
@@ -140,5 +150,7 @@ int multitrack_selected_entry(multitrack_listing_t *listing);
  * \return Window row
  **/
 int multitrack_selected_window_row(multitrack_listing_t *listing);
+				
+int multitrack_option_selector_get_option(multitrack_option_selector_t *option_selector);
 
 #endif
