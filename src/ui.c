@@ -1754,11 +1754,13 @@ void EditWhitelist(struct tle_db *tle_db)
 
 	int *tle_index = (int*)calloc(tle_db->num_tles, sizeof(int));
 
-	attrset(COLOR_PAIR(3)|A_BOLD);
-	if (tle_db->num_tles >= MAX_NUM_SATS)
-		mvprintw(LINES-3,46,"Truncated to %d satellites",MAX_NUM_SATS);
-	else
-		mvprintw(LINES-3,46,"%d satellites",tle_db->num_tles);
+	if (tle_db->num_tles > 0) {
+		attrset(COLOR_PAIR(3)|A_BOLD);
+		if (tle_db->num_tles >= MAX_NUM_SATS)
+			mvprintw(LINES-3,46,"Truncated to %d satellites",MAX_NUM_SATS);
+		else
+			mvprintw(LINES-3,46,"%d satellites",tle_db->num_tles);
+	}
 
 	/* Create form for query input */
 	FIELD *field[2];
@@ -1796,33 +1798,38 @@ void EditWhitelist(struct tle_db *tle_db)
 
 	keypad(my_menu_win, TRUE);
 	wattrset(my_menu_win, COLOR_PAIR(4));
-	box(my_menu_win, 0, 0);
 
-	/* Print description */
-	attrset(COLOR_PAIR(3)|A_BOLD);
-	int col = 42;
-	row = 5;
-	mvprintw( 6,col,"Use upper-case characters to ");
-	mvprintw( 7,col,"filter satellites by name.");
+	if (tle_db->num_tles > 0) {
+		box(my_menu_win, 0, 0);
+	}
+
+	if (tle_db->num_tles > 0) {
+		/* Print description */
+		attrset(COLOR_PAIR(3)|A_BOLD);
+		int col = 42;
+		row = 5;
+		mvprintw( 6,col,"Use upper-case characters to ");
+		mvprintw( 7,col,"filter satellites by name.");
 
 
-	mvprintw( 10,col,"Use cursor keys to move up/down");
-	mvprintw( 11,col,"the list and then disable/enable");
-	mvprintw( 12,col,"with        .");
+		mvprintw( 10,col,"Use cursor keys to move up/down");
+		mvprintw( 11,col,"the list and then disable/enable");
+		mvprintw( 12,col,"with        .");
 
-	mvprintw( 14,col,"Press  q  to return to menu or");
-	mvprintw( 15,col,"wipe query field if filled.");
-	mvprintw( 17,col,"Press  a  to toggle visible entries.");
-	mvprintw( 19,col,"Press  w  to wipe query field.");
-	mvprintw(5, 6, "Filter TLEs by name:");
-	row = 18;
+		mvprintw( 14,col,"Press  q  to return to menu or");
+		mvprintw( 15,col,"wipe query field if filled.");
+		mvprintw( 17,col,"Press  a  to toggle visible entries.");
+		mvprintw( 19,col,"Press  w  to wipe query field.");
+		mvprintw(5, 6, "Filter TLEs by name:");
+		row = 18;
 
-	/* Print keyboard bindings in special format */
-	attrset(COLOR_PAIR(6)|A_REVERSE|A_BOLD);
-	mvprintw( 12,col+5," SPACE ");
-	mvprintw( 14,col+6," q ");
-	mvprintw( 17,col+6," a ");
-	mvprintw( 19,col+6," w ");
+		/* Print keyboard bindings in special format */
+		attrset(COLOR_PAIR(6)|A_REVERSE|A_BOLD);
+		mvprintw( 12,col+5," SPACE ");
+		mvprintw( 14,col+6," q ");
+		mvprintw( 17,col+6," a ");
+		mvprintw( 19,col+6," w ");
+	}
 
 	refresh();
 
@@ -1834,7 +1841,9 @@ void EditWhitelist(struct tle_db *tle_db)
 	refresh();
 	wrefresh(my_menu_win);
 	form_driver(form, REQ_VALIDATION);
-	wrefresh(form_win);
+	if (tle_db->num_tles > 0) {
+		wrefresh(form_win);
+	}
 	bool run_menu = true;
 
 	while (run_menu) {
@@ -1844,19 +1853,21 @@ void EditWhitelist(struct tle_db *tle_db)
 			string_array_t data_dirs_list = {0};
 			stringsplit(data_dirs, &data_dirs_list);
 
-			int row = 25;
-			int col = 42;
+			int row = 5;
+			int col = 10;
 			attrset(COLOR_PAIR(1));
-			mvprintw(row++, col, "No TLES found.");
+			mvprintw(row++, col, "No TLEs found.");
 			row++;
-			mvprintw(row++, col, "TLE files are searched for ");
-			mvprintw(row++, col, "in the following locations:");
+			mvprintw(row++, col, "TLE files can be placed in ");
+			mvprintw(row++, col, "the following locations:");
 			row++;
 			mvprintw(row++, col, "* %s%s", data_home, TLE_RELATIVE_DIR_PATH);
 
 			for (int i=0; i < string_array_size(&data_dirs_list); i++) {
 				mvprintw(row++, col, "* %s%s", string_array_get(&data_dirs_list, i), TLE_RELATIVE_DIR_PATH);
 			}
+			row++;
+			mvprintw(row++, col, "Files will be loaded on program restart.");
 
 			free(data_home);
 			free(data_dirs);
