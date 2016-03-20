@@ -788,9 +788,6 @@ void multitrack_searcher_hide(multitrack_searcher_t *search_field)
 {
 	form_driver(search_field->form, REQ_CLR_FIELD);
 	search_field->visible = false;
-	wbkgd(search_field->window, COLOR_PAIR(1));
-	werase(search_field->window);
-	wrefresh(search_field->window);
 }
 
 void multitrack_searcher_match(multitrack_searcher_t *search_field, bool match)
