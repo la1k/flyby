@@ -226,6 +226,7 @@ void multitrack_refresh_tles(multitrack_listing_t *listing, struct tle_db *tle_d
 
 }
 
+#define AOS_TIME_OFFSET (1.0/(24.0*60.0*60.0)*10) //offset AOS search in order to avoid some numerical inaccuracies when satellite goes below horizon
 void multitrack_update_entry(predict_observer_t *qth, multitrack_entry_t *entry, predict_julian_date_t time)
 {
 	entry->geostationary = false;
@@ -294,11 +295,12 @@ void multitrack_update_entry(predict_observer_t *qth, multitrack_entry_t *entry,
 	/* Calculate Next Event (AOS/LOS) Times */
 	if (can_predict && (time > entry->next_los) && (obs.elevation > 0)) {
 		entry->next_los= predict_next_los(qth, entry->orbital_elements, time);
+		fprintf(stderr, "Calculating next LOS for satellite %s\n", entry->name);
 	}
 
 	if (can_predict && (time > entry->next_aos)) {
 		if (obs.elevation < 0) {
-			entry->next_aos = predict_next_aos(qth, entry->orbital_elements, time);
+			entry->next_aos = predict_next_aos(qth, entry->orbital_elements, time + AOS_TIME_OFFSET);
 		}
 	}
 
