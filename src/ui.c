@@ -1841,6 +1841,8 @@ void EditWhitelist(struct tle_db *tle_db)
 		if (tle_db->num_tles == 0) {
 			char *data_home = xdg_data_home();
 			char *data_dirs = xdg_data_dirs();
+			string_array_t data_dirs_list = {0};
+			stringsplit(data_dirs, &data_dirs_list);
 
 			int row = 25;
 			int col = 42;
@@ -1851,10 +1853,14 @@ void EditWhitelist(struct tle_db *tle_db)
 			mvprintw(row++, col, "in the following locations:");
 			row++;
 			mvprintw(row++, col, "* %s%s", data_home, TLE_RELATIVE_DIR_PATH);
-			mvprintw(row++, col, "* {%s}/%s", data_dirs, TLE_RELATIVE_DIR_PATH);
+
+			for (int i=0; i < string_array_size(&data_dirs_list); i++) {
+				mvprintw(row++, col, "* %s%s", string_array_get(&data_dirs_list, i), TLE_RELATIVE_DIR_PATH);
+			}
 
 			free(data_home);
 			free(data_dirs);
+			string_array_free(&data_dirs_list);
 			refresh();
 		}
 
