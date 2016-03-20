@@ -34,6 +34,7 @@
 *                                                                           *
 \***************************************************************************/
 
+#include "xdg_basedirs.h"
 #include "config.h"
 #include <math.h>
 #include <time.h>
@@ -572,7 +573,8 @@ int Print(const char *title, const char *string, char mode)
 			mvprintw(1,0,"  flyby Calendar :                                                              ");
 			mvprintw(1,21,"%-24s", type);
 			mvprintw(2,0,"                                                                                ");
-			mvprintw(1,60, "%s", title);
+			int title_col = 79-strlen(title);
+			mvprintw(1,title_col, "%s", title);
 			attrset(COLOR_PAIR(2)|A_REVERSE|A_BOLD);
 			mvprintw(3,0,head2);
 
@@ -1836,6 +1838,26 @@ void EditWhitelist(struct tle_db *tle_db)
 	bool run_menu = true;
 
 	while (run_menu) {
+		if (tle_db->num_tles == 0) {
+			char *data_home = xdg_data_home();
+			char *data_dirs = xdg_data_dirs();
+
+			int row = 25;
+			int col = 42;
+			attrset(COLOR_PAIR(1));
+			mvprintw(row++, col, "No TLES found.");
+			row++;
+			mvprintw(row++, col, "TLE files are searched for ");
+			mvprintw(row++, col, "in the following locations:");
+			row++;
+			mvprintw(row++, col, "* %s%s", data_home, TLE_RELATIVE_DIR_PATH);
+			mvprintw(row++, col, "* {%s}/%s", data_dirs, TLE_RELATIVE_DIR_PATH);
+
+			free(data_home);
+			free(data_dirs);
+			refresh();
+		}
+
 		//handle keyboard
 		c = wgetch(my_menu_win);
 		bool handled = false;
