@@ -42,6 +42,8 @@ typedef struct {
 	MENU *menu;
 	///Display window, shifted around to selected satellite when shown
 	WINDOW *window;
+	///Sub window used for menu
+	WINDOW *sub_window;
 	///Whether window is visible
 	bool visible;
 	///List of menu items
@@ -145,10 +147,17 @@ bool multitrack_handle_listing(multitrack_listing_t *listing, int input_key);
 /**
  * Return currently selected entry, in terms of index in the TLE database.
  *
- * \param listing Satellite index
+ * \param listing Satellite listing
  * \return TLE db index
  **/
 int multitrack_selected_entry(multitrack_listing_t *listing);
+
+/**
+ * Destroy multitrack listing and free all associated memory.
+ *
+ * \param listing Satellite listing
+ **/
+void multitrack_destroy_listing(multitrack_listing_t **listing);
 
 /**
  * Return currently selected entry, in terms of window row within the display window.

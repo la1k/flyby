@@ -1781,7 +1781,8 @@ void EditWhitelist(struct tle_db *tle_db)
 
 	/* Set main window and sub window */
 	set_form_win(form, form_win);
-	set_form_sub(form, derwin(form_win, rows, cols, 2, 2));
+	WINDOW *subwin = derwin(form_win, rows, cols, 2, 2);
+	set_form_sub(form, subwin);
 
 	post_form(form);
 	wrefresh(form_win);
@@ -1889,6 +1890,10 @@ void EditWhitelist(struct tle_db *tle_db)
 
 	free(tle_index);
 	free_form(form);
+
+	delwin(subwin);
+	delwin(my_menu_win);
+	delwin(form_win);
 
 	free_field(field[0]);
 }
@@ -2200,6 +2205,12 @@ void EditTransponderDatabase(int start_index, struct tle_db *tle_db, struct tran
 
 	//read transponder database from file again in order to set the flags correctly
 	transponder_db_from_search_paths(tle_db, sat_db);
+
+	delwin(header_win);
+	delwin(display_win);
+	delwin(main_win);
+	delwin(menu_win);
+	delwin(editor_win);
 }
 
 /**
@@ -2409,4 +2420,8 @@ void RunFlybyUI(bool new_user, const char *qthfile, predict_observer_t *observer
 		predict_destroy_orbital_elements(orbital_elements_array[i]);
 	}
 	free(orbital_elements_array);
+
+	delwin(sat_list_win);
+	delwin(main_menu_win);
+	multitrack_destroy_listing(&listing);
 }

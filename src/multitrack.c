@@ -68,6 +68,13 @@ void multitrack_sort_listing(multitrack_listing_t *listing);
 multitrack_option_selector_t* multitrack_option_selector_create();
 
 /**
+ * Destroy option selector.
+ *
+ * \param option_selector Option selector to free
+ **/
+void multitrack_option_selector_destroy(multitrack_option_selector_t **option_selector);
+
+/**
  * Hide option selector.
  *
  * \param option_selector Option selector
@@ -511,7 +518,31 @@ int multitrack_selected_window_row(multitrack_listing_t *listing)
 	return listing->selected_entry_index - listing->top_index;
 }
 
+void multitrack_destroy_listing(multitrack_listing_t **listing)
+{
+	multitrack_free_entries(*listing);
+	multitrack_option_selector_destroy(&((*listing)->option_selector));
+	delwin((*listing)->header_window);
+	free(*listing);
+	*listing = NULL;
+}
+
 #define NUM_OPTIONS 7
+
+void multitrack_option_selector_destroy(multitrack_option_selector_t **option_selector)
+{
+	unpost_menu((*option_selector)->menu);
+	free_menu((*option_selector)->menu);
+	delwin((*option_selector)->sub_window);
+	delwin((*option_selector)->window);
+	for (int i=0; i < NUM_OPTIONS; i++) {
+		free_item((*option_selector)->items[i]);
+	}
+	free((*option_selector)->items);
+	free((*option_selector)->item_types);
+	free((*option_selector));
+	*option_selector = NULL;
+}
 
 multitrack_option_selector_t* multitrack_option_selector_create()
 {
@@ -555,7 +586,8 @@ multitrack_option_selector_t* multitrack_option_selector_create()
 
 	int max_width, max_height;
 	getmaxyx(option_win, max_height, max_width);
-	set_menu_sub(menu, derwin(option_win, max_height, max_width-1, 0, 1));
+	option_selector->sub_window = derwin(option_win, max_height, max_width-1, 0, 1);
+	set_menu_sub(menu, option_selector->sub_window);
 	set_menu_format(menu, max_height, 1);
 
 	set_menu_mark(menu, "");

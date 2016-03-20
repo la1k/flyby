@@ -33,6 +33,8 @@ struct filtered_menu {
 	int *entry_mapping;
 	///name of currently/last marked item (used for keeping cursor position)
 	char curr_item[MAX_NUM_CHARS];
+	///Subwindow used for MENU
+	WINDOW *sub_window;
 };
 
 /**
