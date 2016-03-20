@@ -2017,12 +2017,18 @@ void EditTransponderDatabaseField(const struct tle_db_entry *sat_info, WINDOW *f
 	delwin(form_win);
 }
 
-void DisplayTransponderEntry(struct sat_db_entry *entry, WINDOW *display_window)
+void DisplayTransponderEntry(const char *name, struct sat_db_entry *entry, WINDOW *display_window)
 {
 	werase(display_window);
+
+	//display satellite name
+	wattrset(display_window, A_BOLD);
+	mvwprintw(display_window, 1, 0, "%s transponders", name);
+
 	int data_col = 15;
 	int info_col = 1;
-	int row = 1;
+	int start_row = 3;
+	int row = start_row;
 
 	//file location information
 	wattrset(display_window, COLOR_PAIR(4)|A_BOLD);
@@ -2038,7 +2044,7 @@ void DisplayTransponderEntry(struct sat_db_entry *entry, WINDOW *display_window)
 		mvwprintw(display_window, row++, info_col, "A system default exists.");
 	}
 
-	row = 4;
+	row = start_row+3;
 
 	//display squint angle information
 	wattrset(display_window, COLOR_PAIR(4)|A_BOLD);
@@ -2058,7 +2064,7 @@ void DisplayTransponderEntry(struct sat_db_entry *entry, WINDOW *display_window)
 	} else {
 		mvwprintw(display_window, row, data_col, "Disabled");
 	}
-	row = 7;
+	row = start_row+6;
 
 	//display transponder information
 	for (int i=0; i < entry->num_transponders; i++) {
@@ -2097,6 +2103,10 @@ void DisplayTransponderEntry(struct sat_db_entry *entry, WINDOW *display_window)
 		wattrset(display_window, COLOR_PAIR(4)|A_BOLD);
 		mvwprintw(display_window, ++row, info_col, "No transponders defined.");
 	}
+
+	int bottom_row = getmaxy(display_window)-2;
+	wattrset(display_window, COLOR_PAIR(4)|A_BOLD);
+	mvwprintw(display_window, bottom_row, 0, "Press ENTER to edit transponder entries.");
 }
 
 void EditTransponderDatabase(int start_index, struct tle_db *tle_db, struct transponder_db *sat_db)
@@ -2137,7 +2147,7 @@ void EditTransponderDatabase(int start_index, struct tle_db *tle_db, struct tran
 	}
 
 	if (tle_db->num_tles > 0) {
-		DisplayTransponderEntry(&(sat_db->sats[start_index]), display_win);
+		DisplayTransponderEntry(tle_db->tles[start_index].name, &(sat_db->sats[start_index]), display_win);
 	}
 
 	set_current_item(menu.menu, menu.displayed_entries[start_index]);
@@ -2177,7 +2187,7 @@ void EditTransponderDatabase(int start_index, struct tle_db *tle_db, struct tran
 
 		//display/refresh transponder entry displayer
 		if (tle_db->num_tles > 0) {
-			DisplayTransponderEntry(&(sat_db->sats[menu_index]), display_win);
+			DisplayTransponderEntry(tle_db->tles[menu_index].name, &(sat_db->sats[menu_index]), display_win);
 		}
 		wrefresh(display_win);
 	}

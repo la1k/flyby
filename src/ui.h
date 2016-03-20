@@ -179,10 +179,11 @@ void EditTransponderDatabaseField(const struct tle_db_entry *sat_info, WINDOW *f
 /**
  * Display transponder database entry.
  *
+ * \param name Satellite name
  * \param entry Transponder database entry to display
  * \param display_window Display window to display the entry in
  **/
-void DisplayTransponderEntry(struct sat_db_entry *entry, WINDOW *display_window);
+void DisplayTransponderEntry(const char *name, struct sat_db_entry *entry, WINDOW *display_window);
 
 /**
  * Edit entries in transponder database. Updates user database defined in XDG_DATA_HOME on exit.
