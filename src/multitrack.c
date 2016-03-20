@@ -400,7 +400,7 @@ void multitrack_print_scrollbar(multitrack_listing_t *listing)
 	}
 
 	//print scrollbar
-	int scrollbar_placement = (listing->top_index*1.0/(listing->num_entries - listing->displayed_entries_per_page - 1))*(scrollarea_height - scrollbar_height);
+	int scrollbar_placement = (listing->top_index*1.0/(listing->num_entries - listing->displayed_entries_per_page))*(scrollarea_height - scrollbar_height);
 	for (int i=scrollbar_placement; i < scrollbar_height+scrollbar_placement; i++) {
 		int row = i+scrollarea_offset;
 		wattrset(listing->window, COLOR_PAIR(8)|A_REVERSE);
@@ -434,7 +434,7 @@ void multitrack_display_listing(multitrack_listing_t *listing)
 	} else {
 		wattrset(listing->window, COLOR_PAIR(1));
 		mvwprintw(listing->window, 5, 2, "Satellite list is empty. Are any satellites enabled?");
-		mvwprintw(listing->window, 6, 2, "(Go back to main menu and press 'W')");
+		mvwprintw(listing->window, 6, 2, "(Press 'W' to enable satellites)");
 	}
 	wrefresh(listing->window);
 	wrefresh(listing->header_window);
@@ -599,6 +599,7 @@ bool multitrack_option_selector_handle(multitrack_option_selector_t *option_sele
 {
 	bool handled = false;
 	switch (input_key) {
+		case KEY_RIGHT:
 		case 10:
 			option_selector->option_selected = true;
 		case 'q':

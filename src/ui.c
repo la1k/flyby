@@ -149,28 +149,6 @@ void AnyKey()
 	getch();
 }
 
-char	temp[80];
-char *Abbreviate(string,n)
-char *string;
-int n;
-{
-	/* This function returns an abbreviated substring of the original,
-	   including a '~' character if a non-blank character is chopped
-	   out of the generated substring.  n is the length of the desired
-	   substring.  It is used for abbreviating satellite names. */
-
-	strncpy(temp,(const char *)string,79);
-
-	if (temp[n]!=0 && temp[n]!=32) {
-		temp[n-2]='~';
-		temp[n-1]=temp[strlen(temp)-1];
-	}
-
-	temp[n]=0;
-
-	return temp;
-}
-
 char KepCheck(line1,line2)
 char *line1, *line2;
 {
@@ -1925,6 +1903,11 @@ int PrintMainMenuOption(WINDOW *window, int row, int col, char key, const char *
 	return col + 1 + strlen(description);
 }
 
+/**
+ * Print global main menu options to specified window.
+ *
+ * \param window Window for printing
+ **/
 void PrintMainMenu(WINDOW *window)
 {
 	int row = 0;
@@ -2209,6 +2192,14 @@ void EditTransponderDatabase(int start_index, struct tle_db *tle_db, struct tran
 	transponder_db_from_search_paths(tle_db, sat_db);
 }
 
+/**
+ * Print sun/moon azimuth/elevation to infoboxes on the standard screen. Uses 9 columns and 7 rows.
+ *
+ * \param row Start row for printing
+ * \param col Start column for printing
+ * \param qth QTH coordinates
+ * \param daynum Time for calculation
+ **/
 void PrintSunMoon(int row, int col, predict_observer_t *qth, predict_julian_date_t daynum)
 {
 	struct predict_observation sun;
@@ -2236,12 +2227,19 @@ void PrintSunMoon(int row, int col, predict_observer_t *qth, predict_julian_date
 	mvprintw(row+6,col,"%+-6.2f El",moon.elevation*180.0/M_PI);
 }
 
+/**
+ * Print QTH coordinates in infobox on standard screen. Uses 9 columns and 3 rows.
+ *
+ * \param row Start row for printing
+ * \param col Start column for printing
+ * \param qth QTH coordinates
+ **/
 void PrintQth(int row, int col, predict_observer_t *qth)
 {
 	attrset(COLOR_PAIR(4)|A_REVERSE|A_BOLD);
 	mvprintw(row++,col,"   QTH   ");
 	attrset(COLOR_PAIR(2));
-	mvprintw(row++,col,"%9s",Abbreviate(qth->name,9));
+	mvprintw(row++,col,"%9s",qth->name);
 	char maidenstr[9];
 	getMaidenHead(qth->latitude*180.0/M_PI, -qth->longitude*180.0/M_PI, maidenstr);
 	mvprintw(row++,col,"%9s",maidenstr);
