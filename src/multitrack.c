@@ -125,7 +125,7 @@ void multitrack_searcher_destroy(multitrack_searcher_t **search_field);
 
 bool multitrack_searcher_visible(multitrack_searcher_t *search_field);
 
-void multitrack_searcher_handle(multitrack_searcher_t *search_field, int input_key);
+bool multitrack_searcher_handle(multitrack_searcher_t *search_field, int input_key);
 
 void multitrack_searcher_match(multitrack_searcher_t *search_field, bool match);
 
@@ -479,12 +479,12 @@ void multitrack_display_listing(multitrack_listing_t *listing)
 	wrefresh(listing->window);
 	wrefresh(listing->header_window);
 
+	//refresh search field
+	multitrack_searcher_display(listing->search_field);
+
 	//refresh option selector
 	int option_selector_row = multitrack_selected_window_row(listing) + listing->window_row + MULTITRACK_PRINT_OFFSET + 1;
 	multitrack_option_selector_display(option_selector_row, listing->option_selector);
-
-	//refresh search field
-	multitrack_searcher_display(listing->search_field);
 }
 
 bool multitrack_handle_listing(multitrack_listing_t *listing, int input_key)
@@ -539,11 +539,12 @@ bool multitrack_handle_listing(multitrack_listing_t *listing, int input_key)
 				}
 			default:
 				if (multitrack_searcher_visible(listing->search_field)) {
-					multitrack_searcher_handle(listing->search_field, input_key);
-					expression = multitrack_searcher_string(listing->search_field);
-					found = multitrack_search_listing(listing, expression);
-					multitrack_searcher_match(listing->search_field, found);
-					free(expression);
+					if (multitrack_searcher_handle(listing->search_field, input_key)) {
+						expression = multitrack_searcher_string(listing->search_field);
+						found = multitrack_search_listing(listing, expression);
+						multitrack_searcher_match(listing->search_field, found);
+						free(expression);
+					}
 					handled = true;
 				}
 			break;
@@ -809,8 +810,9 @@ void multitrack_searcher_destroy(multitrack_searcher_t **search_field)
 	*search_field = NULL;
 }
 
-void multitrack_searcher_handle(multitrack_searcher_t *search_field, int input_key)
+bool multitrack_searcher_handle(multitrack_searcher_t *search_field, int input_key)
 {
+	bool character_handled = false;
 	switch (input_key)
 	{
 		case KEY_BACKSPACE:
@@ -820,8 +822,10 @@ void multitrack_searcher_handle(multitrack_searcher_t *search_field, int input_k
 		default:
 			form_driver(search_field->form, input_key);
 			form_driver(search_field->form, REQ_VALIDATION);
+			character_handled = true;
 			break;
 	}
+	return character_handled;
 }
 
 char *multitrack_searcher_string(multitrack_searcher_t *search_field)
