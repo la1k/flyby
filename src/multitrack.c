@@ -60,16 +60,50 @@ void multitrack_update_entry(predict_observer_t *qth, multitrack_entry_t *entry,
  **/
 void multitrack_sort_listing(multitrack_listing_t *listing);
 
+/**
+ * Create option selector submenu.
+ *
+ * \return Option selector
+ **/
 multitrack_option_selector_t* multitrack_option_selector_create();
 
+/**
+ * Hide option selector.
+ *
+ * \param option_selector Option selector
+ **/
 void multitrack_option_selector_hide(multitrack_option_selector_t *option_selector);
 
+/**
+ * Show option selector.
+ *
+ * \param option_selector Option selector
+ **/
 void multitrack_option_selector_show(multitrack_option_selector_t *option_selector);
 
+/**
+ * Check whether option selector is visible.
+ *
+ * \return True if option selector is visible, false otherwise
+ **/
 bool multitrack_option_selector_visible(multitrack_option_selector_t *option_selector);
 
+/**
+ * Display option selector on specified row number in the standard screen.
+ *
+ * \param row Row to place submenu window
+ * \param option_selector Option selector
+ **/
 void multitrack_option_selector_display(int row, multitrack_option_selector_t *option_selector);
 
+/**
+ * Handle input characters to option selector. KEY_UP/KEY_DOWN scrolls menu, KEY_LEFT/q/ESC hides the menu,
+ * while ENTER/KEY_RIGHT also sets the `option_selected` flag in addition to hiding the menu.
+ *
+ * \param option_selector Option selector
+ * \param input_key Input key
+ * \return True if input key was handled, false otherwise
+ **/
 bool multitrack_option_selector_handle(multitrack_option_selector_t *option_selector, int input_key);
 
 multitrack_entry_t *multitrack_create_entry(const char *name, predict_orbital_elements_t *orbital_elements)

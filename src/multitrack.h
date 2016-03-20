@@ -34,14 +34,21 @@ typedef struct {
 	int display_attributes;
 } multitrack_entry_t;
 
-enum sub_menu_options {OPTION_SINGLETRACK, OPTION_PREDICT, OPTION_PREDICT_VISIBLE, OPTION_DISPLAY_ORBITAL_DATA, OPTION_SOLAR_ILLUMINATION, OPTION_EDIT_TRANSPONDER};
-
+/**
+ * Submenu shown when pressing -> or ENTER on selected satellite in multitrack listing.
+ **/
 typedef struct {
+	///Menu
 	MENU *menu;
+	///Display window, shifted around to selected satellite when shown
 	WINDOW *window;
+	///Whether window is visible
 	bool visible;
+	///List of menu items
 	ITEM **items;
+	///Annotation of menu items: Contains members of `enum sub_menu_options` for what to do on selection
 	int *item_types;
+	///Whether an option has been selected. Submenu is hidden, and this field is set to `true` when an option has been selected
 	bool option_selected;
 } multitrack_option_selector_t;
 
@@ -150,7 +157,23 @@ int multitrack_selected_entry(multitrack_listing_t *listing);
  * \return Window row
  **/
 int multitrack_selected_window_row(multitrack_listing_t *listing);
-				
+
+/**
+ * Used for annotation of satellite submenu.
+ **/
+enum sub_menu_options {OPTION_SINGLETRACK, //run in single track mode
+	OPTION_PREDICT, //predict passes
+	OPTION_PREDICT_VISIBLE, //predict visible passes
+	OPTION_DISPLAY_ORBITAL_DATA, //display orbital data
+	OPTION_SOLAR_ILLUMINATION, //predict solar illumination
+	OPTION_EDIT_TRANSPONDER}; //edit transponder database entry
+
+/**
+ * Get selected submenu option.
+ *
+ * \param option_selector Option selector
+ * \return Option from `enum sub_menu_options`
+ **/
 int multitrack_option_selector_get_option(multitrack_option_selector_t *option_selector);
 
 #endif
