@@ -113,6 +113,24 @@ void multitrack_option_selector_display(int row, multitrack_option_selector_t *o
  **/
 bool multitrack_option_selector_handle(multitrack_option_selector_t *option_selector, int input_key);
 
+multitrack_searcher_t *multitrack_searcher_create(int row, int col);
+
+void multitrack_searcher_show(multitrack_searcher_t *search_field);
+
+void multitrack_searcher_display(multitrack_searcher_t *search_field);
+
+void multitrack_searcher_hide(multitrack_searcher_t *search_field);
+
+void multitrack_searcher_destroy(multitrack_searcher_t **search_field);
+
+bool multitrack_searcher_visible(multitrack_searcher_t *search_field);
+
+void multitrack_searcher_handle(multitrack_searcher_t *search_field, int input_key);
+
+void multitrack_searcher_match(multitrack_searcher_t *search_field, bool match);
+
+char *multitrack_searcher_string(multitrack_searcher_t *search_field);
+
 multitrack_entry_t *multitrack_create_entry(const char *name, predict_orbital_elements_t *orbital_elements)
 {
 	multitrack_entry_t *entry = (multitrack_entry_t*)malloc(sizeof(multitrack_entry_t));
@@ -154,7 +172,22 @@ multitrack_listing_t* multitrack_create_listing(WINDOW *window, predict_observer
 
 	listing->option_selector = multitrack_option_selector_create();
 
+	int search_row = window_row + window_height + 1;
+	int search_col = 0;
+	listing->search_field = multitrack_searcher_create(search_row, search_col);
 	return listing;
+}
+
+bool multitrack_search_listing(multitrack_listing_t *listing, const char *expression)
+{
+	for (int i=0; i < listing->num_entries; i++)
+	{
+		if (strstr(listing->entries[listing->sorted_index[i]]->name, expression) != NULL) {
+			listing->selected_entry_index = i;
+			return true;
+		}
+	}
+	return false;
 }
 
 void multitrack_free_entry(multitrack_entry_t **entry)
@@ -449,10 +482,15 @@ void multitrack_display_listing(multitrack_listing_t *listing)
 	//refresh option selector
 	int option_selector_row = multitrack_selected_window_row(listing) + listing->window_row + MULTITRACK_PRINT_OFFSET + 1;
 	multitrack_option_selector_display(option_selector_row, listing->option_selector);
+
+	//refresh search field
+	multitrack_searcher_display(listing->search_field);
 }
 
 bool multitrack_handle_listing(multitrack_listing_t *listing, int input_key)
 {
+	char *expression;
+	bool found;
 	if (multitrack_option_selector_visible(listing->option_selector)) {
 		return multitrack_option_selector_handle(listing->option_selector, input_key);
 	} else {
@@ -481,14 +519,34 @@ bool multitrack_handle_listing(multitrack_listing_t *listing, int input_key)
 				}
 				handled = true;
 				break;
-			case 't':
-			case 'T':
-				//select single track mode in option selector and
-				//signal that an option has been selected
-				set_menu_pattern(listing->option_selector->menu, "Track satellite");
-				listing->option_selector->option_selected = true;
+			case '/':
+				multitrack_searcher_show(listing->search_field);
 				handled = true;
 				break;
+			case 27:
+				multitrack_searcher_hide(listing->search_field);
+				handled = true;
+				break;
+			case 't':
+			case 'T':
+				if (!multitrack_searcher_visible(listing->search_field)) {
+					//select single track mode in option selector and
+					//signal that an option has been selected
+					set_menu_pattern(listing->option_selector->menu, "Track satellite");
+					listing->option_selector->option_selected = true;
+					handled = true;
+					break;
+				}
+			default:
+				if (multitrack_searcher_visible(listing->search_field)) {
+					multitrack_searcher_handle(listing->search_field, input_key);
+					expression = multitrack_searcher_string(listing->search_field);
+					found = multitrack_search_listing(listing, expression);
+					multitrack_searcher_match(listing->search_field, found);
+					free(expression);
+					handled = true;
+				}
+			break;
 		}
 
 		//adjust index according to limits
@@ -530,6 +588,7 @@ void multitrack_destroy_listing(multitrack_listing_t **listing)
 {
 	multitrack_free_entries(*listing);
 	multitrack_option_selector_destroy(&((*listing)->option_selector));
+	multitrack_searcher_destroy(&((*listing)->search_field));
 	delwin((*listing)->header_window);
 	free(*listing);
 	*listing = NULL;
@@ -664,4 +723,113 @@ int multitrack_option_selector_get_option(multitrack_option_selector_t *option_s
 {
 	int option = *((int*)item_userptr(current_item(option_selector->menu)));
 	return option;
+}
+
+#define SEARCH_FIELD_LENGTH 78
+#define FIELD_START_COL 21
+#define FIELD_LENGTH (SEARCH_FIELD_LENGTH - FIELD_START_COL)
+multitrack_searcher_t *multitrack_searcher_create(int row, int col)
+{
+	multitrack_searcher_t *searcher = (multitrack_searcher_t*)malloc(sizeof(multitrack_searcher_t));
+	searcher->field = (FIELD**)malloc(sizeof(FIELD*)*2);
+	searcher->field[0] = new_field(1, FIELD_LENGTH, 0, 0, 0, 0);
+	searcher->field[1] = NULL;
+	searcher->form = new_form(searcher->field);
+	field_opts_off(searcher->field[0], O_AUTOSKIP);
+	searcher->window = newwin(3, 78, row, col);
+	int rows, cols;
+	scale_form(searcher->form, &rows, &cols);
+	set_form_win(searcher->form, searcher->window);
+	set_form_sub(searcher->form, derwin(searcher->window, rows, cols, 0, FIELD_START_COL));
+	keypad(searcher->window, TRUE);
+	post_form(searcher->form);
+	searcher->visible = false;
+	multitrack_searcher_match(searcher, true);
+	return searcher;
+}
+
+void multitrack_searcher_show(multitrack_searcher_t *search_field)
+{
+	search_field->visible = true;
+	multitrack_searcher_display(search_field);
+}
+
+bool multitrack_searcher_visible(multitrack_searcher_t *search_field)
+{
+	return search_field->visible;
+}
+
+void multitrack_searcher_display(multitrack_searcher_t *search_field)
+{
+	if (search_field->visible) {
+		//fill window without destroying the styling of the FORM :^)
+		wattrset(search_field->window, COLOR_PAIR(1));
+		mvwprintw(search_field->window, 1, 0, "%-78s", "");
+		mvwprintw(search_field->window, 2, 0, "%-78s", "");
+
+		//print keybindings in the same style as htop
+		wattrset(search_field->window, COLOR_PAIR(1));
+		mvwprintw(search_field->window, 0, 0, "Esc");
+		wattrset(search_field->window, COLOR_PAIR(4)|A_REVERSE);
+		mvwprintw(search_field->window, 0, 3, "Cancel ");
+		wattrset(search_field->window, COLOR_PAIR(1));
+		mvwprintw(search_field->window, 0, 10, " ");
+		wattrset(search_field->window, COLOR_PAIR(4)|A_REVERSE);
+		mvwprintw(search_field->window, 0, 12, " Search: ");
+
+		//update form colors
+		set_field_back(search_field->field[0], search_field->attributes);
+		form_driver(search_field->form, REQ_VALIDATION);
+		wrefresh(search_field->window);
+	}
+}
+
+void multitrack_searcher_hide(multitrack_searcher_t *search_field)
+{
+	form_driver(search_field->form, REQ_CLR_FIELD);
+	search_field->visible = false;
+	wbkgd(search_field->window, COLOR_PAIR(1));
+	werase(search_field->window);
+	wrefresh(search_field->window);
+}
+
+void multitrack_searcher_match(multitrack_searcher_t *search_field, bool match)
+{
+	if (match) {
+		search_field->attributes = COLOR_PAIR(4)|A_REVERSE;
+	} else {
+		search_field->attributes = COLOR_PAIR(7)|A_REVERSE;
+	}
+}
+
+void multitrack_searcher_destroy(multitrack_searcher_t **search_field)
+{
+	free_field((*search_field)->field[0]);
+	free((*search_field)->field);
+	free_form((*search_field)->form);
+	free(*search_field);
+	delwin((*search_field)->window);
+	*search_field = NULL;
+}
+
+void multitrack_searcher_handle(multitrack_searcher_t *search_field, int input_key)
+{
+	switch (input_key)
+	{
+		case KEY_BACKSPACE:
+			form_driver(search_field->form, REQ_DEL_PREV);
+			form_driver(search_field->form, REQ_VALIDATION);
+			break;
+		default:
+			form_driver(search_field->form, input_key);
+			form_driver(search_field->form, REQ_VALIDATION);
+			break;
+	}
+}
+
+char *multitrack_searcher_string(multitrack_searcher_t *search_field)
+{
+	char *ret_str = strdup(field_buffer(search_field->field[0], 0));
+	trim_whitespaces_from_end(ret_str);
+	return ret_str;
 }

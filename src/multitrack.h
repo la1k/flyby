@@ -2,6 +2,7 @@
 #define MULTITRACK_H_DEFINED
 
 #include "ncurses.h"
+#include "form.h"
 #include "menu.h"
 
 /**
@@ -55,6 +56,17 @@ typedef struct {
 } multitrack_option_selector_t;
 
 /**
+ * Search field shown when pressing '/'.
+ **/
+typedef struct {
+	WINDOW *window;
+	FORM *form;
+	FIELD **field;
+	bool visible;
+	int attributes;
+} multitrack_searcher_t;
+
+/**
  * Satellite listing, used for providing a live overview of the current status of the satellites, and for
  * providing a selection menu for these satellites.
  **/
@@ -96,6 +108,8 @@ typedef struct {
 	int *tle_db_mapping;
 	///Submenu for selecting options on selected satellite
 	multitrack_option_selector_t *option_selector;
+	///Search field
+	multitrack_searcher_t *search_field;
 } multitrack_listing_t;
 
 ///Row offset from window start at which to start printing
