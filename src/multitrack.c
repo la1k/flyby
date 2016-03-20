@@ -481,6 +481,14 @@ bool multitrack_handle_listing(multitrack_listing_t *listing, int input_key)
 				}
 				handled = true;
 				break;
+			case 't':
+			case 'T':
+				//select single track mode in option selector and
+				//signal that an option has been selected
+				set_menu_pattern(listing->option_selector->menu, "Track satellite");
+				listing->option_selector->option_selected = true;
+				handled = true;
+				break;
 		}
 
 		//adjust index according to limits
