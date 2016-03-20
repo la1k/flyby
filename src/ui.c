@@ -2317,7 +2317,7 @@ void RunFlybyUI(bool new_user, const char *qthfile, predict_observer_t *observer
 			//handle input to satellite list
 			bool handled = multitrack_handle_listing(listing, key);
 
-			//option in the option submenu is selected, run UI subfunctions
+			//option in submenu has been selected, run satellite specific options
 			if (listing->option_selector->option_selected) {
 				listing->option_selector->option_selected = false;
 				int option = multitrack_option_selector_get_option(listing->option_selector);
@@ -2346,8 +2346,8 @@ void RunFlybyUI(bool new_user, const char *qthfile, predict_observer_t *observer
 				refresh();
 			}
 
+			//handle all other, global options
 			if (!handled) {
-				//handle all other, global options
 				if (!handled) {
 					switch (key) {
 						case 'n':
