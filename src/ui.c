@@ -2398,6 +2398,7 @@ void RunFlybyUI(bool new_user, const char *qthfile, predict_observer_t *observer
 
 						case 'g':
 							QthEdit(qthfile, observer);
+							multitrack_refresh_tles(listing, tle_db);
 							break;
 
 						case 'i':
