@@ -585,8 +585,10 @@ bool multitrack_handle_listing(multitrack_listing_t *listing, int input_key)
 			case KEY_F(3):
 				if (multitrack_searcher_visible(listing->search_field)) {
 					multitrack_listing_next_match(listing);
-					handled = true;
+				} else {
+					multitrack_searcher_show(listing->search_field);
 				}
+				handled = true;
 				break;
 			default:
 				if (multitrack_searcher_visible(listing->search_field)) {
@@ -773,27 +775,33 @@ int multitrack_option_selector_get_option(multitrack_option_selector_t *option_s
 	return option;
 }
 
+#define SEARCH_FIELD_HEIGHT 3
 #define SEARCH_FIELD_LENGTH 78
 #define FIELD_START_COL 21
 #define FIELD_LENGTH (SEARCH_FIELD_LENGTH - FIELD_START_COL)
 multitrack_searcher_t *multitrack_searcher_create(int row, int col)
 {
 	multitrack_searcher_t *searcher = (multitrack_searcher_t*)malloc(sizeof(multitrack_searcher_t));
+	searcher->window = newwin(SEARCH_FIELD_HEIGHT, SEARCH_FIELD_LENGTH, row, col);
+	searcher->visible = false;
+
+	//prepare form and field
 	searcher->field = (FIELD**)malloc(sizeof(FIELD*)*2);
 	searcher->field[0] = new_field(1, FIELD_LENGTH, 0, 0, 0, 0);
 	searcher->field[1] = NULL;
 	searcher->form = new_form(searcher->field);
 	field_opts_off(searcher->field[0], O_AUTOSKIP);
-	searcher->window = newwin(3, 78, row, col);
 	int rows, cols;
 	scale_form(searcher->form, &rows, &cols);
 	set_form_win(searcher->form, searcher->window);
 	set_form_sub(searcher->form, derwin(searcher->window, rows, cols, 0, FIELD_START_COL));
 	keypad(searcher->window, TRUE);
 	post_form(searcher->form);
-	searcher->visible = false;
+
+	//prepare search match control
 	searcher->matches = NULL;
 	multitrack_searcher_clear_matches(searcher);
+
 	return searcher;
 }
 
@@ -851,6 +859,7 @@ void multitrack_searcher_match(multitrack_searcher_t *search_field, bool match)
 
 void multitrack_searcher_destroy(multitrack_searcher_t **search_field)
 {
+	multitrack_searcher_clear_matches(*search_field);
 	free_field((*search_field)->field[0]);
 	free((*search_field)->field);
 	free_form((*search_field)->form);
@@ -863,8 +872,7 @@ bool multitrack_searcher_handle(multitrack_searcher_t *search_field, int input_k
 {
 	bool character_handled = false;
 	char *expression = NULL;
-	switch (input_key)
-	{
+	switch (input_key) {
 		case KEY_BACKSPACE:
 			expression = multitrack_searcher_string(search_field);
 			if (strlen(expression) == 0) {
