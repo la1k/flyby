@@ -205,4 +205,6 @@ enum sub_menu_options {OPTION_SINGLETRACK, //run in single track mode
  **/
 int multitrack_option_selector_get_option(multitrack_option_selector_t *option_selector);
 
+bool multitrack_searcher_visible(multitrack_searcher_t *search_field);
+
 #endif

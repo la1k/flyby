@@ -901,11 +901,12 @@ void multitrack_searcher_match(multitrack_searcher_t *search_field, bool match)
 void multitrack_searcher_destroy(multitrack_searcher_t **search_field)
 {
 	multitrack_searcher_clear_matches(*search_field);
+	unpost_form((*search_field)->form);
+	free_form((*search_field)->form);
 	free_field((*search_field)->field[0]);
 	free((*search_field)->field);
-	free_form((*search_field)->form);
-	free(*search_field);
 	delwin((*search_field)->window);
+	free(*search_field);
 	*search_field = NULL;
 }
 
