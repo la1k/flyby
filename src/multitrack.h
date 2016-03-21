@@ -64,6 +64,10 @@ typedef struct {
 	FIELD **field;
 	bool visible;
 	int attributes;
+	int match_num;
+	int *matches;
+	int num_matches;
+	int available_match_size;
 } multitrack_searcher_t;
 
 /**
