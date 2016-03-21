@@ -777,7 +777,7 @@ int multitrack_option_selector_get_option(multitrack_option_selector_t *option_s
 
 #define SEARCH_FIELD_HEIGHT 3
 #define SEARCH_FIELD_LENGTH 78
-#define FIELD_START_COL 21
+#define FIELD_START_COL 29
 #define FIELD_LENGTH (SEARCH_FIELD_LENGTH - FIELD_START_COL)
 multitrack_searcher_t *multitrack_searcher_create(int row, int col)
 {
@@ -825,14 +825,25 @@ void multitrack_searcher_display(multitrack_searcher_t *search_field)
 		mvwprintw(search_field->window, 2, 0, "%-78s", "");
 
 		//print keybindings in the same style as htop
+		int col = 0;
 		wattrset(search_field->window, COLOR_PAIR(1));
-		mvwprintw(search_field->window, 0, 0, "Esc");
+		mvwprintw(search_field->window, 0, col, "F3");
+		col+=2;
 		wattrset(search_field->window, COLOR_PAIR(4)|A_REVERSE);
-		mvwprintw(search_field->window, 0, 3, "Cancel ");
+		mvwprintw(search_field->window, 0, col, "Next   ");
+		col+=6;
 		wattrset(search_field->window, COLOR_PAIR(1));
-		mvwprintw(search_field->window, 0, 10, " ");
+		mvwprintw(search_field->window, 0, col, "Esc");
+		col+=3;
 		wattrset(search_field->window, COLOR_PAIR(4)|A_REVERSE);
-		mvwprintw(search_field->window, 0, 12, " Search: ");
+		mvwprintw(search_field->window, 0, col, "Cancel ");
+		col+=8;
+		wattrset(search_field->window, COLOR_PAIR(1));
+		mvwprintw(search_field->window, 0, col, " ");
+		col+=1;
+		wattrset(search_field->window, COLOR_PAIR(4)|A_REVERSE);
+		mvwprintw(search_field->window, 0, col, " Search: ");
+		col+=9;
 
 		//update form colors
 		set_field_back(search_field->field[0], search_field->attributes);
