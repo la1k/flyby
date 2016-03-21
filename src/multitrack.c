@@ -123,6 +123,15 @@ bool multitrack_option_selector_visible(multitrack_option_selector_t *option_sel
 void multitrack_option_selector_display(int row, multitrack_option_selector_t *option_selector);
 
 /**
+ * Jump to specified option and signal that an option has been selected, regardless of whether
+ * the option selector is visible or not. Used for shortcuts like 'T', 'P', ... from the main menu.
+ *
+ * \param option_selector Option selector
+ * \param option Option to select
+ **/
+void multitrack_option_selector_jump(multitrack_option_selector_t *option_selector, enum sub_menu_options option);
+
+/**
  * Handle input characters to option selector. KEY_UP/KEY_DOWN scrolls menu, KEY_LEFT/q/ESC hides the menu,
  * while ENTER/KEY_RIGHT also sets the `option_selected` flag in addition to hiding the menu.
  *
@@ -641,16 +650,6 @@ bool multitrack_handle_listing(multitrack_listing_t *listing, int input_key)
 				multitrack_search_field_hide(listing->search_field);
 				handled = true;
 				break;
-			case 't':
-			case 'T':
-				if (!multitrack_search_field_visible(listing->search_field)) {
-					//select single track mode in option selector and
-					//signal that an option has been selected
-					set_menu_pattern(listing->option_selector->menu, "Track satellite");
-					listing->option_selector->option_selected = true;
-					handled = true;
-					break;
-				}
 			case KEY_F(3):
 				if (multitrack_search_field_visible(listing->search_field)) {
 					multitrack_listing_next_match(listing);
@@ -659,6 +658,28 @@ bool multitrack_handle_listing(multitrack_listing_t *listing, int input_key)
 				}
 				handled = true;
 				break;
+			//quick jump to each option
+			case 't':
+			case 'T':
+				if (!multitrack_search_field_visible(listing->search_field)) {
+					multitrack_option_selector_jump(listing->option_selector, OPTION_SINGLETRACK);
+					handled = true;
+					break;
+				}
+			case 'p':
+			case 'P':
+				if (!multitrack_search_field_visible(listing->search_field)) {
+					multitrack_option_selector_jump(listing->option_selector, OPTION_PREDICT);
+					handled = true;
+					break;
+				}
+			case 'v':
+			case 'V':
+				if (!multitrack_search_field_visible(listing->search_field)) {
+					multitrack_option_selector_jump(listing->option_selector, OPTION_PREDICT_VISIBLE);
+					handled = true;
+					break;
+				}
 			default:
 				if (multitrack_search_field_visible(listing->search_field)) {
 					multitrack_search_field_handle(listing->search_field, input_key);
@@ -733,6 +754,31 @@ void multitrack_option_selector_destroy(multitrack_option_selector_t **option_se
 	*option_selector = NULL;
 }
 
+/**
+ * Get string corresponding to each submenu option.
+ *
+ * \param option Submenu option
+ * \return String corresponding to submenu option
+ **/
+const char *multitrack_option_selector_name(enum sub_menu_options option)
+{
+	switch (option) {
+		case OPTION_SINGLETRACK:
+			return "Track satellite";
+		case OPTION_PREDICT:
+			return "Predict passes";
+		case OPTION_PREDICT_VISIBLE:
+			return "Predict visible passes";
+		case OPTION_DISPLAY_ORBITAL_DATA:
+			return "Display orbital data";
+		case OPTION_SOLAR_ILLUMINATION:
+			return "Solar illumination prediction";
+		case OPTION_EDIT_TRANSPONDER:
+			return "Show transponders";
+	}
+	return "";
+}
+
 multitrack_option_selector_t* multitrack_option_selector_create()
 {
 	multitrack_option_selector_t *option_selector = (multitrack_option_selector_t*)malloc(sizeof(multitrack_option_selector_t));
@@ -745,27 +791,21 @@ multitrack_option_selector_t* multitrack_option_selector_create()
 	option_selector->window = option_win;
 
 	//prepare ITEMs
-	ITEM *options[NUM_OPTIONS] =  {new_item("Track satellite", ""),
-				      new_item("Predict passes", ""),
-				      new_item("Predict visible passes", ""),
-				      new_item("Display orbital data", ""),
-				      new_item("Show transponders", ""),
-				      new_item("Solar illumination prediction", ""),
-				      NULL};
-
 	int item_types[NUM_OPTIONS] = {OPTION_SINGLETRACK,
 				      OPTION_PREDICT,
 				      OPTION_PREDICT_VISIBLE,
 				      OPTION_DISPLAY_ORBITAL_DATA,
 				      OPTION_EDIT_TRANSPONDER,
 				      OPTION_SOLAR_ILLUMINATION};
+
 	option_selector->items = (ITEM**)malloc(sizeof(ITEM*)*NUM_OPTIONS);
 	option_selector->item_types = (int*)malloc(sizeof(int)*NUM_OPTIONS);
 	for (int i=0; i < NUM_OPTIONS; i++) {
-		option_selector->items[i] = options[i];
 		option_selector->item_types[i] = item_types[i];
+		option_selector->items[i] = new_item(multitrack_option_selector_name(item_types[i]), "");
 		set_item_userptr(option_selector->items[i], &(option_selector->item_types[i]));
 	}
+	option_selector->items[NUM_OPTIONS-1] = NULL;
 
 	//prepare MENU
 	MENU *menu = new_menu(option_selector->items);
@@ -855,6 +895,12 @@ bool multitrack_option_selector_pop(multitrack_option_selector_t *option_selecto
 	} else {
 		return false;
 	}
+}
+
+void multitrack_option_selector_jump(multitrack_option_selector_t *option_selector, enum sub_menu_options option)
+{
+	set_menu_pattern(option_selector->menu, multitrack_option_selector_name(option));
+	option_selector->option_selected = true;
 }
 
 /** Search field function implementations. **/
