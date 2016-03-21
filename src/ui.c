@@ -2357,7 +2357,7 @@ void RunFlybyUI(bool new_user, const char *qthfile, predict_observer_t *observer
 	while (should_run) {
 		curr_time = predict_to_julian(time(NULL));
 
-		if (!multitrack_searcher_visible(listing->search_field)) {
+		if (!multitrack_search_field_visible(listing->search_field)) {
 			PrintMainMenu(main_menu_win);
 		}
 		PrintSunMoon(sat_list_win_height + sat_list_win_row - 7, sat_list_win_width+1, observer, curr_time);

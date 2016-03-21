@@ -141,35 +141,35 @@ bool multitrack_option_selector_handle(multitrack_option_selector_t *option_sele
  * \param col Column
  * \return Search field
  **/
-multitrack_searcher_t *multitrack_searcher_create(int row, int col);
+multitrack_search_field_t *multitrack_search_field_create(int row, int col);
 
 /**
  * Make search field visible.
  *
  * \param search_field Search field
  **/
-void multitrack_searcher_show(multitrack_searcher_t *search_field);
+void multitrack_search_field_show(multitrack_search_field_t *search_field);
 
 /**
  * Refresh search field.
  *
  * \param search_field Search field
  **/
-void multitrack_searcher_display(multitrack_searcher_t *search_field);
+void multitrack_search_field_display(multitrack_search_field_t *search_field);
 
 /**
  * Hide search field from view.
  *
  * \param search_field Search field
  **/
-void multitrack_searcher_hide(multitrack_searcher_t *search_field);
+void multitrack_search_field_hide(multitrack_search_field_t *search_field);
 
 /**
  * Destroy search field and associated memory.
  *
  * \param search_field Search field
  **/
-void multitrack_searcher_destroy(multitrack_searcher_t **search_field);
+void multitrack_search_field_destroy(multitrack_search_field_t **search_field);
 
 /**
  * Handle input characters to search field.
@@ -177,14 +177,14 @@ void multitrack_searcher_destroy(multitrack_searcher_t **search_field);
  * \param search_field Search field
  * \param input_key Input key
  **/
-bool multitrack_searcher_handle(multitrack_searcher_t *search_field, int input_key);
+bool multitrack_search_field_handle(multitrack_search_field_t *search_field, int input_key);
 
 /**
  * Get (trimmed) input string from search field.
  *
  * \param search_field Search field
  **/
-char *multitrack_searcher_string(multitrack_searcher_t *search_field);
+char *multitrack_search_field_string(multitrack_search_field_t *search_field);
 
 /**
  * Add match to match array.
@@ -192,14 +192,14 @@ char *multitrack_searcher_string(multitrack_searcher_t *search_field);
  * \param search_field Search field
  * \param index Menu index to add to list of matches
  **/
-void multitrack_searcher_add_match(multitrack_searcher_t *search_field, int index);
+void multitrack_search_field_add_match(multitrack_search_field_t *search_field, int index);
 
 /**
  * Clear match array.
  *
  * \param search_field Search field
  **/
-void multitrack_searcher_clear_matches(multitrack_searcher_t *search_field);
+void multitrack_search_field_clear_matches(multitrack_search_field_t *search_field);
 
 /** Multitrack satellite listing function implementations. **/
 
@@ -246,21 +246,21 @@ multitrack_listing_t* multitrack_create_listing(WINDOW *window, predict_observer
 
 	int search_row = window_row + window_height + 1;
 	int search_col = 0;
-	listing->search_field = multitrack_searcher_create(search_row, search_col);
+	listing->search_field = multitrack_search_field_create(search_row, search_col);
 	return listing;
 }
 
 void multitrack_search_listing(multitrack_listing_t *listing)
 {
-	multitrack_searcher_clear_matches(listing->search_field);
-	char *expression = multitrack_searcher_string(listing->search_field);
+	multitrack_search_field_clear_matches(listing->search_field);
+	char *expression = multitrack_search_field_string(listing->search_field);
 	if (strlen(expression) == 0) {
 		free(expression);
 		return;
 	}
 	for (int i=0; i < listing->num_entries; i++) {
 		if (strstr(listing->entries[listing->sorted_index[i]]->name, expression) != NULL) {
-			multitrack_searcher_add_match(listing->search_field, i);
+			multitrack_search_field_add_match(listing->search_field, i);
 		}
 	}
 	multitrack_listing_next_match(listing);
@@ -269,7 +269,7 @@ void multitrack_search_listing(multitrack_listing_t *listing)
 
 void multitrack_listing_next_match(multitrack_listing_t *listing)
 {
-	multitrack_searcher_t *search_field = listing->search_field;
+	multitrack_search_field_t *search_field = listing->search_field;
 	if (search_field->num_matches > 0) {
 		search_field->match_num = (search_field->match_num + 1) % (search_field->num_matches);
 		listing->selected_entry_index = search_field->matches[search_field->match_num];
@@ -596,7 +596,7 @@ void multitrack_display_listing(multitrack_listing_t *listing)
 	wrefresh(listing->header_window);
 
 	//refresh search field
-	multitrack_searcher_display(listing->search_field);
+	multitrack_search_field_display(listing->search_field);
 
 	//refresh option selector
 	int option_selector_row = multitrack_selected_window_row(listing) + listing->window_row + MULTITRACK_PRINT_OFFSET + 1;
@@ -634,16 +634,16 @@ bool multitrack_handle_listing(multitrack_listing_t *listing, int input_key)
 				handled = true;
 				break;
 			case '/':
-				multitrack_searcher_show(listing->search_field);
+				multitrack_search_field_show(listing->search_field);
 				handled = true;
 				break;
 			case 27:
-				multitrack_searcher_hide(listing->search_field);
+				multitrack_search_field_hide(listing->search_field);
 				handled = true;
 				break;
 			case 't':
 			case 'T':
-				if (!multitrack_searcher_visible(listing->search_field)) {
+				if (!multitrack_search_field_visible(listing->search_field)) {
 					//select single track mode in option selector and
 					//signal that an option has been selected
 					set_menu_pattern(listing->option_selector->menu, "Track satellite");
@@ -652,16 +652,16 @@ bool multitrack_handle_listing(multitrack_listing_t *listing, int input_key)
 					break;
 				}
 			case KEY_F(3):
-				if (multitrack_searcher_visible(listing->search_field)) {
+				if (multitrack_search_field_visible(listing->search_field)) {
 					multitrack_listing_next_match(listing);
 				} else {
-					multitrack_searcher_show(listing->search_field);
+					multitrack_search_field_show(listing->search_field);
 				}
 				handled = true;
 				break;
 			default:
-				if (multitrack_searcher_visible(listing->search_field)) {
-					multitrack_searcher_handle(listing->search_field, input_key);
+				if (multitrack_search_field_visible(listing->search_field)) {
+					multitrack_search_field_handle(listing->search_field, input_key);
 					multitrack_search_listing(listing);
 					handled = true;
 				}
@@ -707,7 +707,7 @@ void multitrack_destroy_listing(multitrack_listing_t **listing)
 {
 	multitrack_free_entries(*listing);
 	multitrack_option_selector_destroy(&((*listing)->option_selector));
-	multitrack_searcher_destroy(&((*listing)->search_field));
+	multitrack_search_field_destroy(&((*listing)->search_field));
 	delwin((*listing)->header_window);
 	free(*listing);
 	*listing = NULL;
@@ -861,9 +861,9 @@ int multitrack_option_selector_get_option(multitrack_option_selector_t *option_s
 //Length of search field
 #define FIELD_LENGTH (SEARCH_FIELD_LENGTH - FIELD_START_COL)
 
-multitrack_searcher_t *multitrack_searcher_create(int row, int col)
+multitrack_search_field_t *multitrack_search_field_create(int row, int col)
 {
-	multitrack_searcher_t *searcher = (multitrack_searcher_t*)malloc(sizeof(multitrack_searcher_t));
+	multitrack_search_field_t *searcher = (multitrack_search_field_t*)malloc(sizeof(multitrack_search_field_t));
 	searcher->window = newwin(SEARCH_FIELD_HEIGHT, SEARCH_FIELD_LENGTH, row, col);
 	searcher->visible = false;
 
@@ -882,23 +882,23 @@ multitrack_searcher_t *multitrack_searcher_create(int row, int col)
 
 	//prepare search match control
 	searcher->matches = NULL;
-	multitrack_searcher_clear_matches(searcher);
+	multitrack_search_field_clear_matches(searcher);
 
 	return searcher;
 }
 
-void multitrack_searcher_show(multitrack_searcher_t *search_field)
+void multitrack_search_field_show(multitrack_search_field_t *search_field)
 {
 	search_field->visible = true;
-	multitrack_searcher_display(search_field);
+	multitrack_search_field_display(search_field);
 }
 
-bool multitrack_searcher_visible(multitrack_searcher_t *search_field)
+bool multitrack_search_field_visible(multitrack_search_field_t *search_field)
 {
 	return search_field->visible;
 }
 
-void multitrack_searcher_display(multitrack_searcher_t *search_field)
+void multitrack_search_field_display(multitrack_search_field_t *search_field)
 {
 	//set font color according to whether there is a match or not
 	if (search_field->num_matches > 0) {
@@ -941,16 +941,16 @@ void multitrack_searcher_display(multitrack_searcher_t *search_field)
 	}
 }
 
-void multitrack_searcher_hide(multitrack_searcher_t *search_field)
+void multitrack_search_field_hide(multitrack_search_field_t *search_field)
 {
 	form_driver(search_field->form, REQ_CLR_FIELD);
 	search_field->visible = false;
-	multitrack_searcher_clear_matches(search_field);
+	multitrack_search_field_clear_matches(search_field);
 }
 
-void multitrack_searcher_destroy(multitrack_searcher_t **search_field)
+void multitrack_search_field_destroy(multitrack_search_field_t **search_field)
 {
-	multitrack_searcher_clear_matches(*search_field);
+	multitrack_search_field_clear_matches(*search_field);
 	unpost_form((*search_field)->form);
 	free_form((*search_field)->form);
 	free_field((*search_field)->field[0]);
@@ -960,16 +960,16 @@ void multitrack_searcher_destroy(multitrack_searcher_t **search_field)
 	*search_field = NULL;
 }
 
-bool multitrack_searcher_handle(multitrack_searcher_t *search_field, int input_key)
+bool multitrack_search_field_handle(multitrack_search_field_t *search_field, int input_key)
 {
 	bool character_handled = false;
 	char *expression = NULL;
 	switch (input_key) {
 		case KEY_BACKSPACE:
-			expression = multitrack_searcher_string(search_field);
+			expression = multitrack_search_field_string(search_field);
 			if (strlen(expression) == 0) {
 				//hide search field if it already is empty
-				multitrack_searcher_hide(search_field);
+				multitrack_search_field_hide(search_field);
 			} else {
 				//delete characters
 				form_driver(search_field->form, REQ_DEL_PREV);
@@ -988,14 +988,14 @@ bool multitrack_searcher_handle(multitrack_searcher_t *search_field, int input_k
 
 void trim_whitespaces_from_end(char *str);
 
-char *multitrack_searcher_string(multitrack_searcher_t *search_field)
+char *multitrack_search_field_string(multitrack_search_field_t *search_field)
 {
 	char *ret_str = strdup(field_buffer(search_field->field[0], 0));
 	trim_whitespaces_from_end(ret_str);
 	return ret_str;
 }
 
-void multitrack_searcher_clear_matches(multitrack_searcher_t *search_field)
+void multitrack_search_field_clear_matches(multitrack_search_field_t *search_field)
 {
 	search_field->match_num = -1;
 
@@ -1007,7 +1007,7 @@ void multitrack_searcher_clear_matches(multitrack_searcher_t *search_field)
 	search_field->available_match_size = 0;
 }
 
-void multitrack_searcher_add_match(multitrack_searcher_t *search_field, int index)
+void multitrack_search_field_add_match(multitrack_search_field_t *search_field, int index)
 {
 	if (search_field->matches == NULL) {
 		search_field->available_match_size = 2;

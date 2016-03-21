@@ -77,7 +77,7 @@ typedef struct {
 	int num_matches;
 	///Available size in the `matches` array, reallocated at need
 	int available_match_size;
-} multitrack_searcher_t;
+} multitrack_search_field_t;
 
 /**
  * Satellite listing, used for providing a live overview of the current status of the satellites, and for
@@ -124,7 +124,7 @@ typedef struct {
 	///Submenu for selecting options on selected satellite
 	multitrack_option_selector_t *option_selector;
 	///Search field
-	multitrack_searcher_t *search_field;
+	multitrack_search_field_t *search_field;
 } multitrack_listing_t;
 
 ///Row offset from window start at which to start printing
@@ -220,6 +220,6 @@ int multitrack_option_selector_get_option(multitrack_option_selector_t *option_s
  * \param search_field Search field
  * \return True if search field is visible, false otherwise
  **/
-bool multitrack_searcher_visible(multitrack_searcher_t *search_field);
+bool multitrack_search_field_visible(multitrack_search_field_t *search_field);
 
 #endif
