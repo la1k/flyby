@@ -2303,6 +2303,7 @@ void RunFlybyUI(bool new_user, const char *qthfile, predict_observer_t *observer
 	if (new_user) {
 		NewUser();
 		QthEdit(qthfile, observer);
+		clear();
 	}
 
 	/* Parse TLEs */
