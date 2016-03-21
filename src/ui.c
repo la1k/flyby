@@ -190,68 +190,6 @@ char *line1, *line2;
 	return (x ? 0 : 1);
 }
 
-double ReadBearing(input)
-char *input;
-{
-	/* This function takes numeric input in the form of a character
-	string, and returns an equivalent bearing in degrees as a
-	decimal number (double).  The input may either be expressed
-	in decimal format (74.2467) or degree, minute, second
-	format (74 14 48).  This function also safely handles
-	extra spaces found either leading, trailing, or
-	embedded within the numbers expressed in the
-	input string.  Decimal seconds are permitted. */
-
-	char string[20];
-	double bearing=0.0, seconds;
-	int a, b, length, degrees, minutes;
-
-	/* Copy "input" to "string", and ignore any extra
-	spaces that might be present in the process. */
-
-	string[0]=0;
-	length=strlen(input);
-
-	for (a=0, b=0; a<length && a<18; a++) {
-		if ((input[a]!=32 && input[a]!='\n') || (input[a]==32 && input[a+1]!=32 && b!=0)) {
-			string[b]=input[a];
-			b++;
-		}
-	}
-
-	string[b]=0;
-
-	/* Count number of spaces in the clean string. */
-
-	length=strlen(string);
-
-	for (a=0, b=0; a<length; a++)
-		if (string[a]==32)
-			b++;
-
-	if (b==0) /* Decimal Format (74.2467) */
-		sscanf(string,"%lf",&bearing);
-
-	if (b==2) {
-		/* Degree, Minute, Second Format (74 14 48) */
-		sscanf(string,"%d %d %lf",&degrees, &minutes, &seconds);
-
-		if (degrees<0.0) {
-			minutes=-minutes;
-			seconds=-seconds;
-		}
-
-		bearing=(double)degrees+((double)minutes/60)+(seconds/3600);
-	}
-
-	/* Bizarre results return a 0.0 */
-
-	if (bearing>360.0 || bearing<-360.0)
-		bearing=0.0;
-
-	return bearing;
-}
-
 void AutoUpdate(const char *string, struct tle_db *tle_db, predict_orbital_elements_t **orbits)
 {
 	bool interactive_mode = (string[0] == '\0');
@@ -900,31 +838,6 @@ void PredictSunMoon(enum celestial_object object, predict_observer_t *qth)
 	} while (quit==0);
 }
 
-bool KbEdit(int x, int y, int num_characters, char *output_string)
-{
-	char *input_string = (char*)malloc(sizeof(char)*num_characters);
-	bool filled = false;
-
-	echo();
-	move(y-1,x-1);
-	wgetnstr(stdscr,input_string,num_characters);
-
-	if (strlen(input_string)!=0) {
-		filled = true;
-		strncpy(output_string,input_string,num_characters);
-	}
-
-	mvprintw(y-1,x-1,"%-25s",output_string);
-
-	refresh();
-	noecho();
-
-
-	free(input_string);
-
-	return filled;
-}
-
 void ShowOrbitData(const char *name, predict_orbital_elements_t *orbital_elements)
 {
 	int c, namelength, age;
@@ -1010,6 +923,9 @@ void ShowOrbitData(const char *name, predict_orbital_elements_t *orbital_element
 	}
 }
 
+#define QTH_FIELD_LENGTH 10
+#define NUM_QTH_FIELDS 4
+#define INPUT_NUM_CHARS 128
 void QthEdit(const char *qthfile, predict_observer_t *qth)
 {
 	//display current QTH information
@@ -1023,64 +939,127 @@ void QthEdit(const char *qthfile, predict_observer_t *qth)
 
 	curs_set(1);
 
-	attrset(COLOR_PAIR(4)|A_BOLD);
-	mvprintw(11,20,"Station Callsign  : ");
-	mvprintw(12,20,"Station Latitude  : ");
-	mvprintw(13,20,"Station Longitude : ");
-	mvprintw(14,20,"Station Altitude  : ");
+	//set up form for QTH editing
+	FIELD *fields[NUM_QTH_FIELDS+1] = {
+		new_field(1, QTH_FIELD_LENGTH, 0, 0, 0, 0),
+		new_field(1, QTH_FIELD_LENGTH, 1, 0, 0, 0),
+		new_field(1, QTH_FIELD_LENGTH, 2, 0, 0, 0),
+		new_field(1, QTH_FIELD_LENGTH, 3, 0, 0, 0),
+		NULL};
+	FIELD *name = fields[0];
+	FIELD *latitude = fields[1];
+	FIELD *longitude = fields[2];
+	FIELD *altitude = fields[3];
+	FORM *form = new_form(fields);
+	for (int i=0; i < NUM_QTH_FIELDS; i++) {
+		set_field_fore(fields[i], COLOR_PAIR(2)|A_BOLD);
+		field_opts_off(fields[i], O_STATIC);
+		set_max_field(fields[i], INPUT_NUM_CHARS);
+	}
 
+	//set up windows
+	int win_height = 5;
+	int win_width = QTH_FIELD_LENGTH;
+	int win_row = 11;
+	int win_col = 40;
+	WINDOW *form_win = newwin(win_height, win_width, win_row, win_col);
+	int rows, cols;
+	scale_form(form, &rows, &cols);
+	set_form_win(form, form_win);
+	set_form_sub(form, derwin(form_win, rows, cols, 0, 0));
+	keypad(form_win, TRUE);
+	post_form(form);
+
+	//display headers
+	attrset(COLOR_PAIR(4)|A_BOLD);
+	int info_col = 20;
+	mvprintw(win_row,info_col,"Station Callsign  : ");
+	mvprintw(win_row+1,info_col,"Station Latitude  : ");
+	mvprintw(win_row+2,info_col,"Station Longitude : ");
+	mvprintw(win_row+3,info_col,"Station Altitude  : ");
+	mvprintw(win_row+6,info_col-5," Only decimal notation (e.g. 74.2467) allowed");
+	mvprintw(win_row+7,info_col-5," for longitude and latitude.");
+
+	//print units
 	attrset(COLOR_PAIR(2)|A_BOLD);
-	mvprintw(11,43,"%s",qth->name);
-	mvprintw(12,43,"%g [DegN]",qth->latitude*180.0/M_PI);
-	mvprintw(13,43,"%g [DegE]",qth->longitude*180.0/M_PI);
-	mvprintw(14,43,"%g",qth->altitude);
+	mvprintw(win_row+1,win_col+win_width+1,"[DegN]",qth->latitude*180.0/M_PI);
+	mvprintw(win_row+2,win_col+win_width+1,"[DegE]",qth->longitude*180.0/M_PI);
+	mvprintw(win_row+3,win_col+win_width+1,"[m]",qth->altitude);
+
+	//fill form with QTH contents
+	set_field_buffer(name, 0, qth->name);
+	char temp[MAX_NUM_CHARS] = {0};
+	snprintf(temp, MAX_NUM_CHARS, "%f", qth->latitude*180.0/M_PI);
+	set_field_buffer(latitude, 0, temp);
+	snprintf(temp, MAX_NUM_CHARS, "%f", qth->longitude*180.0/M_PI);
+	set_field_buffer(longitude, 0, temp);
+	snprintf(temp, MAX_NUM_CHARS, "%f", qth->altitude);
+	set_field_buffer(altitude, 0, temp);
 
 	refresh();
+	wrefresh(form_win);
 
-	#define INPUT_NUM_CHARS 128
-	char input_string[INPUT_NUM_CHARS] = {0};
-	bool should_save = false;
+	//handle input characters to QTH form
+	bool run_form = true;
+	while (run_form) {
+		int key = wgetch(form_win);
 
-	//edit QTH name
-	mvprintw(18,15, " Enter the callsign of your ground station");
-	strncpy(input_string, qth->name, INPUT_NUM_CHARS);
-	if (KbEdit(44, 12, INPUT_NUM_CHARS, input_string)) {
-		strncpy(qth->name, input_string, INPUT_NUM_CHARS);
-		should_save = true;
+		switch (key) {
+			case KEY_UP:
+				form_driver(form, REQ_UP_FIELD);
+				break;
+			case KEY_DOWN:
+				form_driver(form, REQ_DOWN_FIELD);
+				break;
+			case KEY_LEFT:
+				form_driver(form, REQ_PREV_CHAR);
+				break;
+			case KEY_RIGHT:
+				form_driver(form, REQ_NEXT_CHAR);
+				break;
+			case 10:
+				if (current_field(form) == fields[NUM_QTH_FIELDS-1]) {
+					run_form = false;
+				} else {
+					form_driver(form, REQ_NEXT_FIELD);
+				}
+				break;
+			case KEY_BACKSPACE:
+				form_driver(form, REQ_DEL_PREV);
+				form_driver(form, REQ_VALIDATION);
+				break;
+			case KEY_DC:
+				form_driver(form, REQ_DEL_CHAR);
+				break;
+			case 27:
+				run_form = false;
+				break;
+			default:
+				form_driver(form, key);
+				form_driver(form, REQ_VALIDATION); //update buffer with field contents
+				break;
+		}
 	}
 
-	//edit latitude
-	mvprintw(18,15," Enter your latitude in degrees NORTH      ");
-	mvprintw(19,15," Decimal (74.2467) or DMS (74 14 48) format allowed");
-	sprintf(input_string,"%g [DegN]",qth->latitude*180.0/M_PI);
-	if (KbEdit(44,13, INPUT_NUM_CHARS, input_string)) {
-		qth->latitude = ReadBearing(input_string)*M_PI/180.0;
-		should_save = true;
-	}
+	//copy field contents to predict_observer
+	strncpy(qth->name, field_buffer(name, 0), INPUT_NUM_CHARS);
+	trim_whitespaces_from_end(qth->name);
+	qth->latitude = strtod(field_buffer(latitude, 0), NULL)*M_PI/180.0;
+	qth->longitude = strtod(field_buffer(longitude, 0), NULL)*M_PI/180.0;
+	qth->altitude = strtod(field_buffer(altitude, 0), NULL);
 
-	//edit longitude
-	mvprintw(18,15," Enter your longitude in degrees EAST      ");
-	sprintf(input_string, "%g [DegE]", qth->longitude*180.0/M_PI);
-	if (KbEdit(44, 14, INPUT_NUM_CHARS, input_string)) {
-		qth->longitude = ReadBearing(input_string)*M_PI/180.0;
-		should_save = true;
-	}
-	move(19,15);
-	clrtoeol();
-
-	//edit altitude
-	mvprintw(18,15," Enter your altitude above sea level (in meters)      ");
-	sprintf(input_string, "%d", (int)floor(qth->altitude));
-	if (KbEdit(44,15, INPUT_NUM_CHARS, input_string)) {
-		qth->altitude = strtod(input_string, NULL);
-		should_save = true;
-	}
-
-	if (should_save) {
-		qth_to_file(qthfile, qth);
-	}
-
+	//write to file
+	qth_to_file(qthfile, qth);
 	curs_set(0);
+
+	//free form
+	unpost_form(form);
+	free_field(name);
+	free_field(latitude);
+	free_field(longitude);
+	free_field(altitude);
+	free_form(form);
+	delwin(form_win);
 }
 
 /**
