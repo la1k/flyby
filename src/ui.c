@@ -2335,8 +2335,8 @@ void RunFlybyUI(bool new_user, const char *qthfile, predict_observer_t *observer
 		if (!multitrack_search_field_visible(listing->search_field)) {
 			PrintMainMenu(main_menu_win);
 		}
-		PrintSunMoon(sat_list_win_height + sat_list_win_row - 7, sat_list_win_width+1, observer, curr_time);
-		PrintQth(sat_list_win_row + MULTITRACK_PRINT_OFFSET, sat_list_win_width+1, observer);
+		PrintSunMoon(listing->window_height + listing->window_row - 7, sat_list_win_width+1, observer, curr_time);
+		PrintQth(listing->window_row + MULTITRACK_PRINT_OFFSET, sat_list_win_width+1, observer);
 
 		//refresh satellite list
 		multitrack_update_listing(listing, curr_time);
