@@ -862,11 +862,20 @@ void multitrack_searcher_destroy(multitrack_searcher_t **search_field)
 bool multitrack_searcher_handle(multitrack_searcher_t *search_field, int input_key)
 {
 	bool character_handled = false;
+	char *expression = NULL;
 	switch (input_key)
 	{
 		case KEY_BACKSPACE:
-			form_driver(search_field->form, REQ_DEL_PREV);
-			form_driver(search_field->form, REQ_VALIDATION);
+			expression = multitrack_searcher_string(search_field);
+			if (strlen(expression) == 0) {
+				//hide search field if it already is empty
+				multitrack_searcher_hide(search_field);
+			} else {
+				//delete characters
+				form_driver(search_field->form, REQ_DEL_PREV);
+				form_driver(search_field->form, REQ_VALIDATION);
+			}
+			free(expression);
 			break;
 		default:
 			form_driver(search_field->form, input_key);
