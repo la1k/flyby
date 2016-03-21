@@ -56,7 +56,7 @@ typedef struct {
 } multitrack_option_selector_t;
 
 /**
- * Search field shown when pressing '/'. (format inspired by htop)
+ * Search field shown when pressing '/'. (display format inspired by htop)
  **/
 typedef struct {
 	WINDOW *window;

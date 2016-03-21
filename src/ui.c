@@ -1948,7 +1948,7 @@ int PrintMainMenuOption(WINDOW *window, int row, int col, char key, const char *
 }
 
 /**
- * Print global main menu options to specified window. Format is inspired by htop. :-)
+ * Print global main menu options to specified window. Display format is inspired by htop. :-)
  *
  * \param window Window for printing
  **/
