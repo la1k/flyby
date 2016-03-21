@@ -10,6 +10,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include "string_array.h"
+#include <ctype.h>
 
 struct tle_db *tle_db_create()
 {
