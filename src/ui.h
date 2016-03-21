@@ -106,11 +106,10 @@ void PredictSunMoon(enum celestial_object object, predict_observer_t *qth);
 /* This function permits displays a satellite's orbital
  * data.  The age of the satellite data is also provided.
  *
- * \param num_orbits Number of orbits
- * \param tle_db TLE database
- * \param orbital_elements_array List of rbital elements
+ * \param name Satellite name
+ * \param orbital_elements Orbital elements
  **/
-void ShowOrbitData(struct tle_db *tle_db, predict_orbital_elements_t **orbital_elements_array);
+void ShowOrbitData(const char *name, predict_orbital_elements_t *orbital_elements);
 
 /**
  * Edit QTH information and save to file.
@@ -154,11 +153,6 @@ void MultiTrack(predict_observer_t *qth, predict_orbital_elements_t **orbital_el
  **/
 void Illumination(const char *name, predict_orbital_elements_t *orbital_elements);
 
-/*
- * Print the main menu to screen.
- **/
-void MainMenu();
-
 /**
  * Display program information.
  **/
@@ -185,18 +179,20 @@ void EditTransponderDatabaseField(const struct tle_db_entry *sat_info, WINDOW *f
 /**
  * Display transponder database entry.
  *
+ * \param name Satellite name
  * \param entry Transponder database entry to display
  * \param display_window Display window to display the entry in
  **/
-void DisplayTransponderEntry(struct sat_db_entry *entry, WINDOW *display_window);
+void DisplayTransponderEntry(const char *name, struct sat_db_entry *entry, WINDOW *display_window);
 
 /**
  * Edit entries in transponder database. Updates user database defined in XDG_DATA_HOME on exit.
  *
+ * \param start_index Selected index in the menu
  * \param tle_db TLE database, used for satellite names and numbers
  * \param sat_db Satellite database to edit
  **/
-void EditTransponderDatabase(struct tle_db *tle_db, struct transponder_db *sat_db);
+void EditTransponderDatabase(int start_index, struct tle_db *tle_db, struct transponder_db *sat_db);
 
 /**
  * Run flyby UI.

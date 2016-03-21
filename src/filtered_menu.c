@@ -49,6 +49,8 @@ void filtered_menu_free(struct filtered_menu *list)
 	}
 	free(list->entries);
 	free(list->entry_mapping);
+
+	delwin(list->sub_window);
 }
 
 void filtered_menu_pattern_match(struct filtered_menu *list, const char *pattern)
@@ -127,7 +129,8 @@ void filtered_menu_from_stringarray(struct filtered_menu *list, string_array_t *
 
 	int max_width, max_height;
 	getmaxyx(my_menu_win, max_height, max_width);
-	set_menu_sub(my_menu, derwin(my_menu_win, max_height - 3, max_width - 2, 2, 1));
+	list->sub_window = derwin(my_menu_win, max_height - 3, max_width - 2, 2, 1);
+	set_menu_sub(my_menu, list->sub_window);
 	set_menu_format(my_menu, max_height-4, 1);
 
 	set_menu_mark(my_menu, " * ");

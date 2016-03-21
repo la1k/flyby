@@ -4,6 +4,7 @@
 #include <stdbool.h>
 #include "string_array.h"
 #include "defines.h"
+#include <predict/predict.h>
 
 /**
  * Entry in TLE database.
@@ -184,6 +185,24 @@ void tle_db_entry_set_enabled(struct tle_db *db, int tle_index, bool enabled);
  * \return True if TLE entry is enabled, false otherwise
  **/
 bool tle_db_entry_enabled(const struct tle_db *db, int tle_index);
+
+/**
+ * Parse TLE database entry as an orbital elements struct.
+ *
+ * \param db TLE database
+ * \param tle_index Index in TLE database
+ * \return Orbital elements of TLE database entry
+ **/
+predict_orbital_elements_t *tle_db_entry_to_orbital_elements(const struct tle_db *db, int tle_index);
+
+/**
+ * Get name of satellite corresponding to defined TLE entry.
+ *
+ * \param db TLE database
+ * \param tle_index Index in TLE database
+ * \return Satellite name
+ **/
+const char *tle_db_entry_name(const struct tle_db *db, int tle_index);
 
 /**
  * Set TLE database entries to enabled according to whitelist file in search paths. Default is to let

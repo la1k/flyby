@@ -9,6 +9,7 @@ compiler:
 script: mkdir -p build; cd build; cmake --version && cmake .. && make
 
 notifications:
+  email: false
   irc:
     channels:
       - "irc.oftc.net#libpredict"

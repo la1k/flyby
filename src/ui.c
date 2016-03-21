@@ -34,6 +34,7 @@
 *                                                                           *
 \***************************************************************************/
 
+#include "xdg_basedirs.h"
 #include "config.h"
 #include <math.h>
 #include <time.h>
@@ -56,6 +57,7 @@
 #include "ui.h"
 #include "qth_config.h"
 #include "transponder_editor.h"
+#include "multitrack.h"
 
 #define EARTH_RADIUS_KM		6.378137E3		/* WGS 84 Earth radius km */
 #define HALF_DELAY_TIME	5
@@ -146,28 +148,6 @@ void AnyKey()
 	mvprintw(LINES - 2,57,"[Any Key To Continue]");
 	refresh();
 	getch();
-}
-
-char	temp[80];
-char *Abbreviate(string,n)
-char *string;
-int n;
-{
-	/* This function returns an abbreviated substring of the original,
-	   including a '~' character if a non-blank character is chopped
-	   out of the generated substring.  n is the length of the desired
-	   substring.  It is used for abbreviating satellite names. */
-
-	strncpy(temp,(const char *)string,79);
-
-	if (temp[n]!=0 && temp[n]!=32) {
-		temp[n-2]='~';
-		temp[n-1]=temp[strlen(temp)-1];
-	}
-
-	temp[n]=0;
-
-	return temp;
 }
 
 char KepCheck(line1,line2)
@@ -383,127 +363,6 @@ void AutoUpdate(const char *string, struct tle_db *tle_db, predict_orbital_eleme
 	}
 }
 
-int Select(struct tle_db *tle_db, predict_orbital_elements_t **orbital_elements_array)
-{
-	int num_orbits = tle_db->num_tles;
-	ITEM **my_items;
-	int c;
-	MENU *my_menu;
-	WINDOW *my_menu_win;
-	int n_choices, i, j = -1;
-
-	attrset(COLOR_PAIR(6)|A_REVERSE|A_BOLD);
-	clear();
-
-	mvprintw(0,0,"                                                                                ");
-	mvprintw(1,0,"  flyby Satellite Selector                                                      ");
-	mvprintw(2,0,"                                                                                ");
-
-	attrset(COLOR_PAIR(3)|A_BOLD);
-	mvprintw( 5,46,"Use cursor keys to move up/down");
-	mvprintw( 6,46,"the list and then select with ");
-	mvprintw( 7,46,"the 'Enter' key.");
-	mvprintw( 9,46,"Press 'q' to return to menu.");
-
-	/* Create the window to be associated with the menu */
-	my_menu_win = newwin(LINES-5, 40, 4, 4);
-	keypad(my_menu_win, TRUE);
-	wattrset(my_menu_win, COLOR_PAIR(4));
-
-	/* Print a border around the main window and print a title */
-#if	!defined (__CYGWIN32__)
-	box(my_menu_win, 0, 0);
-#endif
-
-	/* Create items */
-	my_items = (ITEM **)calloc(num_orbits + 1, sizeof(ITEM *));
-
-	int item_ind = 0;
-	for(i = 0; i < num_orbits; ++i) {
-		if (tle_db_entry_enabled(tle_db, i)) {
-			my_items[item_ind] = new_item(tle_db->tles[i].name, orbital_elements_array[i]->designator);
-			item_ind++;
-		}
-	}
-	n_choices = item_ind;
-	my_items[item_ind] = NULL; //terminate the menu list
-
-	mvprintw(LINES-3,46,"%d satellites",n_choices);
-
-	if (n_choices > 0) {
-		/* Create menu */
-		my_menu = new_menu((ITEM **)my_items);
-
-		set_menu_back(my_menu,COLOR_PAIR(1));
-		set_menu_fore(my_menu,COLOR_PAIR(5)|A_BOLD);
-
-		/* Set main window and sub window */
-		set_menu_win(my_menu, my_menu_win);
-		set_menu_sub(my_menu, derwin(my_menu_win, LINES-7, 38, 2, 1));
-		set_menu_format(my_menu, LINES-9, 1);
-
-		/* Set menu mark to the string " * " */
-		set_menu_mark(my_menu, " * ");
-
-		/* Post the menu */
-		post_menu(my_menu);
-
-		refresh();
-		wrefresh(my_menu_win);
-
-		bool should_run = true;
-		bool should_exit = false;
-		while (should_run) {
-			c = wgetch(my_menu_win);
-			switch(c) {
-				case 'q':
-					should_run = false;
-					should_exit = true;
-					break;
-				case KEY_DOWN:
-					menu_driver(my_menu, REQ_DOWN_ITEM);
-					break;
-				case KEY_UP:
-					menu_driver(my_menu, REQ_UP_ITEM);
-					break;
-				case KEY_NPAGE:
-					menu_driver(my_menu, REQ_SCR_DPAGE);
-					break;
-				case KEY_PPAGE:
-					menu_driver(my_menu, REQ_SCR_UPAGE);
-					break;
-				case 10: /* Enter */
-					pos_menu_cursor(my_menu);
-					should_run = false;
-					break;
-			}
-			wrefresh(my_menu_win);
-		}
-
-		if (!should_exit) {
-			for (i=0, j=0; i<num_orbits; i++)
-				if (strcmp(item_name(current_item(my_menu)),tle_db->tles[i].name)==0)
-					j = i;
-		}
-
-		/* Unpost and free all the memory taken up */
-		unpost_menu(my_menu);
-		free_menu(my_menu);
-	} else {
-		refresh();
-		wrefresh(my_menu_win);
-		c = wgetch(my_menu_win);
-		j = -1;
-	}
-
-	for(i = 0; i < n_choices; ++i) {
-		free_item(my_items[i]);
-	}
-	free(my_items);
-
-	return j;
-}
-
 long DayNum(m,d,y)
 int  m, d, y;
 {
@@ -714,7 +573,8 @@ int Print(const char *title, const char *string, char mode)
 			mvprintw(1,0,"  flyby Calendar :                                                              ");
 			mvprintw(1,21,"%-24s", type);
 			mvprintw(2,0,"                                                                                ");
-			mvprintw(1,60, "%s", title);
+			int title_col = 79-strlen(title);
+			mvprintw(1,title_col, "%s", title);
 			attrset(COLOR_PAIR(2)|A_REVERSE|A_BOLD);
 			mvprintw(3,0,head2);
 
@@ -817,6 +677,8 @@ int PrintVisible(const char *title, const char *string)
 
 void Predict(const char *name, predict_orbital_elements_t *orbital_elements, predict_observer_t *qth, char mode)
 {
+	Print("","",0);
+	PrintVisible("","");
 	bool should_quit = false;
 	bool should_break = false;
 	char data_string[MAX_NUM_CHARS];
@@ -927,6 +789,7 @@ void Predict(const char *name, predict_orbital_elements_t *orbital_elements, pre
 		beep();
 		bkgdset(COLOR_PAIR(7)|A_BOLD);
 		AnyKey();
+		bkgdset(COLOR_PAIR(1));
 		refresh();
 	}
 }
@@ -956,6 +819,7 @@ void PredictSunMoon(enum celestial_object object, predict_observer_t *qth)
 			strcpy(name_str, "the Moon");
 		break;
 	}
+	Print("","",0);
 
 	int iaz, iel, lastel=0;
 	char string[MAX_NUM_CHARS], quit=0;
@@ -1061,95 +925,89 @@ bool KbEdit(int x, int y, int num_characters, char *output_string)
 	return filled;
 }
 
-void ShowOrbitData(struct tle_db *tle_db, predict_orbital_elements_t **orbital_elements_array)
+void ShowOrbitData(const char *name, predict_orbital_elements_t *orbital_elements)
 {
-	int c, x, namelength, age;
+	int c, namelength, age;
 	double an_period, no_period, sma, c1, e2, satepoch;
 	char days[5];
 
-	x=Select(tle_db, orbital_elements_array);
+	if (orbital_elements->mean_motion!=0.0) {
+		bkgdset(COLOR_PAIR(2)|A_BOLD);
+		clear();
+		sma=331.25*exp(log(1440.0/orbital_elements->mean_motion)*(2.0/3.0));
+		an_period=1440.0/orbital_elements->mean_motion;
+		c1=cos(orbital_elements->inclination*M_PI/180.0);
+		e2=1.0-(orbital_elements->eccentricity*orbital_elements->eccentricity);
+		no_period=(an_period*360.0)/(360.0+(4.97*pow((EARTH_RADIUS_KM/sma),3.5)*((5.0*c1*c1)-1.0)/(e2*e2))/orbital_elements->mean_motion);
+		satepoch=DayNum(1,0,orbital_elements->epoch_year)+orbital_elements->epoch_day;
+		age=(int)rint(predict_to_julian(time(NULL))-satepoch);
 
-	while (x!=-1) {
-		predict_orbital_elements_t *orbital_elements = orbital_elements_array[x];
-		if (orbital_elements->mean_motion!=0.0) {
-			bkgdset(COLOR_PAIR(2)|A_BOLD);
-			clear();
-			sma=331.25*exp(log(1440.0/orbital_elements->mean_motion)*(2.0/3.0));
-			an_period=1440.0/orbital_elements->mean_motion;
-			c1=cos(orbital_elements->inclination*M_PI/180.0);
-			e2=1.0-(orbital_elements->eccentricity*orbital_elements->eccentricity);
-			no_period=(an_period*360.0)/(360.0+(4.97*pow((EARTH_RADIUS_KM/sma),3.5)*((5.0*c1*c1)-1.0)/(e2*e2))/orbital_elements->mean_motion);
-			satepoch=DayNum(1,0,orbital_elements->epoch_year)+orbital_elements->epoch_day;
-			age=(int)rint(predict_to_julian(time(NULL))-satepoch);
+		if (age==1)
+			strcpy(days,"day");
+		else
+			strcpy(days,"days");
 
-			if (age==1)
-				strcpy(days,"day");
-			else
-				strcpy(days,"days");
+		namelength=strlen(name);
 
-			namelength=strlen(tle_db->tles[x].name);
+		printw("\n");
 
-			printw("\n");
+		for (c=41; c>namelength; c-=2)
+			printw(" ");
 
-			for (c=41; c>namelength; c-=2)
-				printw(" ");
+		bkgdset(COLOR_PAIR(3)|A_BOLD);
+		attrset(COLOR_PAIR(6)|A_REVERSE|A_BOLD);
+		clear();
 
-			bkgdset(COLOR_PAIR(3)|A_BOLD);
-			attrset(COLOR_PAIR(6)|A_REVERSE|A_BOLD);
-			clear();
+		mvprintw(0,0,"                                                                                ");
+		mvprintw(1,0,"  flyby Orbital Data                                                            ");
+		mvprintw(2,0,"                                                                                ");
 
-			mvprintw(0,0,"                                                                                ");
-			mvprintw(1,0,"  flyby Orbital Data                                                            ");
-			mvprintw(2,0,"                                                                                ");
+		mvprintw(1,25,"(%ld) %s", orbital_elements->satellite_number, name);
 
-			mvprintw(1,25,"(%ld) %s", orbital_elements->satellite_number, tle_db->tles[x].name);
+		attrset(COLOR_PAIR(4)|A_BOLD);
+		mvprintw( 4, 4,"Data Issued        : ");
+		mvprintw( 5, 4,"Reference Epoch    : ");
+		mvprintw( 6, 4,"Inclination        : ");
+		mvprintw( 7, 4,"RAAN               : ");
+		mvprintw( 8, 4,"Eccentricity       : ");
+		mvprintw( 9, 4,"Arg of Perigee     : ");
+		mvprintw(10, 4,"Mean Anomaly       : ");
+		mvprintw(11, 4,"Mean Motion        : ");
+		mvprintw(12, 4,"Decay Rate         : ");
+		mvprintw(13, 4,"Nddot/6 Drag       : ");
+		mvprintw(14, 4,"Bstar Drag Factor  : ");
+		mvprintw(15, 4,"Semi-Major Axis    : ");
+		mvprintw(16, 4,"Apogee Altitude    : ");
+		mvprintw(17, 4,"Perigee Altitude   : ");
+		mvprintw(18, 4,"Anomalistic Period : ");
+		mvprintw(19, 4,"Nodal Period       : ");
+		mvprintw(20, 4,"Orbit Number       : ");
+		mvprintw(21, 4,"Element Set Number : ");
 
-			attrset(COLOR_PAIR(4)|A_BOLD);
-			mvprintw( 4, 4,"Data Issued        : ");
-			mvprintw( 5, 4,"Reference Epoch    : ");
-			mvprintw( 6, 4,"Inclination        : ");
-			mvprintw( 7, 4,"RAAN               : ");
-			mvprintw( 8, 4,"Eccentricity       : ");
-			mvprintw( 9, 4,"Arg of Perigee     : ");
-			mvprintw(10, 4,"Mean Anomaly       : ");
-			mvprintw(11, 4,"Mean Motion        : ");
-			mvprintw(12, 4,"Decay Rate         : ");
-			mvprintw(13, 4,"Nddot/6 Drag       : ");
-			mvprintw(14, 4,"Bstar Drag Factor  : ");
-			mvprintw(15, 4,"Semi-Major Axis    : ");
-			mvprintw(16, 4,"Apogee Altitude    : ");
-			mvprintw(17, 4,"Perigee Altitude   : ");
-			mvprintw(18, 4,"Anomalistic Period : ");
-			mvprintw(19, 4,"Nodal Period       : ");
-			mvprintw(20, 4,"Orbit Number       : ");
-			mvprintw(21, 4,"Element Set Number : ");
+		attrset(COLOR_PAIR(2)|A_BOLD);
+		mvprintw( 4,25,"%d %s ago",age,days);
+		mvprintw( 5,25,"%02d %.8f",orbital_elements->epoch_year,orbital_elements->epoch_day);
+		mvprintw( 6,25,"%.4f deg",orbital_elements->inclination);
+		mvprintw( 7,25,"%.4f deg",orbital_elements->right_ascension);
+		mvprintw( 8,25,"%g",orbital_elements->eccentricity);
+		mvprintw( 9,25,"%.4f deg",orbital_elements->argument_of_perigee);
+		mvprintw(10,25,"%.4f deg",orbital_elements->mean_anomaly);
+		mvprintw(11,25,"%.8f rev/day",orbital_elements->mean_motion);
+		mvprintw(12,25,"%g rev/day/day",orbital_elements->derivative_mean_motion);
+		mvprintw(13,25,"%g rev/day/day/day",orbital_elements->second_derivative_mean_motion);
+		mvprintw(14,25,"%g 1/earth radii",orbital_elements->bstar_drag_term);
+		mvprintw(15,25,"%.4f km",sma);
+		mvprintw(16,25,"%.4f km",sma*(1.0+orbital_elements->eccentricity)-EARTH_RADIUS_KM);
+		mvprintw(17,25,"%.4f km",sma*(1.0-orbital_elements->eccentricity)-EARTH_RADIUS_KM);
+		mvprintw(18,25,"%.4f mins",an_period);
+		mvprintw(19,25,"%.4f mins",no_period);
+		mvprintw(20,25,"%ld",orbital_elements->revolutions_at_epoch);
+		mvprintw(21,25,"%ld",orbital_elements->element_number);
 
-			attrset(COLOR_PAIR(2)|A_BOLD);
-			mvprintw( 4,25,"%d %s ago",age,days);
-			mvprintw( 5,25,"%02d %.8f",orbital_elements->epoch_year,orbital_elements->epoch_day);
-			mvprintw( 6,25,"%.4f deg",orbital_elements->inclination);
-			mvprintw( 7,25,"%.4f deg",orbital_elements->right_ascension);
-			mvprintw( 8,25,"%g",orbital_elements->eccentricity);
-			mvprintw( 9,25,"%.4f deg",orbital_elements->argument_of_perigee);
-			mvprintw(10,25,"%.4f deg",orbital_elements->mean_anomaly);
-			mvprintw(11,25,"%.8f rev/day",orbital_elements->mean_motion);
-			mvprintw(12,25,"%g rev/day/day",orbital_elements->derivative_mean_motion);
-			mvprintw(13,25,"%g rev/day/day/day",orbital_elements->second_derivative_mean_motion);
-			mvprintw(14,25,"%g 1/earth radii",orbital_elements->bstar_drag_term);
-			mvprintw(15,25,"%.4f km",sma);
-			mvprintw(16,25,"%.4f km",sma*(1.0+orbital_elements->eccentricity)-EARTH_RADIUS_KM);
-			mvprintw(17,25,"%.4f km",sma*(1.0-orbital_elements->eccentricity)-EARTH_RADIUS_KM);
-			mvprintw(18,25,"%.4f mins",an_period);
-			mvprintw(19,25,"%.4f mins",no_period);
-			mvprintw(20,25,"%ld",orbital_elements->revolutions_at_epoch);
-			mvprintw(21,25,"%ld",orbital_elements->element_number);
-
-			attrset(COLOR_PAIR(3)|A_BOLD);
-			refresh();
-			AnyKey();
-		}
-		x=Select(tle_db, orbital_elements_array);
-	 };
+		attrset(COLOR_PAIR(3)|A_BOLD);
+		refresh();
+		AnyKey();
+	}
 }
 
 void QthEdit(const char *qthfile, predict_observer_t *qth)
@@ -1221,6 +1079,8 @@ void QthEdit(const char *qthfile, predict_observer_t *qth)
 	if (should_save) {
 		qth_to_file(qthfile, qth);
 	}
+
+	curs_set(0);
 }
 
 /**
@@ -1748,321 +1608,13 @@ double scrk, scel;
 		return (COLOR_PAIR(2)|A_REVERSE); /* reverse */
 }
 
-void MultiTrack(predict_observer_t *qth, predict_orbital_elements_t **input_orbital_elements_array, struct tle_db *tle_db, char multitype, char disttype)
-{
-	int num_orbits = tle_db->num_tles;
-	int 		*satindex = (int*)malloc(sizeof(int)*num_orbits);
-
-	double		*aos = (double*)malloc(sizeof(double)*num_orbits);
-	double		*los = (double*)malloc(sizeof(double)*num_orbits);
-	char ans = '\0';
-
-	struct predict_observation *observations = (struct predict_observation*)malloc(sizeof(struct predict_observation)*num_orbits);
-	struct predict_orbit *orbits = (struct predict_orbit*)malloc(sizeof(struct predict_orbit)*num_orbits);
-	NCURSES_ATTR_T *attributes = (NCURSES_ATTR_T*)malloc(sizeof(NCURSES_ATTR_T)*num_orbits);
-	char **string_lines = (char**)malloc(sizeof(char*)*num_orbits);
-	for (int i=0; i < num_orbits; i++) {
-		string_lines[i] = (char*)malloc(sizeof(char)*MAX_NUM_CHARS);
-	}
-	predict_orbital_elements_t **orbital_elements_array = (predict_orbital_elements_t**)malloc(sizeof(predict_orbital_elements_t*)*num_orbits);
-	int *entry_mapping = (int*)calloc(num_orbits, sizeof(int));
-
-	//select only enabled satellites
-	int enabled_ind = 0;
-	for (int i=0; i < num_orbits; i++) {
-		if (tle_db_entry_enabled(tle_db, i)) {
-			orbital_elements_array[enabled_ind] = input_orbital_elements_array[i];
-			entry_mapping[enabled_ind] = i;
-			enabled_ind++;
-		}
-	}
-	num_orbits = enabled_ind;
-
-
-	curs_set(0);
-	attrset(COLOR_PAIR(6)|A_REVERSE|A_BOLD);
-	clear();
-
-	mvprintw(0,0,"                                                                                ");
-	mvprintw(1,0,"  flyby Real-Time Multi-Tracking                                                ");
-	mvprintw(2,0,"                                                                                ");
-
-	attrset(COLOR_PAIR(2)|A_REVERSE);
-
-	mvprintw(3,0,"  Satellite     Azim   Elev  Lat Long    Alt  Range     Next AOS/LOS            ");
-
-	attrset(COLOR_PAIR(4)|A_REVERSE|A_BOLD);
-	mvprintw(5,70,"   QTH   ");
-	attrset(COLOR_PAIR(2));
-	mvprintw(6,70,"%9s",Abbreviate(qth->name,9));
-	char maidenstr[9];
-	getMaidenHead(qth->latitude*180.0/M_PI, -qth->longitude*180.0/M_PI, maidenstr);
-	mvprintw(7,70,"%9s",maidenstr);
-
-	predict_julian_date_t daynum = predict_to_julian(time(NULL));
-	char time_string[MAX_NUM_CHARS];
-
-	for (int x=0; x < num_orbits; x++) {
-		predict_orbit(orbital_elements_array[x], &orbits[x], daynum);
-		los[x]=0.0;
-		aos[x]=0.0;
-		satindex[x]=x;
-	}
-
-	do {
-		attrset(COLOR_PAIR(2)|A_REVERSE);
-		mvprintw(3,28,(multitype=='m') ? " Locator " : " Lat Long");
-		attrset(COLOR_PAIR(2));
-		mvprintw(12,70,(disttype=='i') ? "  (miles)" : "     (km)");
-		mvprintw(13,70,"    (GMT)");
-
-		attrset(COLOR_PAIR(4)|A_REVERSE|A_BOLD);
-		mvprintw( 9,70," Control ");
-		attrset(COLOR_PAIR(2)|A_REVERSE);
-		mvprintw(10,70," ik lm q ");
-		mvprintw(10,(disttype=='i') ? 71 : 72," ");
-		mvprintw(10,(multitype=='m') ? 75 : 74," ");
-
-
-		daynum = predict_to_julian(time(NULL));
-
-		//predict orbits
-		for (int i=0; i < num_orbits; i++){
-			struct predict_orbit *orbit = &(orbits[i]);
-
-			struct predict_observation obs;
-			predict_orbit(orbital_elements_array[i], orbit, daynum);
-			predict_observe_orbit(qth, orbit, &obs);
-
-			//sun status
-			char sunstat;
-			if (!orbit->eclipsed) {
-				if (obs.visible) {
-					sunstat='V';
-				} else {
-					sunstat='D';
-				}
-			} else {
-				sunstat='N';
-			}
-
-			//satellite approaching status
-			char rangestat;
-			if (fabs(obs.range_rate) < 0.1) {
-				rangestat = '=';
-			} else if (obs.range_rate < 0.0) {
-				rangestat = '/';
-			} else if (obs.range_rate > 0.0) {
-				rangestat = '\\';
-			}
-
-			//set text formatting attributes according to satellite state, set AOS/LOS string
-			bool can_predict = !predict_is_geostationary(orbital_elements_array[i]) && predict_aos_happens(orbital_elements_array[i], qth->latitude) && !(orbits[i].decayed);
-			char aos_los[MAX_NUM_CHARS] = {0};
-			if (obs.elevation >= 0) {
-				//different colours according to range and elevation
-				attributes[i] = MultiColours(obs.range, obs.elevation*180/M_PI);
-
-				if (predict_is_geostationary(orbital_elements_array[i])){
-					sprintf(aos_los, "*GeoS*");
-				} else {
-					time_t epoch = predict_from_julian(los[i] - daynum);
-					strftime(aos_los, MAX_NUM_CHARS, "%M:%S", gmtime(&epoch)); //time until LOS
-				}
-			} else if ((obs.elevation < 0) && can_predict) {
-				if ((aos[i]-daynum) < 0.00694) {
-					//satellite is close, set bold
-					attributes[i] = COLOR_PAIR(2);
-					time_t epoch = predict_from_julian(aos[i] - daynum);
-					strftime(aos_los, MAX_NUM_CHARS, "%M:%S", gmtime(&epoch)); //minutes and seconds left until AOS
-				} else {
-					//satellite is far, set normal coloring
-					attributes[i] = COLOR_PAIR(4);
-					time_t epoch = predict_from_julian(aos[i]);
-					strftime(aos_los, MAX_NUM_CHARS, "%j.%H:%M:%S", gmtime(&epoch)); //time for AOS
-				}
-			} else if (!can_predict) {
-				attributes[i] = COLOR_PAIR(3);
-				sprintf(aos_los, "*GeoS-NoAOS*");
-			}
-
-			char abs_pos_string[MAX_NUM_CHARS] = {0};
-			if (multitype == 'm') {
-				getMaidenHead(orbit->latitude*180.0/M_PI, orbit->longitude*180.0/M_PI, abs_pos_string);
-			} else {
-				sprintf(abs_pos_string, "%3.0f  %3.0f", orbit->latitude*180.0/M_PI, orbit->longitude*180.0/M_PI);
-			}
-
-			/* Calculate Next Event (AOS/LOS) Times */
-			if (can_predict && (daynum > los[i]) && (obs.elevation > 0)) {
-				los[i]= predict_next_los(qth, orbital_elements_array[i], daynum);
-			}
-
-			if (can_predict && (daynum > aos[i])) {
-				if (obs.elevation < 0) {
-					aos[i] = predict_next_aos(qth, orbital_elements_array[i], daynum);
-				}
-			}
-
-			//altitude and range in km/miles
-			double disp_altitude = orbit->altitude;
-			double disp_range = obs.range;
-			if (disttype == 'i') {
-				disp_altitude = disp_altitude*KM_TO_MI;
-				disp_range = disp_range*KM_TO_MI;
-			}
-
-			//set string to display
-			char disp_string[MAX_NUM_CHARS];
-			sprintf(disp_string, " %-13s%5.1f  %5.1f %8s  %6.0f %6.0f %c %c %12s ", Abbreviate(tle_db->tles[entry_mapping[i]].name, 12), obs.azimuth*180.0/M_PI, obs.elevation*180.0/M_PI, abs_pos_string, disp_altitude, disp_range, sunstat, rangestat, aos_los);
-
-			//overwrite everything if orbit was decayed
-			if (orbit->decayed) {
-				attributes[i] = COLOR_PAIR(2);
-				sprintf(disp_string, " %-10s   ----------------       Decayed        ---------------", Abbreviate(tle_db->tles[entry_mapping[i]].name,9));
-			}
-
-			memcpy(string_lines[i], disp_string, sizeof(char)*MAX_NUM_CHARS);
-			observations[i] = obs;
-		}
-
-		//predict and observe sun and moon
-		struct predict_observation sun;
-		predict_observe_sun(qth, daynum, &sun);
-
-		struct predict_observation moon;
-		predict_observe_moon(qth, daynum, &moon);
-
-		//display sun and moon
-		attrset(COLOR_PAIR(4)|A_REVERSE|A_BOLD);
-		mvprintw(16,70,"   Sun   ");
-		mvprintw(20,70,"   Moon  ");
-		if (sun.elevation > 0.0)
-			attrset(COLOR_PAIR(3)|A_BOLD);
-		else
-			attrset(COLOR_PAIR(2));
-		mvprintw(17,70,"%-7.2fAz",sun.azimuth*180.0/M_PI);
-		mvprintw(18,70,"%+-6.2f El",sun.elevation*180.0/M_PI);
-
-		attrset(COLOR_PAIR(3)|A_BOLD);
-		if (moon.elevation > 0.0)
-			attrset(COLOR_PAIR(1)|A_BOLD);
-		else
-			attrset(COLOR_PAIR(1));
-		mvprintw(21,70,"%-7.2fAz",moon.azimuth*180.0/M_PI);
-		mvprintw(22,70,"%+-6.2f El",moon.elevation*180.0/M_PI);
-
-
-		//sort satellites before displaying them
-
-		//those with elevation > 0 at the top
-		int above_horizon_counter = 0;
-		for (int i=0; i < num_orbits; i++){
-			if (observations[i].elevation > 0) {
-				satindex[above_horizon_counter] = i;
-				above_horizon_counter++;
-			}
-		}
-
-		//satellites that will eventually rise above the horizon
-		int below_horizon_counter = 0;
-		for (int i=0; i < num_orbits; i++){
-			bool will_be_visible = !(orbits[i].decayed) && predict_aos_happens(orbital_elements_array[i], qth->latitude) && !predict_is_geostationary(orbital_elements_array[i]);
-			if ((observations[i].elevation <= 0) && will_be_visible) {
-				satindex[below_horizon_counter + above_horizon_counter] = i;
-				below_horizon_counter++;
-			}
-		}
-
-		//satellites that will never be visible, with decayed orbits last
-		int nevervisible_counter = 0;
-		int decayed_counter = 0;
-		for (int i=0; i < num_orbits; i++){
-			bool never_visible = !predict_aos_happens(orbital_elements_array[i], qth->latitude) || predict_is_geostationary(orbital_elements_array[i]);
-			if ((observations[i].elevation <= 0) && never_visible && !(orbits[i].decayed)) {
-				satindex[below_horizon_counter + above_horizon_counter + nevervisible_counter] = i;
-				nevervisible_counter++;
-			} else if (orbits[i].decayed) {
-				satindex[num_orbits - 1 - decayed_counter] = i;
-				decayed_counter++;
-			}
-		}
-
-		//sort internally according to AOS/LOS
-		for (int i=0; i < above_horizon_counter + below_horizon_counter; i++) {
-			for (int j=0; j < above_horizon_counter + below_horizon_counter - 1; j++){
-				if (aos[satindex[j]]>aos[satindex[j+1]]) {
-					int x = satindex[j];
-					satindex[j] = satindex[j+1];
-					satindex[j+1] = x;
-				}
-			}
-		}
-
-		attrset(COLOR_PAIR(6)|A_REVERSE|A_BOLD);
-
-		time_t epoch = time(NULL);
-		daynum=predict_to_julian(epoch);
-		strftime(time_string, MAX_NUM_CHARS, "%a %d%b%y %j.%H%M%S", gmtime(&epoch));
-		mvprintw(1,54,"%s",time_string);
-		mvprintw(1,35,"(%d/%d in view)  ", above_horizon_counter, num_orbits);
-
-		//display satellites
-		int line = 5;
-		for (int i=0; i < above_horizon_counter; i++) {
-			attrset(attributes[satindex[i]]);
-			mvprintw((line++), 1, "%s", string_lines[satindex[i]]);
-		}
-		attrset(0);
-		mvprintw((line++), 1, "                                                                   ");
-		for (int i=above_horizon_counter; i < (below_horizon_counter + above_horizon_counter + nevervisible_counter); i++) {
-			attrset(attributes[satindex[i]]);
-			mvprintw((line++), 1, "%s", string_lines[satindex[i]]);
-		}
-		attrset(0);
-		mvprintw((line++), 1, "                                                                   ");
-		for (int i=above_horizon_counter + below_horizon_counter + nevervisible_counter; i < num_orbits; i++) {
-			attrset(attributes[satindex[i]]);
-			mvprintw((line++), 1, "%s", string_lines[satindex[i]]);
-		}
-
-		if (num_orbits == 0) {
-			mvprintw((line++), 1, "Satellite list is empty. Are any satellites enabled?");
-			mvprintw((line++), 1, "(Go back to main menu and press 'W')");
-		}
-
-		refresh();
-		halfdelay(HALF_DELAY_TIME);  // Increase if CPU load is too high
-		ans=tolower(getch());
-
-		if (ans=='m') multitype='m';
-		if (ans=='l') multitype='l';
-		if (ans=='k') disttype ='k';
-		if (ans=='i') disttype ='i';
-
-	} while (ans!='q' && ans!=27);
-
-	cbreak();
-
-	free(satindex);
-	free(aos);
-	free(los);
-	free(observations);
-	free(attributes);
-	for (int i=0; i < tle_db->num_tles; i++) {
-		free(string_lines[i]);
-	}
-	free(orbits);
-	free(string_lines);
-	free(orbital_elements_array);
-	free(entry_mapping);
-}
-
 void Illumination(const char *name, predict_orbital_elements_t *orbital_elements)
 {
 	double startday, oneminute, sunpercent;
 	int eclipses, minutes, quit, breakout=0, count;
 	char string1[MAX_NUM_CHARS], string[MAX_NUM_CHARS], datestring[MAX_NUM_CHARS];
+
+	Print("","",0);
 
 	oneminute=1.0/(24.0*60.0);
 
@@ -2202,11 +1754,13 @@ void EditWhitelist(struct tle_db *tle_db)
 
 	int *tle_index = (int*)calloc(tle_db->num_tles, sizeof(int));
 
-	attrset(COLOR_PAIR(3)|A_BOLD);
-	if (tle_db->num_tles >= MAX_NUM_SATS)
-		mvprintw(LINES-3,46,"Truncated to %d satellites",MAX_NUM_SATS);
-	else
-		mvprintw(LINES-3,46,"%d satellites",tle_db->num_tles);
+	if (tle_db->num_tles > 0) {
+		attrset(COLOR_PAIR(3)|A_BOLD);
+		if (tle_db->num_tles >= MAX_NUM_SATS)
+			mvprintw(LINES-3,46,"Truncated to %d satellites",MAX_NUM_SATS);
+		else
+			mvprintw(LINES-3,46,"%d satellites",tle_db->num_tles);
+	}
 
 	/* Create form for query input */
 	FIELD *field[2];
@@ -2231,7 +1785,8 @@ void EditWhitelist(struct tle_db *tle_db)
 
 	/* Set main window and sub window */
 	set_form_win(form, form_win);
-	set_form_sub(form, derwin(form_win, rows, cols, 2, 2));
+	WINDOW *subwin = derwin(form_win, rows, cols, 2, 2);
+	set_form_sub(form, subwin);
 
 	post_form(form);
 	wrefresh(form_win);
@@ -2243,33 +1798,38 @@ void EditWhitelist(struct tle_db *tle_db)
 
 	keypad(my_menu_win, TRUE);
 	wattrset(my_menu_win, COLOR_PAIR(4));
-	box(my_menu_win, 0, 0);
 
-	/* Print description */
-	attrset(COLOR_PAIR(3)|A_BOLD);
-	int col = 42;
-	row = 5;
-	mvprintw( 6,col,"Use upper-case characters to ");
-	mvprintw( 7,col,"filter satellites by name.");
+	if (tle_db->num_tles > 0) {
+		box(my_menu_win, 0, 0);
+	}
+
+	if (tle_db->num_tles > 0) {
+		/* Print description */
+		attrset(COLOR_PAIR(3)|A_BOLD);
+		int col = 42;
+		row = 5;
+		mvprintw( 6,col,"Use upper-case characters to ");
+		mvprintw( 7,col,"filter satellites by name.");
 
 
-	mvprintw( 10,col,"Use cursor keys to move up/down");
-	mvprintw( 11,col,"the list and then disable/enable");
-	mvprintw( 12,col,"with        .");
+		mvprintw( 10,col,"Use cursor keys to move up/down");
+		mvprintw( 11,col,"the list and then disable/enable");
+		mvprintw( 12,col,"with        .");
 
-	mvprintw( 14,col,"Press  q  to return to menu or");
-	mvprintw( 15,col,"wipe query field if filled.");
-	mvprintw( 17,col,"Press  a  to toggle visible entries.");
-	mvprintw( 19,col,"Press  w  to wipe query field.");
-	mvprintw(5, 6, "Filter TLEs by name:");
-	row = 18;
+		mvprintw( 14,col,"Press  q  to return to menu or");
+		mvprintw( 15,col,"wipe query field if filled.");
+		mvprintw( 17,col,"Press  a  to toggle visible entries.");
+		mvprintw( 19,col,"Press  w  to wipe query field.");
+		mvprintw(5, 6, "Filter TLEs by name:");
+		row = 18;
 
-	/* Print keyboard bindings in special format */
-	attrset(COLOR_PAIR(6)|A_REVERSE|A_BOLD);
-	mvprintw( 12,col+5," SPACE ");
-	mvprintw( 14,col+6," q ");
-	mvprintw( 17,col+6," a ");
-	mvprintw( 19,col+6," w ");
+		/* Print keyboard bindings in special format */
+		attrset(COLOR_PAIR(6)|A_REVERSE|A_BOLD);
+		mvprintw( 12,col+5," SPACE ");
+		mvprintw( 14,col+6," q ");
+		mvprintw( 17,col+6," a ");
+		mvprintw( 19,col+6," w ");
+	}
 
 	refresh();
 
@@ -2281,10 +1841,40 @@ void EditWhitelist(struct tle_db *tle_db)
 	refresh();
 	wrefresh(my_menu_win);
 	form_driver(form, REQ_VALIDATION);
-	wrefresh(form_win);
+	if (tle_db->num_tles > 0) {
+		wrefresh(form_win);
+	}
 	bool run_menu = true;
 
 	while (run_menu) {
+		if (tle_db->num_tles == 0) {
+			char *data_home = xdg_data_home();
+			char *data_dirs = xdg_data_dirs();
+			string_array_t data_dirs_list = {0};
+			stringsplit(data_dirs, &data_dirs_list);
+
+			int row = 5;
+			int col = 10;
+			attrset(COLOR_PAIR(1));
+			mvprintw(row++, col, "No TLEs found.");
+			row++;
+			mvprintw(row++, col, "TLE files can be placed in ");
+			mvprintw(row++, col, "the following locations:");
+			row++;
+			mvprintw(row++, col, "* %s%s", data_home, TLE_RELATIVE_DIR_PATH);
+
+			for (int i=0; i < string_array_size(&data_dirs_list); i++) {
+				mvprintw(row++, col, "* %s%s", string_array_get(&data_dirs_list, i), TLE_RELATIVE_DIR_PATH);
+			}
+			row++;
+			mvprintw(row++, col, "Files will be loaded on program restart.");
+
+			free(data_home);
+			free(data_dirs);
+			string_array_free(&data_dirs_list);
+			refresh();
+		}
+
 		//handle keyboard
 		c = wgetch(my_menu_win);
 		bool handled = false;
@@ -2340,87 +1930,47 @@ void EditWhitelist(struct tle_db *tle_db)
 	free(tle_index);
 	free_form(form);
 
+	delwin(subwin);
+	delwin(my_menu_win);
+	delwin(form_win);
+
 	free_field(field[0]);
 }
 
-void MainMenu()
+#define MAIN_MENU_BACKGROUND_STYLE COLOR_PAIR(4)|A_REVERSE
+int PrintMainMenuOption(WINDOW *window, int row, int col, char key, const char *description)
 {
-	/* Start-up menu.  Your wish is my command. :-) */
+	wattrset(window, COLOR_PAIR(1));
+	mvwprintw(window, row,col,"%c", key);
+	wattrset(window, MAIN_MENU_BACKGROUND_STYLE);
+	mvwprintw(window, row,col+1,"%s", description);
+	return col + 1 + strlen(description);
+}
 
-	Banner();
-	attrset(COLOR_PAIR(6)|A_REVERSE|A_BOLD);
-	mvprintw( 9,2," P ");
-	attrset(COLOR_PAIR(3)|A_BOLD);
-	mvprintw( 9,6," Predict Satellite Passes");
+/**
+ * Print global main menu options to specified window. Display format is inspired by htop. :-)
+ *
+ * \param window Window for printing
+ **/
+void PrintMainMenu(WINDOW *window)
+{
+	int row = 0;
+	int column = 0;
 
-	attrset(COLOR_PAIR(6)|A_REVERSE|A_BOLD);
-	mvprintw(11,2," V ");
-	attrset(COLOR_PAIR(3)|A_BOLD);
-	mvprintw(11,6," Predict Visible Passes");
+	column = PrintMainMenuOption(window, row, column, 'W', "Enable/Disable Satellites");
+	column = PrintMainMenuOption(window, row, column, 'G', "Edit Ground Station      ");
+	column = PrintMainMenuOption(window, row, column, 'E', "Edit Transponder Database");
+	column = 0;
+	row++;
+	column = PrintMainMenuOption(window, row, column, 'I', "Program Information      ");
+	column = PrintMainMenuOption(window, row, column, 'O', "Solar Pass Predictions   ");
+	column = PrintMainMenuOption(window, row, column, 'N', "Lunar Pass Predictions   ");
+	column = 0;
+	row++;
+	column = PrintMainMenuOption(window, row, column, 'U', "Update Sat Elements                                ");
+	column = PrintMainMenuOption(window, row, column, 'Q', "Exit flyby               ");
 
-	attrset(COLOR_PAIR(6)|A_REVERSE|A_BOLD);
-	mvprintw(13,2," S ");
-	attrset(COLOR_PAIR(3)|A_BOLD);
-	mvprintw(13,6," Solar Illumination Predictions");
-
-	attrset(COLOR_PAIR(6)|A_REVERSE|A_BOLD);
-	mvprintw(15,2," N ");
-	attrset(COLOR_PAIR(3)|A_BOLD);
-	mvprintw(15,6," Lunar Pass Predictions");
-
-	attrset(COLOR_PAIR(6)|A_REVERSE|A_BOLD);
-	mvprintw(17,2," O ");
-	attrset(COLOR_PAIR(3)|A_BOLD);
-	mvprintw(17,6," Solar Pass Predictions");
-
-	attrset(COLOR_PAIR(6)|A_REVERSE|A_BOLD);
-	mvprintw(19,2," T ");
-	attrset(COLOR_PAIR(3)|A_BOLD);
-	mvprintw(19,6," Single Satellite Tracking Mode");
-
-	attrset(COLOR_PAIR(6)|A_REVERSE|A_BOLD);
-	mvprintw(21,2," M ");
-	attrset(COLOR_PAIR(3)|A_BOLD);
-	mvprintw(21,6," Multi-Satellite Tracking Mode");
-
-
-	attrset(COLOR_PAIR(6)|A_REVERSE|A_BOLD);
-	mvprintw( 9,41," I ");
-	attrset(COLOR_PAIR(3)|A_BOLD);
-	mvprintw( 9,45," Program Information");
-
-	attrset(COLOR_PAIR(6)|A_REVERSE|A_BOLD);
-	mvprintw(11,41," G ");
-	attrset(COLOR_PAIR(3)|A_BOLD);
-	mvprintw(11,45," Edit Ground Station Information");
-
-	attrset(COLOR_PAIR(6)|A_REVERSE|A_BOLD);
-	mvprintw(13,41," D ");
-	attrset(COLOR_PAIR(3)|A_BOLD);
-	mvprintw(13,45," Display Satellite Orbital Data");
-
-	attrset(COLOR_PAIR(6)|A_REVERSE|A_BOLD);
-	mvprintw(15,41," U ");
-	attrset(COLOR_PAIR(3)|A_BOLD);
-	mvprintw(15,45," Update Sat Elements From File");
-
-	attrset(COLOR_PAIR(6)|A_REVERSE|A_BOLD);
-	mvprintw(17,41," W ");
-	attrset(COLOR_PAIR(3)|A_BOLD);
-	mvprintw(17,45," Enable/disable satellites");
-
-	attrset(COLOR_PAIR(6)|A_REVERSE|A_BOLD);
-	mvprintw(19,41," E ");
-	attrset(COLOR_PAIR(3)|A_BOLD);
-	mvprintw(19,45," Edit transponder database");
-
-	attrset(COLOR_PAIR(6)|A_REVERSE|A_BOLD);
-	mvprintw(21,41," Q ");
-	attrset(COLOR_PAIR(3)|A_BOLD);
-	mvprintw(21,45," Exit flyby");
-
-	refresh();
-
+	wrefresh(window);
 }
 
 void ProgramInfo(const char *qthfile, struct tle_db *tle_db, struct transponder_db *transponder_db, rotctld_info_t *rotctld)
@@ -2511,12 +2061,18 @@ void EditTransponderDatabaseField(const struct tle_db_entry *sat_info, WINDOW *f
 	delwin(form_win);
 }
 
-void DisplayTransponderEntry(struct sat_db_entry *entry, WINDOW *display_window)
+void DisplayTransponderEntry(const char *name, struct sat_db_entry *entry, WINDOW *display_window)
 {
 	werase(display_window);
+
+	//display satellite name
+	wattrset(display_window, A_BOLD);
+	mvwprintw(display_window, 1, 0, "%s transponders", name);
+
 	int data_col = 15;
 	int info_col = 1;
-	int row = 1;
+	int start_row = 3;
+	int row = start_row;
 
 	//file location information
 	wattrset(display_window, COLOR_PAIR(4)|A_BOLD);
@@ -2532,7 +2088,7 @@ void DisplayTransponderEntry(struct sat_db_entry *entry, WINDOW *display_window)
 		mvwprintw(display_window, row++, info_col, "A system default exists.");
 	}
 
-	row = 4;
+	row = start_row+3;
 
 	//display squint angle information
 	wattrset(display_window, COLOR_PAIR(4)|A_BOLD);
@@ -2552,7 +2108,7 @@ void DisplayTransponderEntry(struct sat_db_entry *entry, WINDOW *display_window)
 	} else {
 		mvwprintw(display_window, row, data_col, "Disabled");
 	}
-	row = 7;
+	row = start_row+6;
 
 	//display transponder information
 	for (int i=0; i < entry->num_transponders; i++) {
@@ -2591,9 +2147,13 @@ void DisplayTransponderEntry(struct sat_db_entry *entry, WINDOW *display_window)
 		wattrset(display_window, COLOR_PAIR(4)|A_BOLD);
 		mvwprintw(display_window, ++row, info_col, "No transponders defined.");
 	}
+
+	int bottom_row = getmaxy(display_window)-2;
+	wattrset(display_window, COLOR_PAIR(4)|A_BOLD);
+	mvwprintw(display_window, bottom_row, 0, "Press ENTER to edit transponder entries.");
 }
 
-void EditTransponderDatabase(struct tle_db *tle_db, struct transponder_db *sat_db)
+void EditTransponderDatabase(int start_index, struct tle_db *tle_db, struct transponder_db *sat_db)
 {
 	//print header
 	clear();
@@ -2621,9 +2181,18 @@ void EditTransponderDatabase(struct tle_db *tle_db, struct transponder_db *sat_d
 	filtered_menu_from_tle_db(&menu, tle_db, menu_win);
 	filtered_menu_set_multimark(&menu, false);
 
-	if (tle_db->num_tles > 0) {
-		DisplayTransponderEntry(&(sat_db->sats[0]), display_win);
+	if (start_index >= menu.num_displayed_entries) {
+		start_index = menu.num_displayed_entries-1;
 	}
+	if (start_index < 0) {
+		start_index = 0;
+	}
+
+	if (tle_db->num_tles > 0) {
+		DisplayTransponderEntry(tle_db->tles[start_index].name, &(sat_db->sats[start_index]), display_win);
+	}
+
+	set_current_item(menu.menu, menu.displayed_entries[start_index]);
 
 	box(menu_win, 0, 0);
 
@@ -2659,7 +2228,7 @@ void EditTransponderDatabase(struct tle_db *tle_db, struct transponder_db *sat_d
 
 		//display/refresh transponder entry displayer
 		if (tle_db->num_tles > 0) {
-			DisplayTransponderEntry(&(sat_db->sats[menu_index]), display_win);
+			DisplayTransponderEntry(tle_db->tles[menu_index].name, &(sat_db->sats[menu_index]), display_win);
 		}
 		wrefresh(display_win);
 	}
@@ -2672,6 +2241,65 @@ void EditTransponderDatabase(struct tle_db *tle_db, struct transponder_db *sat_d
 
 	//read transponder database from file again in order to set the flags correctly
 	transponder_db_from_search_paths(tle_db, sat_db);
+
+	delwin(header_win);
+	delwin(display_win);
+	delwin(main_win);
+	delwin(menu_win);
+	delwin(editor_win);
+}
+
+/**
+ * Print sun/moon azimuth/elevation to infoboxes on the standard screen. Uses 9 columns and 7 rows.
+ *
+ * \param row Start row for printing
+ * \param col Start column for printing
+ * \param qth QTH coordinates
+ * \param daynum Time for calculation
+ **/
+void PrintSunMoon(int row, int col, predict_observer_t *qth, predict_julian_date_t daynum)
+{
+	struct predict_observation sun;
+	predict_observe_sun(qth, daynum, &sun);
+
+	struct predict_observation moon;
+	predict_observe_moon(qth, daynum, &moon);
+
+	attrset(COLOR_PAIR(4)|A_REVERSE|A_BOLD);
+	mvprintw(row,col,"   Sun   ");
+	mvprintw(row+4,col,"   Moon  ");
+	if (sun.elevation > 0.0)
+		attrset(COLOR_PAIR(3)|A_BOLD);
+	else
+		attrset(COLOR_PAIR(2));
+	mvprintw(row+1,col,"%-7.2fAz",sun.azimuth*180.0/M_PI);
+	mvprintw(row+2,col,"%+-6.2f El",sun.elevation*180.0/M_PI);
+
+	attrset(COLOR_PAIR(3)|A_BOLD);
+	if (moon.elevation > 0.0)
+		attrset(COLOR_PAIR(1)|A_BOLD);
+	else
+		attrset(COLOR_PAIR(1));
+	mvprintw(row+5,col,"%-7.2fAz",moon.azimuth*180.0/M_PI);
+	mvprintw(row+6,col,"%+-6.2f El",moon.elevation*180.0/M_PI);
+}
+
+/**
+ * Print QTH coordinates in infobox on standard screen. Uses 9 columns and 3 rows.
+ *
+ * \param row Start row for printing
+ * \param col Start column for printing
+ * \param qth QTH coordinates
+ **/
+void PrintQth(int row, int col, predict_observer_t *qth)
+{
+	attrset(COLOR_PAIR(4)|A_REVERSE|A_BOLD);
+	mvprintw(row++,col,"   QTH   ");
+	attrset(COLOR_PAIR(2));
+	mvprintw(row++,col,"%9s",qth->name);
+	char maidenstr[9];
+	getMaidenHead(qth->latitude*180.0/M_PI, -qth->longitude*180.0/M_PI, maidenstr);
+	mvprintw(row++,col,"%9s",maidenstr);
 }
 
 void RunFlybyUI(bool new_user, const char *qthfile, predict_observer_t *observer, struct tle_db *tle_db, struct transponder_db *sat_db, rotctld_info_t *rotctld, rigctld_info_t *downlink, rigctld_info_t *uplink)
@@ -2692,6 +2320,7 @@ void RunFlybyUI(bool new_user, const char *qthfile, predict_observer_t *observer
 	init_pair(5,COLOR_WHITE,COLOR_RED);
 	init_pair(6,COLOR_RED,COLOR_WHITE);
 	init_pair(7,COLOR_CYAN,COLOR_RED);
+	init_pair(8,COLOR_RED,COLOR_YELLOW);
 
 	if (new_user) {
 		NewUser();
@@ -2705,106 +2334,118 @@ void RunFlybyUI(bool new_user, const char *qthfile, predict_observer_t *observer
 		char *tle[2] = {tle_db->tles[i].line1, tle_db->tles[i].line2};
 		orbital_elements_array[i] = predict_parse_tle(tle);
 	}
+	predict_julian_date_t curr_time = predict_to_julian(time(NULL));
+
+	//prepare multitrack window
+	int sat_list_win_height = 22;
+	int sat_list_win_row = 2;
+	int sat_list_win_width = 67;
+	WINDOW *sat_list_win = newwin(sat_list_win_height, sat_list_win_width, sat_list_win_row, 0);
+	multitrack_listing_t *listing = multitrack_create_listing(sat_list_win, observer, tle_db);
+
+	//window for printing main menu options
+	WINDOW *main_menu_win = newwin(3, COLS, sat_list_win_row + sat_list_win_height + 1, 0);
+
+	refresh();
 
 	/* Display main menu and handle keyboard input */
-	MainMenu();
-	int indx = 0;
-	char key;
-	do {
-		key=getch();
+	int key = 0;
+	bool should_run = true;
+	while (should_run) {
+		curr_time = predict_to_julian(time(NULL));
 
-		if (key!='T')
-			key=tolower(key);
-
-		switch (key) {
-			case 'p':
-			case 'v':
-				Print("","",0);
-				PrintVisible("","");
-				indx=Select(tle_db, orbital_elements_array);
-
-				if (indx!=-1) {
-					Predict(tle_db->tles[indx].name, orbital_elements_array[indx], observer, key);
-				}
-
-				MainMenu();
-				break;
-
-			case 'n':
-				Print("","",0);
-				PredictSunMoon(PREDICT_MOON, observer);
-				MainMenu();
-				break;
-
-			case 'o':
-				Print("","",0);
-				PredictSunMoon(PREDICT_SUN, observer);
-				MainMenu();
-				break;
-
-			case 'u':
-				AutoUpdate("", tle_db, orbital_elements_array);
-				MainMenu();
-				break;
-
-			case 'd':
-				ShowOrbitData(tle_db, orbital_elements_array);
-				MainMenu();
-				break;
-
-			case 'g':
-				QthEdit(qthfile, observer);
-				MainMenu();
-				break;
-
-			case 't':
-			case 'T':
-				indx=Select(tle_db, orbital_elements_array);
-
-				if (indx!=-1) {
-					SingleTrack(indx, orbital_elements_array, observer, sat_db, tle_db, rotctld, downlink, uplink);
-				}
-
-				MainMenu();
-				break;
-
-			case 'm':
-			case 'l':
-
-				MultiTrack(observer, orbital_elements_array, tle_db, key, 'k');
-				MainMenu();
-				break;
-
-			case 'i':
-				ProgramInfo(qthfile, tle_db, sat_db, rotctld);
-				MainMenu();
-				break;
-
-			case 's':
-				indx=Select(tle_db, orbital_elements_array);
-
-				if (indx!=-1) {
-					Print("","",0);
-
-					Illumination(tle_db->tles[indx].name, orbital_elements_array[indx]);
-				}
-
-				MainMenu();
-				break;
-
-			case 'w':
-			case 'W':
-				EditWhitelist(tle_db);
-				MainMenu();
-				break;
-			case 'E':
-			case 'e':
-				EditTransponderDatabase(tle_db, sat_db);
-				MainMenu();
-				break;
+		if (!multitrack_search_field_visible(listing->search_field)) {
+			PrintMainMenu(main_menu_win);
 		}
+		PrintSunMoon(sat_list_win_height + sat_list_win_row - 7, sat_list_win_width+1, observer, curr_time);
+		PrintQth(sat_list_win_row + MULTITRACK_PRINT_OFFSET, sat_list_win_width+1, observer);
 
-	} while (key!='q' && key!=27);
+		//refresh satellite list
+		multitrack_update_listing(listing, curr_time);
+		multitrack_display_listing(listing);
+
+		//get input character
+		refresh();
+		halfdelay(HALF_DELAY_TIME);  // Increase if CPU load is too high
+		key = getch();
+		if (key != -1) {
+			cbreak(); //turn off halfdelay
+
+			//handle input to satellite list
+			bool handled = multitrack_handle_listing(listing, key);
+
+			//option in submenu has been selected, run satellite specific options
+			if (multitrack_option_selector_pop(listing->option_selector)) {
+				int option = multitrack_option_selector_get_option(listing->option_selector);
+				int satellite_index = multitrack_selected_entry(listing);
+				switch (option) {
+					case OPTION_SINGLETRACK:
+						SingleTrack(satellite_index, orbital_elements_array, observer, sat_db, tle_db, rotctld, downlink, uplink);
+						break;
+					case OPTION_PREDICT_VISIBLE:
+						Predict(tle_db->tles[satellite_index].name, orbital_elements_array[satellite_index], observer, 'v');
+						break;
+					case OPTION_PREDICT:
+						Predict(tle_db->tles[satellite_index].name, orbital_elements_array[satellite_index], observer, 'p');
+						break;
+					case OPTION_DISPLAY_ORBITAL_DATA:
+						ShowOrbitData(tle_db->tles[satellite_index].name, orbital_elements_array[satellite_index]);
+						break;
+					case OPTION_EDIT_TRANSPONDER:
+						EditTransponderDatabase(satellite_index, tle_db, sat_db);
+						break;
+					case OPTION_SOLAR_ILLUMINATION:
+						Illumination(tle_db->tles[satellite_index].name, orbital_elements_array[satellite_index]);
+						break;
+				}
+				clear();
+				refresh();
+			}
+
+			//handle all other, global options
+			if (!handled) {
+				if (!handled) {
+					switch (key) {
+						case 'n':
+							PredictSunMoon(PREDICT_MOON, observer);
+							break;
+
+						case 'o':
+							PredictSunMoon(PREDICT_SUN, observer);
+							break;
+
+						case 'u':
+							AutoUpdate("", tle_db, orbital_elements_array);
+							break;
+
+						case 'g':
+							QthEdit(qthfile, observer);
+							break;
+
+						case 'i':
+							ProgramInfo(qthfile, tle_db, sat_db, rotctld);
+							break;
+
+						case 'w':
+						case 'W':
+							EditWhitelist(tle_db);
+							multitrack_refresh_tles(listing, tle_db);
+							break;
+						case 'E':
+						case 'e':
+							EditTransponderDatabase(0, tle_db, sat_db);
+							break;
+						case 27:
+						case 'q':
+							should_run = false;
+							break;
+					}
+					clear();
+					refresh();
+				}
+			}
+		}
+	}
 
 	curs_set(1);
 	bkgdset(COLOR_PAIR(1));
@@ -2816,4 +2457,8 @@ void RunFlybyUI(bool new_user, const char *qthfile, predict_observer_t *observer
 		predict_destroy_orbital_elements(orbital_elements_array[i]);
 	}
 	free(orbital_elements_array);
+
+	delwin(sat_list_win);
+	delwin(main_menu_win);
+	multitrack_destroy_listing(&listing);
 }
