@@ -75,6 +75,8 @@ typedef struct {
  * providing a selection menu for these satellites.
  **/
 typedef struct {
+	///Whether multitrack listing has been displayed for the first time yet
+	bool not_displayed;
 	///Number of displayed satellites
 	int num_entries;
 	///Displayed satellites

@@ -267,6 +267,7 @@ void multitrack_free_entries(multitrack_listing_t *listing)
 
 void multitrack_refresh_tles(multitrack_listing_t *listing, struct tle_db *tle_db)
 {
+	listing->not_displayed = true;
 	multitrack_free_entries(listing);
 
 	int num_enabled_tles = 0;
@@ -407,6 +408,11 @@ void multitrack_update_entry(predict_observer_t *qth, multitrack_entry_t *entry,
 void multitrack_update_listing(multitrack_listing_t *listing, predict_julian_date_t time)
 {
 	for (int i=0; i < listing->num_entries; i++) {
+		if (listing->not_displayed) {
+			wattrset(listing->window, COLOR_PAIR(1));
+			mvwprintw(listing->window, 0, 1, "Preparing entry %d of %d\n", i, listing->num_entries);
+			wrefresh(listing->window);
+		}
 		multitrack_entry_t *entry = listing->entries[i];
 		multitrack_update_entry(listing->qth, entry, time);
 	}
@@ -414,6 +420,8 @@ void multitrack_update_listing(multitrack_listing_t *listing, predict_julian_dat
 	if (!multitrack_option_selector_visible(listing->option_selector)) {
 		multitrack_sort_listing(listing); //freeze sorting when option selector is hovering over a satellite
 	}
+
+	listing->not_displayed = false;
 }
 
 void multitrack_sort_listing(multitrack_listing_t *listing)
