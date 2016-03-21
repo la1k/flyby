@@ -1990,22 +1990,6 @@ void ProgramInfo(const char *qthfile, struct tle_db *tle_db, struct transponder_
 	AnyKey();
 }
 
-void NewUser()
-{
-	Banner();
-	attrset(COLOR_PAIR(3)|A_BOLD);
-
-	mvprintw(12,2,"Welcome to flyby!  Since you are a new user to the program, default\n");
-	printw("  orbital data and ground station location information was copied into\n");
-	printw("  your home directory to get you going.  Please select option [G] from\n");
-	printw("  flyby's main menu to edit your ground station information, and update\n");
-	printw("  your orbital database using option [U] or [E].  Enjoy the program!  :-)");
-	refresh();
-
-	attrset(COLOR_PAIR(4)|A_BOLD);
-	AnyKey();
-}
-
 void EditTransponderDatabaseField(const struct tle_db_entry *sat_info, WINDOW *form_win, struct sat_db_entry *sat_entry)
 {
 	struct transponder_editor *transponder_editor = transponder_editor_create(sat_info, form_win, sat_entry);
@@ -2301,7 +2285,6 @@ void RunFlybyUI(bool new_user, const char *qthfile, predict_observer_t *observer
 	init_pair(8,COLOR_RED,COLOR_YELLOW);
 
 	if (new_user) {
-		NewUser();
 		QthEdit(qthfile, observer);
 		clear();
 	}
