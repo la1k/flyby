@@ -21,19 +21,6 @@ void trim_whitespaces_from_end(char *string);
  **/
 void bailout(char *string);
 
-/* This function scans line 1 and line 2 of a NASA 2-Line element
- * set and returns a 1 if the element set appears to be valid or
- * a 0 if it does not.  If the data survives this torture test,
- * it's a pretty safe bet we're looking at a valid 2-line
- * element set and not just some random text that might pass
- * as orbital data based on a simple checksum calculation alone.
- *
- * \param line1 Line 1 of TLE
- * \param line2 Line 2 of TLE
- * \return 1 if valid, 0 if not
- **/
-char KepCheck(char *line1, char *line2);
-
 /* This function updates PREDICT's orbital datafile from a NASA
  * 2-line element file either through a menu (interactive mode)
  * or via the command line.  string==filename of 2-line element
@@ -47,14 +34,6 @@ char KepCheck(char *line1, char *line2);
  * \return 0 on success, -1 otherwise
  **/
 void AutoUpdate(const char *string, struct tle_db *tle_db, predict_orbital_elements_t **orbits);
-
-/**
- * Displays a menu for selecting a satellite based on their names and international designators.
- *
- * \param tle_db TLE database
- * \param orbital_elements_array Orbital elements list
- **/
-int Select(struct tle_db *tle_db, predict_orbital_elements_t **orbital_elements_array);
 
 /* This function buffers and displays orbital predictions.
  *
@@ -134,18 +113,6 @@ void QthEdit(const char *qthfile, predict_observer_t *qth);
 void SingleTrack(int orbit_ind, predict_orbital_elements_t **orbital_elements_array, predict_observer_t *qth, struct transponder_db *transponder_db, struct tle_db *tle_db, rotctld_info_t *rotctld, rigctld_info_t *downlink_info, rigctld_info_t *uplink_info);
 
 /**
- * Displays information on all satellites in real-time.
- *
- * \param qth Point of observation
- * \param num_orbits Number of orbits in the orbital elements array
- * \param orbital_elements_array List of orbital elements to track
- * \param tle_db TLE database
- * \param multitype Display locator ('m') or lat/long ('l')
- * \param disttype Display units in miles ('i') or km ('k')
- **/
-void MultiTrack(predict_observer_t *qth, predict_orbital_elements_t **orbital_elements_array, struct tle_db *tle_db, char multitype, char disttype);
-
-/**
  * Display solar illumination predictions.
  *
  * \param name Name of satellite
@@ -157,11 +124,6 @@ void Illumination(const char *name, predict_orbital_elements_t *orbital_elements
  * Display program information.
  **/
 void ProgramInfo(const char *qthfile, struct tle_db *tle_db, struct transponder_db *transponder_db, rotctld_info_t *rotctld);
-
-/**
- * Display information for new user.
- **/
-void NewUser();
 
 /**
  * Display transponder editor form and edit the transponder entry.
