@@ -6,7 +6,19 @@ compiler:
   - gcc
   - clang
 
-script: mkdir -p build; cd build; cmake --version && cmake .. && make
+before_script:
+  - wget https://github.com/la1k/libpredict/archive/master.tar.gz -O libpredict.tar.gz
+  - tar -xvf libpredict.tar.gz
+  - export ORIG_FOLDER="$PWD"
+  - export LIBPREDICT_FOLDER="$PWD/libpredict-install"
+  - mkdir $LIBPREDICT_FOLDER
+  - cd libpredict-master && mkdir -p build; cd build; cmake -D CMAKE_INSTALL_PREFIX=$LIBPREDICT_FOLDER .. && make && make install
+  - export LIBPREDICT_LIBRARY_PATH="$LIBPREDICT_FOLDER/lib/"
+  - export LIBPREDICT_INCLUDE_PATH="$LIBPREDICT_FOLDER/include"
+  - export LD_LIBRARY_PATH="$LIBPREDICT_LIBRARY_PATH"
+  - cd $ORIG_FOLDER
+
+script: mkdir -p build; cd build; cmake --version && cmake -D CMAKE_C_FLAGS="-I $LIBPREDICT_INCLUDE_PATH -L $LIBPREDICT_LIBRARY_PATH" .. && make
 
 notifications:
   email: false
