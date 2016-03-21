@@ -19,6 +19,8 @@ int MultiColours(double range, double elevation);
 //marker of menu item
 #define MULTITRACK_SELECTED_MARKER '-'
 
+/** Private multitrack satellite listing prototypes. **/
+
 /**
  * Create entry in multitrack satellite listing.
  *
@@ -59,6 +61,23 @@ void multitrack_update_entry(predict_observer_t *qth, multitrack_entry_t *entry,
  * \param listing Satellite listing
  **/
 void multitrack_sort_listing(multitrack_listing_t *listing);
+
+/**
+ * Apply search information in the search field, and construct match array for matches found in the satellite list.
+ * Match state is saved to listing->search_field.
+ *
+ * \param listing Satellite list
+ **/
+void multitrack_search_listing(multitrack_listing_t *listing);
+
+/**
+ * Jump to next search match (obtained from listing->search_field).
+ *
+ * \param listing Satellite list
+ **/
+void multitrack_listing_next_match(multitrack_listing_t *listing);
+
+/** Private option submenu selector prototypes. **/
 
 /**
  * Create option selector submenu.
@@ -113,27 +132,76 @@ void multitrack_option_selector_display(int row, multitrack_option_selector_t *o
  **/
 bool multitrack_option_selector_handle(multitrack_option_selector_t *option_selector, int input_key);
 
+/** Private search field prototypes. **/
+
+/**
+ * Create search field.
+ *
+ * \param row Row
+ * \param col Column
+ * \return Search field
+ **/
 multitrack_searcher_t *multitrack_searcher_create(int row, int col);
 
+/**
+ * Make search field visible.
+ *
+ * \param search_field Search field
+ **/
 void multitrack_searcher_show(multitrack_searcher_t *search_field);
 
+/**
+ * Refresh search field.
+ *
+ * \param search_field Search field
+ **/
 void multitrack_searcher_display(multitrack_searcher_t *search_field);
 
+/**
+ * Hide search field from view.
+ *
+ * \param search_field Search field
+ **/
 void multitrack_searcher_hide(multitrack_searcher_t *search_field);
 
+/**
+ * Destroy search field and associated memory.
+ *
+ * \param search_field Search field
+ **/
 void multitrack_searcher_destroy(multitrack_searcher_t **search_field);
 
-bool multitrack_searcher_visible(multitrack_searcher_t *search_field);
-
+/**
+ * Handle input characters to search field.
+ *
+ * \param search_field Search field
+ * \param input_key Input key
+ **/
 bool multitrack_searcher_handle(multitrack_searcher_t *search_field, int input_key);
 
-void multitrack_searcher_match(multitrack_searcher_t *search_field, bool match);
-
+/**
+ * Get (trimmed) input string from search field.
+ *
+ * \param search_field Search field
+ **/
 char *multitrack_searcher_string(multitrack_searcher_t *search_field);
 
-void multitrack_listing_next_match(multitrack_listing_t *listing);
+/**
+ * Add match to match array.
+ *
+ * \param search_field Search field
+ * \param index Menu index to add to list of matches
+ **/
 void multitrack_searcher_add_match(multitrack_searcher_t *search_field, int index);
+
+/**
+ * Clear match array.
+ *
+ * \param search_field Search field
+ **/
 void multitrack_searcher_clear_matches(multitrack_searcher_t *search_field);
+
+/** Multitrack satellite listing function implementations. **/
 
 multitrack_entry_t *multitrack_create_entry(const char *name, predict_orbital_elements_t *orbital_elements)
 {
@@ -197,35 +265,6 @@ void multitrack_search_listing(multitrack_listing_t *listing)
 	}
 	multitrack_listing_next_match(listing);
 	free(expression);
-}
-
-void multitrack_searcher_clear_matches(multitrack_searcher_t *search_field)
-{
-	multitrack_searcher_match(search_field, false);
-	search_field->match_num = -1;
-
-	if (search_field->matches != NULL) {
-		free(search_field->matches);
-		search_field->matches = NULL;
-	}
-	search_field->num_matches = 0;
-	search_field->available_match_size = 0;
-}
-
-void multitrack_searcher_add_match(multitrack_searcher_t *search_field, int index)
-{
-	multitrack_searcher_match(search_field, true);
-	if (search_field->matches == NULL) {
-		search_field->available_match_size = 2;
-		search_field->matches = (int*)malloc(sizeof(int)*search_field->available_match_size);
-	}
-
-	if (search_field->num_matches == search_field->available_match_size) {
-		search_field->available_match_size = search_field->available_match_size*2;
-		search_field->matches = (int*)realloc(search_field->matches, sizeof(int)*search_field->available_match_size);
-	}
-
-	search_field->matches[search_field->num_matches++] = index;
 }
 
 void multitrack_listing_next_match(multitrack_listing_t *listing)
@@ -674,6 +713,9 @@ void multitrack_destroy_listing(multitrack_listing_t **listing)
 	*listing = NULL;
 }
 
+/** Option selector submenu function implementations. **/
+
+//number of options in the option selector submenu
 #define NUM_OPTIONS 7
 
 void multitrack_option_selector_destroy(multitrack_option_selector_t **option_selector)
@@ -805,10 +847,20 @@ int multitrack_option_selector_get_option(multitrack_option_selector_t *option_s
 	return option;
 }
 
+/** Search field function implementations. **/
+
+//Height of search window
 #define SEARCH_FIELD_HEIGHT 3
+
+//Width of search window
 #define SEARCH_FIELD_LENGTH 78
+
+//Column at which to start the search field
 #define FIELD_START_COL 29
+
+//Length of search field
 #define FIELD_LENGTH (SEARCH_FIELD_LENGTH - FIELD_START_COL)
+
 multitrack_searcher_t *multitrack_searcher_create(int row, int col)
 {
 	multitrack_searcher_t *searcher = (multitrack_searcher_t*)malloc(sizeof(multitrack_searcher_t));
@@ -848,6 +900,13 @@ bool multitrack_searcher_visible(multitrack_searcher_t *search_field)
 
 void multitrack_searcher_display(multitrack_searcher_t *search_field)
 {
+	//set font color according to whether there is a match or not
+	if (search_field->num_matches > 0) {
+		search_field->attributes = COLOR_PAIR(4)|A_REVERSE;
+	} else {
+		search_field->attributes = COLOR_PAIR(7)|A_REVERSE;
+	}
+
 	if (search_field->visible) {
 		//fill window without destroying the styling of the FORM :^)
 		wattrset(search_field->window, COLOR_PAIR(1));
@@ -887,15 +946,6 @@ void multitrack_searcher_hide(multitrack_searcher_t *search_field)
 	form_driver(search_field->form, REQ_CLR_FIELD);
 	search_field->visible = false;
 	multitrack_searcher_clear_matches(search_field);
-}
-
-void multitrack_searcher_match(multitrack_searcher_t *search_field, bool match)
-{
-	if (match) {
-		search_field->attributes = COLOR_PAIR(4)|A_REVERSE;
-	} else {
-		search_field->attributes = COLOR_PAIR(7)|A_REVERSE;
-	}
 }
 
 void multitrack_searcher_destroy(multitrack_searcher_t **search_field)
@@ -943,4 +993,31 @@ char *multitrack_searcher_string(multitrack_searcher_t *search_field)
 	char *ret_str = strdup(field_buffer(search_field->field[0], 0));
 	trim_whitespaces_from_end(ret_str);
 	return ret_str;
+}
+
+void multitrack_searcher_clear_matches(multitrack_searcher_t *search_field)
+{
+	search_field->match_num = -1;
+
+	if (search_field->matches != NULL) {
+		free(search_field->matches);
+		search_field->matches = NULL;
+	}
+	search_field->num_matches = 0;
+	search_field->available_match_size = 0;
+}
+
+void multitrack_searcher_add_match(multitrack_searcher_t *search_field, int index)
+{
+	if (search_field->matches == NULL) {
+		search_field->available_match_size = 2;
+		search_field->matches = (int*)malloc(sizeof(int)*search_field->available_match_size);
+	}
+
+	if (search_field->num_matches == search_field->available_match_size) {
+		search_field->available_match_size = search_field->available_match_size*2;
+		search_field->matches = (int*)realloc(search_field->matches, sizeof(int)*search_field->available_match_size);
+	}
+
+	search_field->matches[search_field->num_matches++] = index;
 }

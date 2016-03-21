@@ -59,14 +59,23 @@ typedef struct {
  * Search field shown when pressing '/'. (display format inspired by htop)
  **/
 typedef struct {
+	///Display window
 	WINDOW *window;
+	///Search form
 	FORM *form;
+	///Search field in form
 	FIELD **field;
+	///Whether visible
 	bool visible;
+	///Display attributes of search string (set to red when no matches found)
 	int attributes;
+	///Current match number state (used for jumping through the matches)
 	int match_num;
+	///List of match indices in the sorted index array
 	int *matches;
+	///Number of matches
 	int num_matches;
+	///Available size in the `matches` array, reallocated at need
 	int available_match_size;
 } multitrack_searcher_t;
 
@@ -205,6 +214,12 @@ enum sub_menu_options {OPTION_SINGLETRACK, //run in single track mode
  **/
 int multitrack_option_selector_get_option(multitrack_option_selector_t *option_selector);
 
+/**
+ * Check whether search field is visible.
+ *
+ * \param search_field Search field
+ * \return True if search field is visible, false otherwise
+ **/
 bool multitrack_searcher_visible(multitrack_searcher_t *search_field);
 
 #endif
