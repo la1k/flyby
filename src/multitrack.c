@@ -847,6 +847,16 @@ int multitrack_option_selector_get_option(multitrack_option_selector_t *option_s
 	return option;
 }
 
+bool multitrack_option_selector_pop(multitrack_option_selector_t *option_selector)
+{
+	if (option_selector->option_selected) {
+		option_selector->option_selected = false;
+		return true;
+	} else {
+		return false;
+	}
+}
+
 /** Search field function implementations. **/
 
 //Height of search window

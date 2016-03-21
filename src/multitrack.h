@@ -215,6 +215,14 @@ enum sub_menu_options {OPTION_SINGLETRACK, //run in single track mode
 int multitrack_option_selector_get_option(multitrack_option_selector_t *option_selector);
 
 /**
+ * Check if an option has been selected and clear it.
+ *
+ * \param option_selector Option selector
+ * \return True if an option has been selected by the user, false otherwise
+ **/
+bool multitrack_option_selector_pop(multitrack_option_selector_t *option_selector);
+
+/**
  * Check whether search field is visible.
  *
  * \param search_field Search field
