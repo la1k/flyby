@@ -141,6 +141,14 @@ void multitrack_option_selector_jump(multitrack_option_selector_t *option_select
  **/
 bool multitrack_option_selector_handle(multitrack_option_selector_t *option_selector, int input_key);
 
+/**
+ * Get string corresponding to each submenu option.
+ *
+ * \param option Submenu option
+ * \return String corresponding to submenu option
+ **/
+const char *multitrack_option_selector_name(enum sub_menu_options option);
+
 /** Private search field prototypes. **/
 
 /**
@@ -754,12 +762,6 @@ void multitrack_option_selector_destroy(multitrack_option_selector_t **option_se
 	*option_selector = NULL;
 }
 
-/**
- * Get string corresponding to each submenu option.
- *
- * \param option Submenu option
- * \return String corresponding to submenu option
- **/
 const char *multitrack_option_selector_name(enum sub_menu_options option)
 {
 	switch (option) {
