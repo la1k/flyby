@@ -352,7 +352,10 @@ void multitrack_update_entry(predict_observer_t *qth, multitrack_entry_t *entry,
 			time_t epoch = predict_from_julian(entry->next_los - time);
 			struct tm timeval;
 			gmtime_r(&epoch, &timeval);
-			if (timeval.tm_hour > 0) {
+			if ((entry->next_los - time) > 1.0) {
+				int num_days = (entry->next_los - time);
+				snprintf(aos_los, MAX_NUM_CHARS, "%d days", num_days);
+			} else if (timeval.tm_hour > 0) {
 				strftime(aos_los, MAX_NUM_CHARS, "%H:%M:%S", &timeval);
 			} else {
 				strftime(aos_los, MAX_NUM_CHARS, "%M:%S", &timeval);
