@@ -350,7 +350,14 @@ void multitrack_update_entry(predict_observer_t *qth, multitrack_entry_t *entry,
 			entry->geostationary = true;
 		} else {
 			time_t epoch = predict_from_julian(entry->next_los - time);
-			strftime(aos_los, MAX_NUM_CHARS, "%M:%S", gmtime(&epoch)); //time until LOS
+			struct tm timeval;
+			gmtime_r(&epoch, &timeval);
+			if (timeval.tm_hour > 0) {
+				strftime(aos_los, MAX_NUM_CHARS, "%H:%M:%S", &timeval);
+			} else {
+				strftime(aos_los, MAX_NUM_CHARS, "%M:%S", &timeval);
+			}
+
 		}
 	} else if ((obs.elevation < 0) && can_predict) {
 		if ((entry->next_aos-time) < 0.00694) {
@@ -361,8 +368,19 @@ void multitrack_update_entry(predict_observer_t *qth, multitrack_entry_t *entry,
 		} else {
 			//satellite is far, set normal coloring
 			entry->display_attributes = COLOR_PAIR(4);
-			time_t epoch = predict_from_julian(entry->next_aos);
-			strftime(aos_los, MAX_NUM_CHARS, "%j.%H:%M:%S", gmtime(&epoch)); //time for AOS
+			time_t aoslos_epoch = predict_from_julian(entry->next_aos);
+			time_t curr_epoch = predict_from_julian(time);
+			struct tm aostime, currtime;
+			gmtime_r(&aoslos_epoch, &aostime);
+			gmtime_r(&curr_epoch, &currtime);
+			aostime.tm_yday = aostime.tm_yday - currtime.tm_yday;
+			char temp[MAX_NUM_CHARS];
+			strftime(temp, MAX_NUM_CHARS, "%H:%MZ", &aostime);
+			if (aostime.tm_yday == 0) {
+				strncpy(aos_los, temp, MAX_NUM_CHARS);
+			} else {
+				snprintf(aos_los, MAX_NUM_CHARS, "+%dd %s", aostime.tm_yday, temp);
+			}
 		}
 	} else if (!can_predict) {
 		entry->display_attributes = COLOR_PAIR(3);
@@ -409,6 +427,7 @@ void multitrack_update_listing(multitrack_listing_t *listing, predict_julian_dat
 {
 	for (int i=0; i < listing->num_entries; i++) {
 		if (listing->not_displayed) {
+			//display progress information when this is the first time entries are displayed
 			wattrset(listing->window, COLOR_PAIR(1));
 			mvwprintw(listing->window, 0, 1, "Preparing entry %d of %d\n", i, listing->num_entries);
 			wrefresh(listing->window);
