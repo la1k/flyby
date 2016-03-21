@@ -2242,7 +2242,6 @@ void EditTransponderDatabase(int start_index, struct tle_db *tle_db, struct tran
 	//read transponder database from file again in order to set the flags correctly
 	transponder_db_from_search_paths(tle_db, sat_db);
 
-	delwin(header_win);
 	delwin(display_win);
 	delwin(main_win);
 	delwin(menu_win);

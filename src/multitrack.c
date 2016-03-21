@@ -495,7 +495,7 @@ void multitrack_update_listing(multitrack_listing_t *listing, predict_julian_dat
 		multitrack_update_entry(listing->qth, entry, time);
 	}
 
-	if (!multitrack_option_selector_visible(listing->option_selector)) {
+	if (!multitrack_option_selector_visible(listing->option_selector) && !multitrack_search_field_visible(listing->search_field)) {
 		multitrack_sort_listing(listing); //freeze sorting when option selector is hovering over a satellite
 	}
 
