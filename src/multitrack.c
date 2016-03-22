@@ -36,6 +36,7 @@ multitrack_entry_t *multitrack_create_entry(const char *name, predict_orbital_el
  * \param listing Satellite listing
  **/
 void multitrack_print_scrollbar(multitrack_listing_t *listing);
+
 /**
  * Display entry in satellite listing.
  *
@@ -255,7 +256,7 @@ multitrack_listing_t* multitrack_create_listing(WINDOW *window, predict_observer
 	listing->window_row = window_row;
 
 	listing->qth = observer;
-	listing->displayed_entries_per_page = window_height-MULTITRACK_PRINT_OFFSET;
+	listing->displayed_entries_per_page = window_height;
 
 	multitrack_refresh_tles(listing, tle_db);
 
@@ -561,8 +562,8 @@ void multitrack_display_entry(WINDOW *window, int row, int col, multitrack_entry
 
 void multitrack_print_scrollbar(multitrack_listing_t *listing)
 {
-	int scrollarea_offset = MULTITRACK_PRINT_OFFSET;
-	int scrollarea_height = listing->window_height-MULTITRACK_PRINT_OFFSET;
+	int scrollarea_offset = 0;
+	int scrollarea_height = listing->window_height;
 	int scrollbar_height = ((listing->displayed_entries_per_page*1.0)/(listing->num_entries*1.0))*scrollarea_height;
 
 	//print scrollarea
@@ -594,7 +595,7 @@ void multitrack_display_listing(multitrack_listing_t *listing)
 		listing->entries[selected_index]->display_attributes = MULTITRACK_SELECTED_ATTRIBUTE;
 		listing->entries[selected_index]->display_string[0] = MULTITRACK_SELECTED_MARKER;
 
-		int line = MULTITRACK_PRINT_OFFSET;
+		int line = 0;
 		int col = 1;
 
 		for (int i=listing->top_index; ((i <= listing->bottom_index) && (i < listing->num_entries)); i++) {
@@ -616,7 +617,7 @@ void multitrack_display_listing(multitrack_listing_t *listing)
 	multitrack_search_field_display(listing->search_field);
 
 	//refresh option selector
-	int option_selector_row = multitrack_selected_window_row(listing) + listing->window_row + MULTITRACK_PRINT_OFFSET + 1;
+	int option_selector_row = multitrack_selected_window_row(listing) + listing->window_row + 1;
 	multitrack_option_selector_display(option_selector_row, listing->option_selector);
 }
 

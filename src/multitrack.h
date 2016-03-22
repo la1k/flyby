@@ -127,9 +127,6 @@ typedef struct {
 	multitrack_search_field_t *search_field;
 } multitrack_listing_t;
 
-///Row offset from window start at which to start printing
-#define MULTITRACK_PRINT_OFFSET 0
-
 /**
  * Create multitrack satellite listing. Only satellites enabled within the TLE database are displayed.
  *

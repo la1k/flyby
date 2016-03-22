@@ -2280,7 +2280,7 @@ void RunFlybyUI(bool new_user, const char *qthfile, predict_observer_t *observer
 			PrintMainMenu(main_menu_win);
 		}
 		PrintSunMoon(listing->window_height + listing->window_row - 7, sat_list_win_width+1, observer, curr_time);
-		PrintQth(listing->window_row + MULTITRACK_PRINT_OFFSET, sat_list_win_width+1, observer);
+		PrintQth(listing->window_row, sat_list_win_width+1, observer);
 
 		//refresh satellite list
 		multitrack_update_listing(listing, curr_time);
