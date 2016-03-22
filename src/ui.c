@@ -2002,7 +2002,7 @@ void DisplayTransponderEntry(const char *name, struct sat_db_entry *entry, WINDO
 	for (int i=0; i < entry->num_transponders; i++) {
 		int display_row = row;
 
-		if (display_row < LINES-8) {
+		if (display_row + 3 < LINES-8) {
 			int info_col = 1;
 			int data_col = 4;
 			if ((i % 2) == 1) {
