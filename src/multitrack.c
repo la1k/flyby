@@ -7,8 +7,7 @@
 #include <stdlib.h>
 #include "tle_db.h"
 #include "multitrack.h"
-
-int MultiColours(double range, double elevation);
+#include "ui.h"
 
 //header (Satellite Azim Elev ...) color style
 #define HEADER_STYLE COLOR_PAIR(2)|A_REVERSE
@@ -362,6 +361,32 @@ void multitrack_refresh_tles(multitrack_listing_t *listing, struct tle_db *tle_d
 	listing->num_decayed = 0;
 	listing->num_nevervisible = 0;
 
+}
+
+NCURSES_ATTR_T MultiColours(double scrk, double scel)
+{
+	if (scrk < 8000)
+		if (scrk < 4000)
+			if (scrk < 2000)
+				if (scrk < 1000)
+					if (scel > 10)
+						return (COLOR_PAIR(6)|A_REVERSE); /* red */
+					else
+						return (COLOR_PAIR(3)|A_REVERSE); /* yellow */
+				else
+					if (scel > 20)
+						return (COLOR_PAIR(3)|A_REVERSE); /* yellow */
+					else
+						return (COLOR_PAIR(4)|A_REVERSE); /* cyan */
+			else
+				if (scel > 40)
+					return (COLOR_PAIR(4)|A_REVERSE); /* cyan */
+				else
+					return (COLOR_PAIR(1)|A_REVERSE); /* white */
+		else
+			return (COLOR_PAIR(1)|A_REVERSE); /* white */
+	else
+		return (COLOR_PAIR(2)|A_REVERSE); /* reverse */
 }
 
 void multitrack_update_entry(predict_observer_t *qth, multitrack_entry_t *entry, predict_julian_date_t time)
@@ -1044,8 +1069,6 @@ bool multitrack_search_field_handle(multitrack_search_field_t *search_field, int
 	}
 	return character_handled;
 }
-
-void trim_whitespaces_from_end(char *str);
 
 char *multitrack_search_field_string(multitrack_search_field_t *search_field)
 {

@@ -1520,33 +1520,6 @@ void SingleTrack(int orbit_ind, predict_orbital_elements_t **orbital_elements_ar
 	cbreak();
 }
 
-NCURSES_ATTR_T MultiColours(scrk, scel)
-double scrk, scel;
-{
-	if (scrk < 8000)
-		if (scrk < 4000)
-			if (scrk < 2000)
-				if (scrk < 1000)
-					if (scel > 10)
-						return (COLOR_PAIR(6)|A_REVERSE); /* red */
-					else
-						return (COLOR_PAIR(3)|A_REVERSE); /* yellow */
-				else
-					if (scel > 20)
-						return (COLOR_PAIR(3)|A_REVERSE); /* yellow */
-					else
-						return (COLOR_PAIR(4)|A_REVERSE); /* cyan */
-			else
-				if (scel > 40)
-					return (COLOR_PAIR(4)|A_REVERSE); /* cyan */
-				else
-					return (COLOR_PAIR(1)|A_REVERSE); /* white */
-		else
-			return (COLOR_PAIR(1)|A_REVERSE); /* white */
-	else
-		return (COLOR_PAIR(2)|A_REVERSE); /* reverse */
-}
-
 void Illumination(const char *name, predict_orbital_elements_t *orbital_elements)
 {
 	double startday, oneminute, sunpercent;
