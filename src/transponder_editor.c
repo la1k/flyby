@@ -3,6 +3,7 @@
 #include <string.h>
 #include "ui.h"
 #include "xdg_basedirs.h"
+#include <math.h>
 
 //default style for field
 #define TRANSPONDER_ENTRY_DEFAULT_STYLE COLOR_PAIR(1)|A_UNDERLINE
@@ -140,7 +141,11 @@ void transponder_editor_set_visible(struct transponder_editor *transponder_edito
 	transponder_editor->last_field_in_form = transponder_editor->transponders[end_ind-1]->downlink[1];
 
 	//update page number
-	transponder_editor->num_pages = (transponder_editor->num_editable_transponders-1)/transponder_editor->transponders_per_page+1;
+	if (transponder_editor->num_editable_transponders > (transponder_editor->transponders_per_page-1)) {
+		transponder_editor->num_pages = ceil((transponder_editor->num_editable_transponders+1)/(transponder_editor->transponders_per_page*1.0)); //+1 to account for alon/alat fields
+	} else {
+		transponder_editor->num_pages = 1;
+	}
 	if (transponder_editor->num_pages > 1) {
 		transponder_editor_print_page_number(transponder_editor);
 	}
@@ -228,9 +233,6 @@ void transponder_editor_keybindings(WINDOW *window, int row, int col)
 //number of fields in one transponder editor line
 #define NUM_FIELDS_IN_ENTRY (NUM_TRANSPONDER_SPECIFIERS*2 + 1)
 
-//number of allowed rows per transponder page, for scrolling
-#define NUM_ROWS_PER_TRANSPONDER_PAGE 20
-
 struct transponder_editor* transponder_editor_create(const struct tle_db_entry *sat_info, WINDOW *window, struct sat_db_entry *db_entry)
 {
 	struct transponder_editor *new_editor = (struct transponder_editor*)malloc(sizeof(struct transponder_editor));
@@ -254,13 +256,16 @@ struct transponder_editor* transponder_editor_create(const struct tle_db_entry *
 	set_field_buffer(new_editor->transponder_description, 0, "Transponder name      Uplink      Downlink");
 	field_opts_off(new_editor->transponder_description, O_ACTIVE);
 
+	int win_row = getbegy(window);
+	int num_rows_per_transponder_page = LINES-win_row-6;
+
 	new_editor->tot_num_pages = 1;
 	new_editor->num_pages = 1;
 	new_editor->transponders_per_page = 0;
 	bool first_page = false;
 	for (int i=0; i < MAX_NUM_TRANSPONDERS; i++) {
 		bool page_break = false;
-		if (row > NUM_ROWS_PER_TRANSPONDER_PAGE) {
+		if (row > num_rows_per_transponder_page) {
 			row = 0;
 			page_break = true;
 			new_editor->tot_num_pages++;
@@ -279,6 +284,7 @@ struct transponder_editor* transponder_editor_create(const struct tle_db_entry *
 			set_new_page(new_editor->transponders[i]->name, true);
 		}
 	}
+	new_editor->transponders_per_page++; //account for the fact that we would have had space for one transponder extra on the first page if we didn't have alon/alat info there
 	new_editor->curr_page_number = 0;
 
 	//create horrible FIELD array for input into the FORM
@@ -304,7 +310,7 @@ struct transponder_editor* transponder_editor_create(const struct tle_db_entry *
 	int rows, cols;
 	scale_form(new_editor->form, &rows, &cols);
 	int win_width = cols+30;
-	int win_height = rows+6;
+	int win_height = rows+3;
 	wresize(window, win_height, win_width);
 	keypad(window, TRUE);
 	wattrset(window, COLOR_PAIR(4));
