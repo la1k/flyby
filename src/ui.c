@@ -1956,11 +1956,10 @@ void DisplayTransponderEntry(const char *name, struct sat_db_entry *entry, WINDO
 
 	//display satellite name
 	wattrset(display_window, A_BOLD);
-	mvwprintw(display_window, 1, 0, "%s transponders", name);
 
 	int data_col = 15;
 	int info_col = 1;
-	int start_row = 3;
+	int start_row = 0;
 	int row = start_row;
 
 	//file location information
@@ -2001,34 +2000,53 @@ void DisplayTransponderEntry(const char *name, struct sat_db_entry *entry, WINDO
 
 	//display transponder information
 	for (int i=0; i < entry->num_transponders; i++) {
-		wattrset(display_window, A_BOLD);
-		mvwprintw(display_window, ++row, info_col, "%s", entry->transponder_name[i]);
+		int display_row = row;
 
-		//uplink
-		if (entry->uplink_start[i] != 0.0) {
+		if (display_row < LINES-8) {
+			int info_col = 1;
+			int data_col = 4;
+			if ((i % 2) == 1) {
+				info_col = 25;
+				data_col = info_col+3;
+			}
+
+			wattrset(display_window, A_BOLD);
+			mvwprintw(display_window, ++display_row, info_col, "%.20s", entry->transponder_name[i]);
+
+			//uplink
+			if (entry->uplink_start[i] != 0.0) {
+				wattrset(display_window, COLOR_PAIR(4)|A_BOLD);
+				mvwprintw(display_window, ++display_row, info_col, "U:");
+
+				wattrset(display_window, COLOR_PAIR(2)|A_BOLD);
+				mvwprintw(display_window, display_row, data_col, "%.2f-%.2f", entry->uplink_start[i], entry->uplink_end[i]);
+			}
+
+			//downlink
+			if (entry->downlink_start[i] != 0.0) {
+				wattrset(display_window, COLOR_PAIR(4)|A_BOLD);
+				mvwprintw(display_window, ++display_row, info_col, "D:");
+
+				wattrset(display_window, COLOR_PAIR(2)|A_BOLD);
+				mvwprintw(display_window, display_row, data_col, "%.2f-%.2f", entry->downlink_start[i], entry->downlink_end[i]);
+			}
+
+			//no uplink/downlink defined
+			if ((entry->uplink_start[i] == 0.0) && (entry->downlink_start[i] == 0.0)) {
+				wattrset(display_window, COLOR_PAIR(2)|A_BOLD);
+				mvwprintw(display_window, ++display_row, info_col, "Neither downlink or uplink is defined.");
+				mvwprintw(display_window, ++display_row, info_col, "(Will be ignored on database reload)");
+			}
+			display_row++;
+
+			if ((i % 2) == 1) {
+				row = display_row;
+			}
+		} else {
 			wattrset(display_window, COLOR_PAIR(4)|A_BOLD);
-			mvwprintw(display_window, ++row, info_col, "Uplink:");
-
-			wattrset(display_window, COLOR_PAIR(2)|A_BOLD);
-			mvwprintw(display_window, row, data_col, "%f, %f", entry->uplink_start[i], entry->uplink_end[i]);
+			mvwprintw(display_window, ++display_row, info_col, "Truncated to %d of %d transponder entries.", i, entry->num_transponders);
+			break;
 		}
-
-		//downlink
-		if (entry->downlink_start[i] != 0.0) {
-			wattrset(display_window, COLOR_PAIR(4)|A_BOLD);
-			mvwprintw(display_window, ++row, info_col, "Downlink:");
-
-			wattrset(display_window, COLOR_PAIR(2)|A_BOLD);
-			mvwprintw(display_window, row, data_col, "%f, %f", entry->downlink_start[i], entry->downlink_end[i]);
-		}
-
-		//no uplink/downlink defined
-		if ((entry->uplink_start[i] == 0.0) && (entry->downlink_start[i] == 0.0)) {
-			wattrset(display_window, COLOR_PAIR(2)|A_BOLD);
-			mvwprintw(display_window, ++row, info_col, "Neither downlink or uplink is defined.");
-			mvwprintw(display_window, ++row, info_col, "(Will be ignored on database reload)");
-		}
-		row++;
 	}
 
 	//default text when no transponders are defined
@@ -2036,10 +2054,6 @@ void DisplayTransponderEntry(const char *name, struct sat_db_entry *entry, WINDO
 		wattrset(display_window, COLOR_PAIR(4)|A_BOLD);
 		mvwprintw(display_window, ++row, info_col, "No transponders defined.");
 	}
-
-	int bottom_row = getmaxy(display_window)-2;
-	wattrset(display_window, COLOR_PAIR(4)|A_BOLD);
-	mvwprintw(display_window, bottom_row, 0, "Press ENTER to edit transponder entries.");
 }
 
 void EditTransponderDatabase(int start_index, struct tle_db *tle_db, struct transponder_db *sat_db)
