@@ -363,23 +363,23 @@ void multitrack_refresh_tles(multitrack_listing_t *listing, struct tle_db *tle_d
 
 }
 
-NCURSES_ATTR_T MultiColours(double scrk, double scel)
+NCURSES_ATTR_T multitrack_colors(double range, double elevation)
 {
-	if (scrk < 8000)
-		if (scrk < 4000)
-			if (scrk < 2000)
-				if (scrk < 1000)
-					if (scel > 10)
+	if (range < 8000)
+		if (range < 4000)
+			if (range < 2000)
+				if (range < 1000)
+					if (elevation > 10)
 						return (COLOR_PAIR(6)|A_REVERSE); /* red */
 					else
 						return (COLOR_PAIR(3)|A_REVERSE); /* yellow */
 				else
-					if (scel > 20)
+					if (elevation > 20)
 						return (COLOR_PAIR(3)|A_REVERSE); /* yellow */
 					else
 						return (COLOR_PAIR(4)|A_REVERSE); /* cyan */
 			else
-				if (scel > 40)
+				if (elevation > 40)
 					return (COLOR_PAIR(4)|A_REVERSE); /* cyan */
 				else
 					return (COLOR_PAIR(1)|A_REVERSE); /* white */
@@ -425,7 +425,7 @@ void multitrack_update_entry(predict_observer_t *qth, multitrack_entry_t *entry,
 	char aos_los[MAX_NUM_CHARS] = {0};
 	if (obs.elevation >= 0) {
 		//different colours according to range and elevation
-		entry->display_attributes = MultiColours(obs.range, obs.elevation*180/M_PI);
+		entry->display_attributes = multitrack_colors(obs.range, obs.elevation*180/M_PI);
 
 		if (predict_is_geostationary(entry->orbital_elements)){
 			sprintf(aos_los, "*GeoS*");
