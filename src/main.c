@@ -163,7 +163,7 @@ int main(int argc, char **argv)
 	if (num_update_files > 0) {
 		for (int i=0; i < num_update_files; i++) {
 			printf("Updating TLE database using %s:\n\n", string_array_get(&tle_update_filenames, i));
-			AutoUpdate(string_array_get(&tle_update_filenames, i), tle_db, NULL);
+			AutoUpdate(string_array_get(&tle_update_filenames, i), tle_db);
 			printf("\n");
 		}
 		string_array_free(&tle_update_filenames);

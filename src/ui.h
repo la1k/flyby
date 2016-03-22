@@ -30,10 +30,9 @@ void bailout(char *string);
  *
  * \param string Filename, or 0 if interactive mode is to be used
  * \param tle_db Pre-loaded TLE database
- * \param orbits Parsed orbital elements to be updated along with updated TLE database. Can be set to NULL
  * \return 0 on success, -1 otherwise
  **/
-void AutoUpdate(const char *string, struct tle_db *tle_db, predict_orbital_elements_t **orbits);
+void AutoUpdate(const char *string, struct tle_db *tle_db);
 
 /* This function buffers and displays orbital predictions.
  *
@@ -102,7 +101,6 @@ void QthEdit(const char *qthfile, predict_observer_t *qth);
  * until 'Q' or ESC is pressed.
  *
  * \param orbit_ind Which orbit is first displayed on screen (can be changed within SingleTrack using left/right buttons)
- * \param orbital_elements_array Array over orbital elements that can be tracked
  * \param qth Point of observation
  * \param transponder_db Transponder database
  * \param tle_db TLE database
@@ -110,7 +108,7 @@ void QthEdit(const char *qthfile, predict_observer_t *qth);
  * \param downlink_info rigctld connection instance for downlink
  * \param uplink_info rigctld connection instance for uplink
  **/
-void SingleTrack(int orbit_ind, predict_orbital_elements_t **orbital_elements_array, predict_observer_t *qth, struct transponder_db *transponder_db, struct tle_db *tle_db, rotctld_info_t *rotctld, rigctld_info_t *downlink_info, rigctld_info_t *uplink_info);
+void SingleTrack(int orbit_ind, predict_observer_t *qth, struct transponder_db *transponder_db, struct tle_db *tle_db, rotctld_info_t *rotctld, rigctld_info_t *downlink_info, rigctld_info_t *uplink_info);
 
 /**
  * Display solar illumination predictions.

@@ -150,7 +150,7 @@ void AnyKey()
 	getch();
 }
 
-void AutoUpdate(const char *string, struct tle_db *tle_db, predict_orbital_elements_t **orbits)
+void AutoUpdate(const char *string, struct tle_db *tle_db)
 {
 	bool interactive_mode = (string[0] == '\0');
 	char filename[MAX_NUM_CHARS] = {0};
@@ -211,14 +211,6 @@ void AutoUpdate(const char *string, struct tle_db *tle_db, predict_orbital_eleme
 				printf("\n");
 			}
 			num_updated++;
-
-			//update orbital elements
-			if (orbits != NULL) {
-				predict_destroy_orbital_elements(orbits[i]);
-
-				char *tle[] = {tle_db->tles[i].line1, tle_db->tles[i].line2};
-				orbits[i] = predict_parse_tle(tle);
-			}
 		}
 	}
 
@@ -1043,7 +1035,7 @@ int get_next_enabled_satellite(int curr_index, int step, struct tle_db *tle_db)
 	return curr_index;
 }
 
-void SingleTrack(int orbit_ind, predict_orbital_elements_t **orbital_elements_array, predict_observer_t *qth, struct transponder_db *sat_db, struct tle_db *tle_db, rotctld_info_t *rotctld, rigctld_info_t *downlink_info, rigctld_info_t *uplink_info)
+void SingleTrack(int orbit_ind, predict_observer_t *qth, struct transponder_db *sat_db, struct tle_db *tle_db, rotctld_info_t *rotctld, rigctld_info_t *downlink_info, rigctld_info_t *uplink_info)
 {
 	double horizon = rotctld->tracking_horizon;
 
@@ -1074,7 +1066,7 @@ void SingleTrack(int orbit_ind, predict_orbital_elements_t **orbital_elements_ar
 
 		char time_string[MAX_NUM_CHARS];
 
-		predict_orbital_elements_t *orbital_elements = orbital_elements_array[orbit_ind];
+		predict_orbital_elements_t *orbital_elements = tle_db_entry_to_orbital_elements(tle_db, orbit_ind);
 		struct predict_orbit orbit;
 		struct sat_db_entry sat_db = sat_db_entries[orbit_ind];
 
@@ -1515,6 +1507,7 @@ void SingleTrack(int orbit_ind, predict_orbital_elements_t **orbital_elements_ar
 		 	ans!='+' && ans!='-' &&
 		 	ans!=KEY_LEFT && ans!=KEY_RIGHT);
 
+		predict_destroy_orbital_elements(orbital_elements);
 	} while (ans!='q' && ans!=17);
 
 	cbreak();
@@ -2222,13 +2215,6 @@ void RunFlybyUI(bool new_user, const char *qthfile, predict_observer_t *observer
 		clear();
 	}
 
-	/* Parse TLEs */
-	int num_sats = tle_db->num_tles;
-	predict_orbital_elements_t **orbital_elements_array = (predict_orbital_elements_t**)malloc(sizeof(predict_orbital_elements_t*)*num_sats);
-	for (int i=0; i < num_sats; i++){
-		char *tle[2] = {tle_db->tles[i].line1, tle_db->tles[i].line2};
-		orbital_elements_array[i] = predict_parse_tle(tle);
-	}
 	predict_julian_date_t curr_time = predict_to_julian(time(NULL));
 
 	//prepare multitrack window
@@ -2273,26 +2259,29 @@ void RunFlybyUI(bool new_user, const char *qthfile, predict_observer_t *observer
 			if (multitrack_option_selector_pop(listing->option_selector)) {
 				int option = multitrack_option_selector_get_option(listing->option_selector);
 				int satellite_index = multitrack_selected_entry(listing);
+				predict_orbital_elements_t *orbital_elements = tle_db_entry_to_orbital_elements(tle_db, satellite_index);
+				const char *sat_name = tle_db->tles[satellite_index].name;
 				switch (option) {
 					case OPTION_SINGLETRACK:
-						SingleTrack(satellite_index, orbital_elements_array, observer, sat_db, tle_db, rotctld, downlink, uplink);
+						SingleTrack(satellite_index, observer, sat_db, tle_db, rotctld, downlink, uplink);
 						break;
 					case OPTION_PREDICT_VISIBLE:
-						Predict(tle_db->tles[satellite_index].name, orbital_elements_array[satellite_index], observer, 'v');
+						Predict(sat_name, orbital_elements, observer, 'v');
 						break;
 					case OPTION_PREDICT:
-						Predict(tle_db->tles[satellite_index].name, orbital_elements_array[satellite_index], observer, 'p');
+						Predict(sat_name, orbital_elements, observer, 'p');
 						break;
 					case OPTION_DISPLAY_ORBITAL_DATA:
-						ShowOrbitData(tle_db->tles[satellite_index].name, orbital_elements_array[satellite_index]);
+						ShowOrbitData(sat_name, orbital_elements);
 						break;
 					case OPTION_EDIT_TRANSPONDER:
 						EditTransponderDatabase(satellite_index, tle_db, sat_db);
 						break;
 					case OPTION_SOLAR_ILLUMINATION:
-						Illumination(tle_db->tles[satellite_index].name, orbital_elements_array[satellite_index]);
+						Illumination(sat_name, orbital_elements);
 						break;
 				}
+				predict_destroy_orbital_elements(orbital_elements);
 				clear();
 				refresh();
 			}
@@ -2310,7 +2299,7 @@ void RunFlybyUI(bool new_user, const char *qthfile, predict_observer_t *observer
 							break;
 
 						case 'u':
-							AutoUpdate("", tle_db, orbital_elements_array);
+							AutoUpdate("", tle_db);
 							break;
 
 						case 'g':
@@ -2348,11 +2337,6 @@ void RunFlybyUI(bool new_user, const char *qthfile, predict_observer_t *observer
 	clear();
 	refresh();
 	endwin();
-
-	for (int i=0; i < num_sats; i++){
-		predict_destroy_orbital_elements(orbital_elements_array[i]);
-	}
-	free(orbital_elements_array);
 
 	delwin(sat_list_win);
 	delwin(main_menu_win);
