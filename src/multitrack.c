@@ -643,6 +643,10 @@ void multitrack_display_listing(multitrack_listing_t *listing)
 
 	//refresh option selector
 	int option_selector_row = multitrack_selected_window_row(listing) + listing->window_row + 1;
+	if (option_selector_row + listing->option_selector->window_height > LINES) {
+		//flip menu since it otherwise would try to be outside the terminal
+		option_selector_row = option_selector_row - listing->option_selector->window_height - 1;
+	}
 	multitrack_option_selector_display(option_selector_row, listing->option_selector);
 }
 
@@ -771,7 +775,7 @@ void multitrack_destroy_listing(multitrack_listing_t **listing)
 /** Option selector submenu function implementations. **/
 
 //number of options in the option selector submenu
-#define NUM_OPTIONS 7
+#define NUM_OPTIONS 6
 
 void multitrack_option_selector_destroy(multitrack_option_selector_t **option_selector)
 {
@@ -812,7 +816,8 @@ multitrack_option_selector_t* multitrack_option_selector_create()
 	multitrack_option_selector_t *option_selector = (multitrack_option_selector_t*)malloc(sizeof(multitrack_option_selector_t));
 
 	//prepare option selector window
-	WINDOW *option_win = newwin(6, 30, 0, 0);
+	option_selector->window_height = NUM_OPTIONS;
+	WINDOW *option_win = newwin(option_selector->window_height, 30, 0, 0);
 	wattrset(option_win, COLOR_PAIR(1)|A_REVERSE);
 	werase(option_win);
 	wrefresh(option_win);
@@ -826,14 +831,14 @@ multitrack_option_selector_t* multitrack_option_selector_create()
 				      OPTION_EDIT_TRANSPONDER,
 				      OPTION_SOLAR_ILLUMINATION};
 
-	option_selector->items = (ITEM**)malloc(sizeof(ITEM*)*NUM_OPTIONS);
-	option_selector->item_types = (int*)malloc(sizeof(int)*NUM_OPTIONS);
+	option_selector->items = (ITEM**)malloc(sizeof(ITEM*)*(NUM_OPTIONS+1));
+	option_selector->item_types = (int*)malloc(sizeof(int)*(NUM_OPTIONS+1));
 	for (int i=0; i < NUM_OPTIONS; i++) {
 		option_selector->item_types[i] = item_types[i];
 		option_selector->items[i] = new_item(multitrack_option_selector_name(item_types[i]), "");
 		set_item_userptr(option_selector->items[i], &(option_selector->item_types[i]));
 	}
-	option_selector->items[NUM_OPTIONS-1] = NULL;
+	option_selector->items[NUM_OPTIONS] = NULL;
 
 	//prepare MENU
 	MENU *menu = new_menu(option_selector->items);

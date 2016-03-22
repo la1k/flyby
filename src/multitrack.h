@@ -41,6 +41,8 @@ typedef struct {
 typedef struct {
 	///Menu
 	MENU *menu;
+	///Window height
+	int window_height;
 	///Display window, shifted around to selected satellite when shown
 	WINDOW *window;
 	///Sub window used for menu
