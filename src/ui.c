@@ -1999,10 +1999,13 @@ void DisplayTransponderEntry(const char *name, struct sat_db_entry *entry, WINDO
 	row = start_row+6;
 
 	//display transponder information
+	int rows_per_entry = 3;
+	int prev_row_diff = 0;
 	for (int i=0; i < entry->num_transponders; i++) {
 		int display_row = row;
 
-		if (display_row + 3 < LINES-8) {
+		if (display_row + rows_per_entry < LINES-8) {
+			int start_row = display_row;
 			int info_col = 1;
 			int data_col = 4;
 			if ((i % 2) == 1) {
@@ -2034,13 +2037,20 @@ void DisplayTransponderEntry(const char *name, struct sat_db_entry *entry, WINDO
 			//no uplink/downlink defined
 			if ((entry->uplink_start[i] == 0.0) && (entry->downlink_start[i] == 0.0)) {
 				wattrset(display_window, COLOR_PAIR(2)|A_BOLD);
-				mvwprintw(display_window, ++display_row, info_col, "Neither downlink or uplink is defined.");
-				mvwprintw(display_window, ++display_row, info_col, "(Will be ignored on database reload)");
+				mvwprintw(display_window, ++display_row, info_col, "Neither downlink or");
+				mvwprintw(display_window, ++display_row, info_col, "uplink is defined.");
+				mvwprintw(display_window, ++display_row, info_col, "(Will be ignored)");
 			}
 			display_row++;
 
+			int diff = display_row-start_row;
 			if ((i % 2) == 1) {
-				row = display_row;
+				if (diff < prev_row_diff) {
+					diff = prev_row_diff;
+				}
+				row += diff;
+			} else {
+				prev_row_diff = diff;
 			}
 		} else {
 			wattrset(display_window, COLOR_PAIR(4)|A_BOLD);
