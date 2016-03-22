@@ -63,8 +63,7 @@
 #define HALF_DELAY_TIME	5
 #define	KM_TO_MI		0.621371		/* km to miles */
 
-double reduce(value,rangeMin,rangeMax)
-double value, rangeMin, rangeMax;
+double reduce(double value, double rangeMin, double rangeMax)
 {
 	double range, rangeFrac, fullRanges, retval;
 
@@ -81,9 +80,7 @@ double value, rangeMin, rangeMax;
 	return(retval);
 }
 
-void getMaidenHead(mLtd,mLng,mStr)
-double mLtd, mLng;
-char   *mStr;
+void getMaidenHead(double mLtd, double mLng, char* mStr)
 {
 	int i, j, k, l, m, n;
 
@@ -111,12 +108,9 @@ char   *mStr;
 		k, l,
 		tolower('A' + (char) m),
 		tolower('A' + (char) n));
-
-	return;
 }
 
-void bailout(string)
-char *string;
+void bailout(const char *string)
 {
 	beep();
 	curs_set(1);
@@ -253,8 +247,7 @@ void AutoUpdate(const char *string, struct tle_db *tle_db)
 	}
 }
 
-long DayNum(m,d,y)
-int  m, d, y;
+long DayNum(int m, int d, int y)
 {
 	/* This function calculates the day number from m/d/y. */
 
@@ -684,7 +677,8 @@ void Predict(const char *name, predict_orbital_elements_t *orbital_elements, pre
 	}
 }
 
-void celestial_predict(enum celestial_object object, predict_observer_t *qth, predict_julian_date_t time, struct predict_observation *obs) {
+void celestial_predict(enum celestial_object object, predict_observer_t *qth, predict_julian_date_t time, struct predict_observation *obs)
+{
 	switch (object) {
 		case PREDICT_SUN:
 			predict_observe_sun(qth, time, obs);

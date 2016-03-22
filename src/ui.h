@@ -19,7 +19,7 @@ void trim_whitespaces_from_end(char *string);
  *
  * \param string Error message
  **/
-void bailout(char *string);
+void bailout(const char *string);
 
 /* This function updates PREDICT's orbital datafile from a NASA
  * 2-line element file either through a menu (interactive mode)
