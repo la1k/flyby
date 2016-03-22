@@ -233,6 +233,9 @@ void transponder_editor_keybindings(WINDOW *window, int row, int col)
 //number of fields in one transponder editor line
 #define NUM_FIELDS_IN_ENTRY (NUM_TRANSPONDER_SPECIFIERS*2 + 1)
 
+//number of rows occupied by one transponder field
+#define NUM_ROWS_PER_TRANSPONDER 4
+
 struct transponder_editor* transponder_editor_create(const struct tle_db_entry *sat_info, WINDOW *window, struct sat_db_entry *db_entry)
 {
 	struct transponder_editor *new_editor = (struct transponder_editor*)malloc(sizeof(struct transponder_editor));
@@ -265,7 +268,7 @@ struct transponder_editor* transponder_editor_create(const struct tle_db_entry *
 	bool first_page = false;
 	for (int i=0; i < MAX_NUM_TRANSPONDERS; i++) {
 		bool page_break = false;
-		if (row > num_rows_per_transponder_page) {
+		if ((row + NUM_ROWS_PER_TRANSPONDER) > num_rows_per_transponder_page) {
 			row = 0;
 			page_break = true;
 			new_editor->tot_num_pages++;
@@ -277,7 +280,7 @@ struct transponder_editor* transponder_editor_create(const struct tle_db_entry *
 		}
 
 		new_editor->transponders[i] = transponder_editor_line_create(row);
-		row += 4;
+		row += NUM_ROWS_PER_TRANSPONDER;
 
 		//set page break at appropriate entry
 		if (page_break) {
@@ -310,7 +313,7 @@ struct transponder_editor* transponder_editor_create(const struct tle_db_entry *
 	int rows, cols;
 	scale_form(new_editor->form, &rows, &cols);
 	int win_width = cols+30;
-	int win_height = rows+3;
+	int win_height = rows+5;
 	wresize(window, win_height, win_width);
 	keypad(window, TRUE);
 	wattrset(window, COLOR_PAIR(4));
