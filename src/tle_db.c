@@ -490,8 +490,8 @@ void whitelist_from_file(const char *file, struct tle_db *db)
 			long satellite_number = strtol(temp_str, NULL, 10);
 			tle_db_entry_set_enabled(db, tle_db_find_entry(db, satellite_number), true);
 		}
+		fclose(fd);
 	}
-	fclose(fd);
 }
 
 string_array_t tle_db_filenames(const struct tle_db *db)
