@@ -22,6 +22,30 @@
 #define XDG_CONFIG_HOME_DEFAULT ".config/"
 
 /**
+ * Check if dirpath contains a backslash at the end, and append one if not.
+ *
+ * \param dirpath Directory path
+ * \return Path with backslash appended
+ **/
+char *append_backslash(char *dirpath)
+{
+	if (strlen(dirpath) == 0) {
+		return NULL;
+	}
+
+	if (dirpath[strlen(dirpath)-1] != '/') {
+		int new_size = strlen(dirpath)+2;
+		char *new_str = (char*)malloc(new_size);
+		strncpy(new_str, dirpath, new_size);
+		new_str[new_size-2] = '/';
+		new_str[new_size-1] = '\0';
+		return new_str;
+	} else {
+		return strdup(dirpath);
+	}
+}
+
+/**
  * Helper function for creating an XDG_DIRS-variable. Use the value contained within environment variable varname, if empty use default_val.
  *
  * \param varname Environment variable name
@@ -37,7 +61,10 @@ char *xdg_dirs(const char *varname, const char *default_val)
 	//duplicate string (string from getenv is static)
 	data_dirs = strdup(data_dirs);
 
-	return data_dirs;
+	char *data_dirs_app = append_backslash(data_dirs);
+	free(data_dirs);
+
+	return data_dirs_app;
 }
 
 /**
@@ -60,7 +87,11 @@ char *xdg_home(const char *varname, const char *default_val)
 		data_dirs = (char*)malloc(sizeof(char)*(strlen(data_dirs) + 1));
 		strcpy(data_dirs, temp);
 	}
-	return data_dirs;
+
+	char *data_dirs_app = append_backslash(data_dirs);
+	free(data_dirs);
+
+	return data_dirs_app;
 }
 
 char *xdg_data_dirs()
