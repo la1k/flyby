@@ -101,16 +101,51 @@ void test_xdg_config_home(void **param)
 void test_create_xdg_dirs(void **param)
 {
 	//create temporary directory for XDG_DATA_HOME and XDG_CONFIG_HOME
-	char temp_xdg_data_home[] = "/tmp/XXXXXXXX";
+	char temp_xdg_data_home[] = "/tmp/flybyXXXXXXXX";
 	mkdtemp(temp_xdg_data_home);
 	setenv("XDG_DATA_HOME", temp_xdg_data_home, 1);
 	assert_true(directory_exists(temp_xdg_data_home));
 
-	char temp_xdg_config_home[] = "/tmp/XXXXXXXX";
+	char temp_xdg_config_home[] = "/tmp/flybyXXXXXXXX";
 	mkdtemp(temp_xdg_config_home);
 	setenv("XDG_CONFIG_HOME", temp_xdg_config_home, 1);
 	assert_true(directory_exists(temp_xdg_config_home));
 
+	//create full path strings for full flyby config path, full flyby data path and full flyby tle path
+	int config_length = strlen(temp_xdg_config_home) + strlen(FLYBY_RELATIVE_ROOT_PATH) + 1;
+	char *flyby_config_dir = malloc(config_length*sizeof(char));
+	snprintf(flyby_config_dir, config_length, "%s/%s", temp_xdg_config_home, FLYBY_RELATIVE_ROOT_PATH);
+
+	int data_length = strlen(temp_xdg_data_home) + strlen(FLYBY_RELATIVE_ROOT_PATH) + 1;
+	char *flyby_data_dir = malloc(data_length*sizeof(char));
+	snprintf(flyby_data_dir, data_length, "%s/%s", temp_xdg_data_home, FLYBY_RELATIVE_ROOT_PATH);
+
+	int tle_length = data_length + strlen(TLE_RELATIVE_DIR_PATH);
+	char *flyby_tle_dir = malloc(tle_length*sizeof(char));
+	snprintf(flyby_tle_dir, tle_length, "%s/%s", temp_xdg_data_home, TLE_RELATIVE_DIR_PATH);
+
+	//check that paths do not exist yet
+	assert_false(directory_exists(flyby_config_dir));
+	assert_false(directory_exists(flyby_data_dir));
+	assert_false(directory_exists(flyby_tle_dir));
+
+	create_xdg_dirs();
+
+	//check that paths have been created
+	assert_true(directory_exists(flyby_config_dir));
+	assert_true(directory_exists(flyby_data_dir));
+	assert_true(directory_exists(flyby_tle_dir));
+
+	//cleanup
+	rmdir(flyby_tle_dir);
+	rmdir(flyby_data_dir);
+	rmdir(flyby_config_dir);
+	rmdir(temp_xdg_data_home);
+	rmdir(temp_xdg_config_home);
+
+	free(flyby_config_dir);
+	free(flyby_data_dir);
+	free(flyby_tle_dir);
 }
 
 int main()
@@ -121,7 +156,7 @@ int main()
 		cmocka_unit_test(test_xdg_config_home),
 		cmocka_unit_test(test_xdg_data_home),
 		cmocka_unit_test(test_create_xdg_dirs)};
+
 	int rc = cmocka_run_group_tests(tests, NULL, NULL);
 	return rc;
-	return 0;
 }
