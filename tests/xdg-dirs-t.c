@@ -29,7 +29,7 @@ void test_directory_exists(void **param)
 	assert_false(directory_exists("/dev/NULL"));
 }
 
-#define DEFAULT_XDG_DATA_DIRS "/usr/local/share/:/usr/share"
+#define DEFAULT_XDG_DATA_DIRS "/usr/local/share/:/usr/share/"
 #define DEFAULT_XDG_CONFIG_DIRS "/etc/xdg/"
 #define DEFAULT_XDG_DATA_HOME ".local/share/"
 #define DEFAULT_XDG_CONFIG_HOME ".config/"
