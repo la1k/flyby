@@ -30,7 +30,7 @@
 char *xdg_dirs(const char *varname, const char *default_val)
 {
 	char *data_dirs = getenv(varname);
-	if (data_dirs == NULL) {
+	if ((data_dirs == NULL) || (strlen(data_dirs) == 0)) {
 		data_dirs = (char*)default_val;
 	}
 
@@ -50,7 +50,7 @@ char *xdg_dirs(const char *varname, const char *default_val)
 char *xdg_home(const char *varname, const char *default_val)
 {
 	char *data_dirs = getenv(varname);
-	if (data_dirs == NULL) {
+	if ((data_dirs == NULL) || (strlen(data_dirs) == 0)) {
 		char *home_env = getenv("HOME");
 		int size = strlen(home_env) + strlen(default_val) + 2;
 		data_dirs = (char*)malloc(sizeof(char)*size);
