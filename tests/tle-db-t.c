@@ -322,22 +322,6 @@ void test_tle_db_merge(void **param)
 	tle_db_destroy(&merged);
 }
 
-
-/*
-char *tle_db_updatefile_writepath()
-void tle_db_update_file(const char *tle_filename, struct tle_db *tle_db)
-void tle_db_update(const char *filename, struct tle_db *tle_db, bool *ret_was_updated, bool *ret_in_new_file)
-
-Her tror jeg det er viktig å sjekke alle spesialtilfellene som er definert i dokumentasjonen.
-void tle_db_from_search_paths(struct tle_db *ret_tle_db)
-
-
-sjekk det samme her?
-void whitelist_from_search_paths(struct tle_db *db)
-void whitelist_write_to_default(struct tle_db *db)
-*/
-
-
 int main()
 {
 	struct CMUnitTest tests[] = {cmocka_unit_test(test_tle_db_add_entry),
