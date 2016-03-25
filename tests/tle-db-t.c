@@ -254,35 +254,83 @@ void test_whitelist_to_file(void **param)
 	tle_db_destroy(&tle_db_new);
 }
 
-/*
 void test_tle_db_merge(void **param)
 {
 	struct tle_db *tle_db_1 = tle_db_create();
 	struct tle_db *tle_db_2 = tle_db_create();
 
 	//check merge behavior for two complementary databases
-	tle_db_from_file(TEST_TLE_DIR, "old_tles/part1.tle", tle_db_1);
-	tle_db_from_file(TEST_TLE_DIR, "old_tles/part2.tle", tle_db_2);
+	tle_db_from_file(TEST_TLE_DIR "old_tles/part1.tle", tle_db_1);
+	tle_db_from_file(TEST_TLE_DIR "old_tles/part2.tle", tle_db_2);
+	struct tle_db *merged = tle_db_create();
+	tle_db_merge(tle_db_1, merged, TLE_OVERWRITE_NONE);
+	tle_db_merge(tle_db_2, merged, TLE_OVERWRITE_NONE);
+	assert_int_equal(tle_db_1->num_tles + tle_db_2->num_tles, merged->num_tles);
 	
 	//check merge behavior for two completely overlapping databases
-	tle_db_from_file(TEST_TLE_DIR, "old_tles/part1.tle", tle_db_1);
-	tle_db_from_file(TEST_TLE_DIR, "old_tles/part2.tle", tle_db_2);
-}*/
+	tle_db_from_file(TEST_TLE_DIR "old_tles/part1.tle", tle_db_1);
+	tle_db_from_file(TEST_TLE_DIR "old_tles/part1.tle", tle_db_2);
+	tle_db_from_file("/dev/NULL", merged);
+	tle_db_merge(tle_db_1, merged, TLE_OVERWRITE_NONE);
+	tle_db_merge(tle_db_2, merged, TLE_OVERWRITE_NONE);
+	assert_int_equal(tle_db_1->num_tles, merged->num_tles);
+	assert_int_equal(tle_db_2->num_tles, merged->num_tles);
+
+	//check merge behavior for two partially overlapping databases
+	tle_db_from_directory(TEST_TLE_DIR "old_tles/", tle_db_1);
+	tle_db_from_file(TEST_TLE_DIR "newer_tles/amateur.txt", tle_db_2);
+	tle_db_from_file("/dev/NULL", merged);
+	tle_db_merge(tle_db_1, merged, TLE_OVERWRITE_NONE);
+	tle_db_merge(tle_db_2, merged, TLE_OVERWRITE_NONE);
+	int expected_num_tles = 66;
+	assert_int_equal(merged->num_tles, expected_num_tles);
+
+	//check that old entries are overwritten with new when this option is chosen
+	tle_db_from_file("/dev/NULL", merged);
+	tle_db_merge(tle_db_1, merged, TLE_OVERWRITE_NONE);
+	tle_db_merge(tle_db_2, merged, TLE_OVERWRITE_OLD);
+	assert_int_equal(merged->num_tles, expected_num_tles);
+	for (int i=0; i < merged->num_tles; i++) {
+		long satellite_number = merged->tles[i].satellite_number;
+		int corr_entry = tle_db_find_entry(tle_db_1, satellite_number);
+		if (corr_entry != -1) {
+			if (!tle_db_entry_is_newer_than(merged->tles[i], tle_db_1->tles[corr_entry])) {
+				assert_string_equal(merged->tles[i].line1, tle_db_1->tles[corr_entry].line1);
+				assert_string_equal(merged->tles[i].line2, tle_db_1->tles[corr_entry].line2);
+			}
+		}
+	}
+
+	//check the same, but with opposite order of merge
+	tle_db_from_file("/dev/NULL", merged);
+	tle_db_merge(tle_db_2, merged, TLE_OVERWRITE_OLD);
+	tle_db_merge(tle_db_1, merged, TLE_OVERWRITE_NONE);
+	assert_int_equal(merged->num_tles, expected_num_tles);
+	for (int i=0; i < merged->num_tles; i++) {
+		long satellite_number = merged->tles[i].satellite_number;
+		int corr_entry = tle_db_find_entry(tle_db_1, satellite_number);
+		if (corr_entry != -1) {
+			if (!tle_db_entry_is_newer_than(merged->tles[i], tle_db_1->tles[corr_entry])) {
+				assert_string_equal(merged->tles[i].line1, tle_db_1->tles[corr_entry].line1);
+				assert_string_equal(merged->tles[i].line2, tle_db_1->tles[corr_entry].line2);
+			}
+		}
+	}
+
+	tle_db_destroy(&tle_db_1);
+	tle_db_destroy(&tle_db_2);
+	tle_db_destroy(&merged);
+}
 
 
 /*
-void tle_db_merge(struct tle_db *new_db, struct tle_db *main_db, enum tle_merge_behavior merge_opt)
-
-
 char *tle_db_updatefile_writepath()
 void tle_db_update_file(const char *tle_filename, struct tle_db *tle_db)
 void tle_db_update(const char *filename, struct tle_db *tle_db, bool *ret_was_updated, bool *ret_in_new_file)
+
+Her tror jeg det er viktig å sjekke alle spesialtilfellene som er definert i dokumentasjonen.
 void tle_db_from_search_paths(struct tle_db *ret_tle_db)
 
-Sjekk oppførsel med ikke-eksisterende whitelist.
-Sjekk at det blir samme state før og etter whitelist_to_file og whitelist_from_file.
-void whitelist_from_file(const char *file, struct tle_db *db)
-void whitelist_to_file(const char *filename, struct tle_db *db)
 
 sjekk det samme her?
 void whitelist_from_search_paths(struct tle_db *db)
@@ -302,6 +350,7 @@ int main()
 	cmocka_unit_test(test_tle_db_create),
 	cmocka_unit_test(test_whitelist_from_file),
 	cmocka_unit_test(test_tle_db_to_file),
+	cmocka_unit_test(test_tle_db_merge),
 	cmocka_unit_test(test_whitelist_to_file),
 	cmocka_unit_test(test_tle_db_enabled)
 	};
