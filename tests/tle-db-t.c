@@ -39,19 +39,6 @@ void test_tle_db_add_entry(void **param)
 	tle_db_destroy(&tle_db);
 }
 
-void test_tle_db_create(void **param)
-{
-	struct tle_db *tle_db_1 = tle_db_create();
-	struct tle_db *tle_db_2 = tle_db_create();
-
-	assert_int_equal(tle_db_1->num_tles, 0);
-	assert_int_equal(tle_db_2->num_tles, 0);
-	assert_memory_equal((char*)tle_db_1, (char*)tle_db_2, sizeof(struct tle_db));
-
-	tle_db_destroy(&tle_db_1);
-	tle_db_destroy(&tle_db_2);
-}
-
 #define TEST_TLE_DIR "test_data/"
 void test_tle_db_from_file(void **param)
 {
@@ -331,7 +318,6 @@ int main()
 	cmocka_unit_test(test_tle_db_entry_is_newer_than),
 	cmocka_unit_test(test_tle_db_from_directory),
 	cmocka_unit_test(test_tle_db_filenames),
-	cmocka_unit_test(test_tle_db_create),
 	cmocka_unit_test(test_whitelist_from_file),
 	cmocka_unit_test(test_tle_db_to_file),
 	cmocka_unit_test(test_tle_db_merge),
