@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <unistd.h>
+#include <errno.h>
 
 #include <setjmp.h>
 #include <stdarg.h>
@@ -156,17 +157,19 @@ void test_tle_db_filenames(void **param)
 
 void test_tle_db_to_file(void **param)
 {
-	char tempfile[L_tmpnam];
-	mkstemp(tempfile);
+	char filename[L_tmpnam] = "/tmp/XXXXXX";
+	int fid = mkstemp(filename);
+	assert_true(fid != -1);
+	assert_true(strlen(filename) > 0);
 
 	//write and read back non-empty database
 	struct tle_db *tle_db = tle_db_create();
 	tle_db_from_file(TEST_TLE_DIR "old_tles/part1.tle", tle_db);
 	assert_true(tle_db->num_tles > 0);
-	tle_db_to_file(tempfile, tle_db);
+	tle_db_to_file(filename, tle_db);
 
 	struct tle_db *tle_db_2 = tle_db_create();
-	tle_db_from_file(tempfile, tle_db_2);
+	tle_db_from_file(filename, tle_db_2);
 
 	assert_int_equal(tle_db_2->num_tles, tle_db->num_tles);
 
@@ -179,11 +182,14 @@ void test_tle_db_to_file(void **param)
 	assert_int_equal(tle_db->num_tles, 0);
 	tle_db_from_file(TEST_TLE_DIR "old_tles/part1.tle", tle_db_2);
 	assert_true(tle_db_2->num_tles > 0);
-	tle_db_to_file(tempfile, tle_db);
-	tle_db_from_file(tempfile, tle_db_2);
+	tle_db_to_file(filename, tle_db);
+	tle_db_from_file(filename, tle_db_2);
 	assert_int_equal(tle_db_2->num_tles, 0);
 
-	unlink(tempfile);
+	//try to write to non-existing location
+	tle_db_to_file("/dev/NULL", tle_db);
+
+	unlink(filename);
 }
 
 void test_whitelist_from_file(void **param)
@@ -197,9 +203,55 @@ void test_whitelist_from_file(void **param)
 	//read non-existing whitelist
 	whitelist_from_file("/dev/NULL", tle_db);
 	assert_memory_equal((char*)tle_db_copy, (char*)tle_db, sizeof(struct tle_db));
+	for (int i=0; i < tle_db->num_tles; i++) {
+		assert_false(tle_db_entry_enabled(tle_db, i));
+	}
+	long sat_1 = 32785;
+	long sat_2 = 33493;
+	assert_false(tle_db_entry_enabled(tle_db, tle_db_find_entry(tle_db, sat_1)));
+	assert_false(tle_db_entry_enabled(tle_db, tle_db_find_entry(tle_db, sat_2)));
 
 	//read non-empty whitelist
+	whitelist_from_file(TEST_TLE_DIR "flyby/flyby.whitelist", tle_db);
+	assert_true(tle_db->num_tles > 0);
+	assert_true(tle_db_entry_enabled(tle_db, tle_db_find_entry(tle_db, sat_1)));
+	assert_true(tle_db_entry_enabled(tle_db, tle_db_find_entry(tle_db, sat_2)));
+	for (int i=0; i < tle_db->num_tles; i++) {
+		long satellite_number = tle_db->tles[i].satellite_number;
+		if ((satellite_number != sat_1) && (satellite_number != sat_2)) {
+			assert_false(tle_db_entry_enabled(tle_db, i));
+		}
+	}
+}
 
+void test_whitelist_to_file(void **param)
+{
+	struct tle_db *tle_db = tle_db_create();
+	tle_db_from_file(TEST_TLE_DIR "old_tles/part1.tle", tle_db);
+	int index = 0;
+	whitelist_from_file("/dev/NULL", tle_db);
+	tle_db_entry_set_enabled(tle_db, index, true);
+
+	//write whitelist to file
+	char filename[L_tmpnam] = "/tmp/XXXXX";
+	mkstemp(filename);
+	assert_true(strlen(filename) > 0);
+	whitelist_to_file(filename, tle_db);
+
+	tle_db_destroy(&tle_db);
+	
+	//read back whitelist
+	struct tle_db *tle_db_new = tle_db_create();
+	tle_db_from_file(TEST_TLE_DIR "old_tles/part1.tle", tle_db_new);
+	whitelist_from_file("/dev/NULL", tle_db_new);
+	assert_false(tle_db_entry_enabled(tle_db_new, index));
+	whitelist_from_file(filename, tle_db_new);
+	assert_true(tle_db_entry_enabled(tle_db_new, index));
+	
+	//write whitelist to impossible location
+	whitelist_to_file("/dev/NULL", tle_db);
+
+	tle_db_destroy(&tle_db_new);
 }
 
 /*
@@ -250,6 +302,7 @@ int main()
 	cmocka_unit_test(test_tle_db_create),
 	cmocka_unit_test(test_whitelist_from_file),
 	cmocka_unit_test(test_tle_db_to_file),
+	cmocka_unit_test(test_whitelist_to_file),
 	cmocka_unit_test(test_tle_db_enabled)
 	};
 

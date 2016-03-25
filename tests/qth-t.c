@@ -44,8 +44,9 @@ void test_qth_readwrite()
 	assert_false(observer->latitude == read_observer->latitude);
 	assert_false(observer->altitude == read_observer->altitude);
 
-	char qth_file[L_tmpnam];
+	char qth_file[L_tmpnam] = "/tmp/XXXXXX";
 	mkstemp(qth_file);
+	assert_true(strlen(qth_file) > 0);
 
 	//write one observer to file, read back the other. Check that they are equal
 	qth_to_file(qth_file, observer);
