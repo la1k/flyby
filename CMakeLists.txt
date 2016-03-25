@@ -37,4 +37,4 @@ target_link_libraries(flyby predict)
 if (WITH_TESTING)
 	enable_testing()
 	add_subdirectory(tests)
-endif
+endif (WITH_TESTING)
