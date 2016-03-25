@@ -29,7 +29,7 @@ void test_string_array(void **param)
 	//find
 	assert_int_equal(string_array_find(&string_array, "test"), 1);
 	assert_int_equal(string_array_find(&string_array, "teststri"), -1);
-	
+
 	//free
 	string_array_free(&string_array);
 	assert_int_equal(string_array_size(&string_array), 0);

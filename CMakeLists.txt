@@ -34,5 +34,7 @@ target_link_libraries(flyby menu)
 target_link_libraries(flyby form)
 target_link_libraries(flyby predict)
 
-enable_testing()
-add_subdirectory(tests)
+if (WITH_TESTING)
+	enable_testing()
+	add_subdirectory(tests)
+endif
