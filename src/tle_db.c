@@ -252,16 +252,16 @@ void tle_db_to_file(const char *filename, struct tle_db *tle_db)
 	FILE *fd;
 
 	/* Save orbital data to tlefile */
-
 	fd=fopen(filename,"w");
+	if (fd != NULL) {
+		for (x=0; x<tle_db->num_tles; x++) {
+			fprintf(fd,"%s\n", tle_db->tles[x].name);
+			fprintf(fd,"%s\n", tle_db->tles[x].line1);
+			fprintf(fd,"%s\n", tle_db->tles[x].line2);
+		}
 
-	for (x=0; x<tle_db->num_tles; x++) {
-		fprintf(fd,"%s\n", tle_db->tles[x].name);
-		fprintf(fd,"%s\n", tle_db->tles[x].line1);
-		fprintf(fd,"%s\n", tle_db->tles[x].line2);
+		fclose(fd);
 	}
-
-	fclose(fd);
 }
 
 /**
@@ -519,12 +519,14 @@ void whitelist_from_search_paths(struct tle_db *db)
 void whitelist_to_file(const char *filename, struct tle_db *db)
 {
 	FILE* fd = fopen(filename, "w");
-	for (int i=0; i < db->num_tles; i++) {
-		if (tle_db_entry_enabled(db, i)) {
-			fprintf(fd, "%ld\n", db->tles[i].satellite_number);
+	if (fd != NULL) {
+		for (int i=0; i < db->num_tles; i++) {
+			if (tle_db_entry_enabled(db, i)) {
+				fprintf(fd, "%ld\n", db->tles[i].satellite_number);
+			}
 		}
+		fclose(fd);
 	}
-	fclose(fd);
 }
 
 void whitelist_write_to_default(struct tle_db *db)
