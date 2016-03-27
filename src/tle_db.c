@@ -81,7 +81,7 @@ void tle_db_merge(struct tle_db *new_db, struct tle_db *main_db, enum tle_merge_
 			if (new_db->tles[i].satellite_number == main_db->tles[j].satellite_number) {
 				tle_exists = true;
 
-				if ((merge_opt == TLE_OVERWRITE_OLD) && tle_db_entry_is_newer_than(new_db->tles[i], main_db->tles[i])) {
+				if ((merge_opt == TLE_OVERWRITE_OLD) && tle_db_entry_is_newer_than(new_db->tles[i], main_db->tles[j])) {
 					tle_db_overwrite_entry(j, main_db, &(new_db->tles[i]));
 				}
 			}
@@ -108,13 +108,24 @@ void tle_db_from_directory(const char *dirpath, struct tle_db *ret_tle_db)
 {
 	DIR *d;
 	struct dirent *file;
-	d = opendir(dirpath);
+
+	char *dirpath_ext = NULL;
+	if (dirpath[strlen(dirpath)-1] != '/') {
+		dirpath_ext = (char*)malloc(sizeof(char)*(strlen(dirpath)+2));
+		strcpy(dirpath_ext, dirpath);
+		dirpath_ext[strlen(dirpath)] = '/';
+		dirpath_ext[strlen(dirpath_ext)] = '\0';
+	} else {
+		dirpath_ext = strdup(dirpath);
+	}
+
+	d = opendir(dirpath_ext);
 	if (d) {
 		while ((file = readdir(d)) != NULL) {
 			if (file->d_type == DT_REG) {
-				int pathsize = strlen(file->d_name) + strlen(dirpath) + 1;
+				int pathsize = strlen(file->d_name) + strlen(dirpath_ext) + 1;
 				char *full_path = (char*)malloc(sizeof(char)*pathsize);
-				snprintf(full_path, pathsize, "%s%s", dirpath, file->d_name);
+				snprintf(full_path, pathsize, "%s%s", dirpath_ext, file->d_name);
 
 				//read into empty TLE db
 				struct tle_db temp_db = {0};
@@ -127,6 +138,7 @@ void tle_db_from_directory(const char *dirpath, struct tle_db *ret_tle_db)
 		}
 		closedir(d);
 	}
+	free(dirpath_ext);
 }
 
 /* This function scans line 1 and line 2 of a NASA 2-Line element
