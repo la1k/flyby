@@ -45,7 +45,7 @@ void test_tle_db_from_file(void **param)
 	struct tle_db *tle_db = tle_db_create();
 
 	//read empty database
-	int retval = tle_db_from_file("/dev/NULL", tle_db);
+	int retval = tle_db_from_file("/dev/NULL/", tle_db);
 	assert_int_not_equal(retval, 0);
 	assert_int_equal(tle_db->num_tles, 0);
 
@@ -103,11 +103,47 @@ void test_tle_db_from_directory(void **param)
 {
 	struct tle_db *tle_db = tle_db_create();
 
-	tle_db_from_directory("/dev/NULL", tle_db);
+	//non-existing directory
+	tle_db_from_directory("/dev/NULL/", tle_db);
 	assert_int_equal(tle_db->num_tles, 0);
 
+	//correct number from homogeneous directory
 	tle_db_from_directory(TEST_TLE_DIR "old_tles/", tle_db);
 	assert_int_equal(tle_db->num_tles, 16);
+
+	//check when there is no trailing '/' in directory name
+	tle_db_from_file("/dev/NULL/", tle_db);
+	assert_int_equal(tle_db->num_tles, 0);
+	tle_db_from_directory(TEST_TLE_DIR "old_tles", tle_db);
+	assert_int_equal(tle_db->num_tles, 16);
+
+	//test new/old precedence in inhomogeneous directory
+	struct tle_db *old_tles = tle_db_create();
+	tle_db_from_directory(TEST_TLE_DIR "old_tles/", old_tles);
+	assert_int_equal(old_tles->num_tles, 16);
+	struct tle_db *new_tles = tle_db_create();
+	tle_db_from_directory(TEST_TLE_DIR "newer_tles/", new_tles);
+	assert_int_equal(new_tles->num_tles, 63);
+
+	tle_db_from_file("/dev/NULL/", tle_db);
+	tle_db_from_directory(TEST_TLE_DIR "mixture/flyby/tles/", tle_db);
+	assert_true(tle_db->num_tles > 0);
+
+	bool in_both = false;
+	for (int i=0; i < tle_db->num_tles; i++) {
+		long sat_num = tle_db->tles[i].satellite_number;
+		int old_ind = tle_db_find_entry(old_tles, sat_num);
+		int new_ind = tle_db_find_entry(new_tles, sat_num);
+		assert_true((old_ind != -1) || (new_ind != -1));
+
+		//if TLE is in both databases, the one in tle_db should be more recent than the one in old_tles
+		if ((old_ind != -1) && (new_ind != -1)) {
+			in_both = true;
+			assert_true(tle_db_entry_is_newer_than(new_tles->tles[new_ind], old_tles->tles[old_ind])); //check that the new TLE truly is newer than the old TLE
+			assert_true(tle_db_entry_is_newer_than(tle_db->tles[i], old_tles->tles[old_ind])); //check that the newest one was picked
+		}
+	}
+	assert_true(in_both); //check that we actually encounter a TLE in both new and old databases
 
 	tle_db_destroy(&tle_db);
 }
@@ -124,10 +160,10 @@ void test_tle_db_enabled(void **param)
 
 	tle_db_entry_set_enabled(tle_db, 0, false);
 	assert_false(tle_db_entry_enabled(tle_db, 0));
-	
+
 	tle_db_entry_set_enabled(tle_db, tle_db->num_tles, true);
 	assert_false(tle_db_entry_enabled(tle_db, tle_db->num_tles));
-	
+
 	tle_db_entry_set_enabled(tle_db, tle_db->num_tles, false);
 	assert_false(tle_db_entry_enabled(tle_db, tle_db->num_tles));
 }
@@ -174,7 +210,7 @@ void test_tle_db_to_file(void **param)
 	assert_int_equal(tle_db_2->num_tles, 0);
 
 	//try to write to non-existing location
-	tle_db_to_file("/dev/NULL", tle_db);
+	tle_db_to_file("/dev/NULL/", tle_db);
 
 	unlink(filename);
 }
@@ -188,7 +224,7 @@ void test_whitelist_from_file(void **param)
 	assert_memory_equal((char*)tle_db_copy, (char*)tle_db, sizeof(struct tle_db));
 
 	//read non-existing whitelist
-	whitelist_from_file("/dev/NULL", tle_db);
+	whitelist_from_file("/dev/NULL/", tle_db);
 	assert_memory_equal((char*)tle_db_copy, (char*)tle_db, sizeof(struct tle_db));
 	for (int i=0; i < tle_db->num_tles; i++) {
 		assert_false(tle_db_entry_enabled(tle_db, i));
@@ -216,7 +252,7 @@ void test_whitelist_to_file(void **param)
 	struct tle_db *tle_db = tle_db_create();
 	tle_db_from_file(TEST_TLE_DIR "old_tles/part1.tle", tle_db);
 	int index = 0;
-	whitelist_from_file("/dev/NULL", tle_db);
+	whitelist_from_file("/dev/NULL/", tle_db);
 	tle_db_entry_set_enabled(tle_db, index, true);
 
 	//write whitelist to file
@@ -226,17 +262,17 @@ void test_whitelist_to_file(void **param)
 	whitelist_to_file(filename, tle_db);
 
 	tle_db_destroy(&tle_db);
-	
+
 	//read back whitelist
 	struct tle_db *tle_db_new = tle_db_create();
 	tle_db_from_file(TEST_TLE_DIR "old_tles/part1.tle", tle_db_new);
-	whitelist_from_file("/dev/NULL", tle_db_new);
+	whitelist_from_file("/dev/NULL/", tle_db_new);
 	assert_false(tle_db_entry_enabled(tle_db_new, index));
 	whitelist_from_file(filename, tle_db_new);
 	assert_true(tle_db_entry_enabled(tle_db_new, index));
-	
+
 	//write whitelist to impossible location
-	whitelist_to_file("/dev/NULL", tle_db);
+	whitelist_to_file("/dev/NULL/", tle_db);
 
 	tle_db_destroy(&tle_db_new);
 }
@@ -253,11 +289,11 @@ void test_tle_db_merge(void **param)
 	tle_db_merge(tle_db_1, merged, TLE_OVERWRITE_NONE);
 	tle_db_merge(tle_db_2, merged, TLE_OVERWRITE_NONE);
 	assert_int_equal(tle_db_1->num_tles + tle_db_2->num_tles, merged->num_tles);
-	
+
 	//check merge behavior for two completely overlapping databases
 	tle_db_from_file(TEST_TLE_DIR "old_tles/part1.tle", tle_db_1);
 	tle_db_from_file(TEST_TLE_DIR "old_tles/part1.tle", tle_db_2);
-	tle_db_from_file("/dev/NULL", merged);
+	tle_db_from_file("/dev/NULL/", merged);
 	tle_db_merge(tle_db_1, merged, TLE_OVERWRITE_NONE);
 	tle_db_merge(tle_db_2, merged, TLE_OVERWRITE_NONE);
 	assert_int_equal(tle_db_1->num_tles, merged->num_tles);
@@ -266,17 +302,18 @@ void test_tle_db_merge(void **param)
 	//check merge behavior for two partially overlapping databases
 	tle_db_from_directory(TEST_TLE_DIR "old_tles/", tle_db_1);
 	tle_db_from_file(TEST_TLE_DIR "newer_tles/amateur.txt", tle_db_2);
-	tle_db_from_file("/dev/NULL", merged);
+	tle_db_from_file("/dev/NULL/", merged);
 	tle_db_merge(tle_db_1, merged, TLE_OVERWRITE_NONE);
 	tle_db_merge(tle_db_2, merged, TLE_OVERWRITE_NONE);
 	int expected_num_tles = 66;
 	assert_int_equal(merged->num_tles, expected_num_tles);
 
 	//check that old entries are overwritten with new when this option is chosen
-	tle_db_from_file("/dev/NULL", merged);
+	tle_db_from_file("/dev/NULL/", merged);
 	tle_db_merge(tle_db_1, merged, TLE_OVERWRITE_NONE);
 	tle_db_merge(tle_db_2, merged, TLE_OVERWRITE_OLD);
 	assert_int_equal(merged->num_tles, expected_num_tles);
+	bool oldnew_triggered = false;
 	for (int i=0; i < merged->num_tles; i++) {
 		long satellite_number = merged->tles[i].satellite_number;
 		int corr_entry = tle_db_find_entry(tle_db_1, satellite_number);
@@ -284,12 +321,15 @@ void test_tle_db_merge(void **param)
 			if (!tle_db_entry_is_newer_than(merged->tles[i], tle_db_1->tles[corr_entry])) {
 				assert_string_equal(merged->tles[i].line1, tle_db_1->tles[corr_entry].line1);
 				assert_string_equal(merged->tles[i].line2, tle_db_1->tles[corr_entry].line2);
+			} else {
+				oldnew_triggered = true;
 			}
 		}
 	}
+	assert_true(oldnew_triggered);
 
 	//check the same, but with opposite order of merge
-	tle_db_from_file("/dev/NULL", merged);
+	tle_db_from_file("/dev/NULL/", merged);
 	tle_db_merge(tle_db_2, merged, TLE_OVERWRITE_OLD);
 	tle_db_merge(tle_db_1, merged, TLE_OVERWRITE_NONE);
 	assert_int_equal(merged->num_tles, expected_num_tles);
@@ -309,6 +349,60 @@ void test_tle_db_merge(void **param)
 	tle_db_destroy(&merged);
 }
 
+char *xdg_data_dirs()
+{
+	return strdup((char*)mock());
+}
+
+char *xdg_data_home()
+{
+	return strdup((char*)mock());
+}
+
+void create_xdg_dirs()
+{
+}
+
+char *xdg_config_home()
+{
+	return strdup((char*)mock());
+}
+
+void test_tle_db_from_search_paths(void **param)
+{
+	//test that search path gives same database as the direct path
+	struct tle_db *tle_db_direct = tle_db_create();
+	tle_db_from_directory(TEST_TLE_DIR "old_tles/flyby/tles/", tle_db_direct);
+
+	will_return(xdg_data_dirs, "/dev/NULL/");
+	will_return(xdg_data_home, TEST_TLE_DIR "old_tles/");
+	struct tle_db *tle_db_searchpaths = tle_db_create();
+	tle_db_from_search_paths(tle_db_searchpaths);
+
+	assert_int_equal(tle_db_direct->num_tles, tle_db_searchpaths->num_tles);
+
+	//check that xdg_config_home takes precedence over xdg_data_home regardless of how old the TLEs are
+	struct tle_db *tle_db_old = tle_db_create();
+	tle_db_from_directory(TEST_TLE_DIR "old_tles/flyby/tles/", tle_db_old);
+	struct tle_db *tle_db_new = tle_db_create();
+	tle_db_from_directory(TEST_TLE_DIR "newer_tles/flyby/tles/", tle_db_new);
+
+	will_return(xdg_data_dirs, TEST_TLE_DIR "newer_tles/");
+	will_return(xdg_data_home, TEST_TLE_DIR "old_tles/");
+	tle_db_from_file("/dev/NULL/", tle_db_searchpaths);
+	tle_db_from_search_paths(tle_db_searchpaths);
+
+	for (int i=0; i < tle_db_searchpaths->num_tles; i++) {
+		long sat_num = tle_db_searchpaths->tles[i].satellite_number;
+		int old_ind = tle_db_find_entry(tle_db_old, sat_num);
+		int new_ind = tle_db_find_entry(tle_db_new, sat_num);
+		assert_true((old_ind != -1) || (new_ind != -1));
+		if ((old_ind != -1) && (new_ind != -1)) {
+			assert_false(tle_db_entry_is_newer_than(tle_db_searchpaths->tles[i], tle_db_new->tles[new_ind]));
+		}
+	}
+}
+
 int main()
 {
 	struct CMUnitTest tests[] = {cmocka_unit_test(test_tle_db_add_entry),
@@ -321,7 +415,8 @@ int main()
 	cmocka_unit_test(test_whitelist_from_file),
 	cmocka_unit_test(test_tle_db_to_file),
 	cmocka_unit_test(test_tle_db_merge),
-	cmocka_unit_test(test_whitelist_to_file),
+	cmocka_unit_test(test_tle_db_from_search_paths),
+	cmocka_unit_test(test_whitelist_from_search_paths),
 	cmocka_unit_test(test_tle_db_enabled)
 	};
 
