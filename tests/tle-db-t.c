@@ -390,13 +390,48 @@ void test_tle_db_from_search_paths(void **param)
 	tle_db_from_file("/dev/NULL/", tle_db_searchpaths);
 	tle_db_from_search_paths(tle_db_searchpaths);
 
+	bool in_both = false;
 	for (int i=0; i < tle_db_searchpaths->num_tles; i++) {
 		long sat_num = tle_db_searchpaths->tles[i].satellite_number;
 		int old_ind = tle_db_find_entry(tle_db_old, sat_num);
 		int new_ind = tle_db_find_entry(tle_db_new, sat_num);
 		assert_true((old_ind != -1) || (new_ind != -1));
 		if ((old_ind != -1) && (new_ind != -1)) {
+			in_both = true;
 			assert_false(tle_db_entry_is_newer_than(tle_db_searchpaths->tles[i], tle_db_new->tles[new_ind]));
+		}
+	}
+	assert_true(in_both);
+}
+
+void test_whitelist_from_search_paths(void **param)
+{
+	struct tle_db *tle_db = tle_db_create();
+	tle_db_from_file(TEST_TLE_DIR "old_tles/part1.tle", tle_db);
+	struct tle_db *tle_db_copy = tle_db_create();
+	memcpy(tle_db_copy, tle_db, sizeof(struct tle_db));
+
+	//read non-existing whitelist
+	will_return(xdg_config_home, "/dev/NULL");
+	whitelist_from_search_paths(tle_db);
+	for (int i=0; i < tle_db->num_tles; i++) {
+		assert_false(tle_db_entry_enabled(tle_db, i));
+	}
+	long sat_1 = 32785;
+	long sat_2 = 33493;
+	assert_false(tle_db_entry_enabled(tle_db, tle_db_find_entry(tle_db, sat_1)));
+	assert_false(tle_db_entry_enabled(tle_db, tle_db_find_entry(tle_db, sat_2)));
+
+	//read non-empty whitelist
+	will_return(xdg_config_home, TEST_TLE_DIR);
+	whitelist_from_search_paths(tle_db);
+	assert_true(tle_db->num_tles > 0);
+	assert_true(tle_db_entry_enabled(tle_db, tle_db_find_entry(tle_db, sat_1)));
+	assert_true(tle_db_entry_enabled(tle_db, tle_db_find_entry(tle_db, sat_2)));
+	for (int i=0; i < tle_db->num_tles; i++) {
+		long satellite_number = tle_db->tles[i].satellite_number;
+		if ((satellite_number != sat_1) && (satellite_number != sat_2)) {
+			assert_false(tle_db_entry_enabled(tle_db, i));
 		}
 	}
 }
@@ -413,6 +448,7 @@ int main()
 	cmocka_unit_test(test_whitelist_from_file),
 	cmocka_unit_test(test_tle_db_to_file),
 	cmocka_unit_test(test_tle_db_merge),
+	cmocka_unit_test(test_whitelist_from_search_paths),
 	cmocka_unit_test(test_tle_db_from_search_paths),
 	cmocka_unit_test(test_tle_db_enabled)
 	};
