@@ -25,7 +25,15 @@ configure_file(test_data/old_tles/part2.tle.in test_data/old_tles/part2.tle ONLY
 configure_file(test_data/newer_tles/amateur.txt.in test_data/newer_tles/amateur.txt ONLY)
 configure_file(test_data/flyby.whitelist.in test_data/flyby/flyby.whitelist ONLY)
 
+#TLEs in paths compatible with the XDG_DATA_HOME setup
+configure_file(test_data/old_tles/part1.tle.in test_data/old_tles/flyby/tles/part1.tle ONLY)
+configure_file(test_data/old_tles/part2.tle.in test_data/old_tles/flyby/tles/part2.tle ONLY)
+configure_file(test_data/newer_tles/amateur.txt.in test_data/newer_tles/flyby/tles/amateur.txt ONLY)
+configure_file(test_data/old_tles/part1.tle.in test_data/mixture/flyby/tles/part1.tle ONLY)
+configure_file(test_data/old_tles/part2.tle.in test_data/mixture/flyby/tles/part2.tle ONLY)
+configure_file(test_data/newer_tles/amateur.txt.in test_data/mixture/flyby/tles/amateur.txt ONLY)
+
 #TLE db tests
-add_executable(tle-db-t tle-db-t.c ${CMAKE_SOURCE_DIR}/src/tle_db.c ${CMAKE_SOURCE_DIR}/src/xdg_basedirs.c ${CMAKE_SOURCE_DIR}/src/string_array.c)
+add_executable(tle-db-t tle-db-t.c ${CMAKE_SOURCE_DIR}/src/tle_db.c ${CMAKE_SOURCE_DIR}/src/string_array.c)
 target_link_libraries(tle-db-t ${CMOCKA_LIBRARY} predict)
 add_test(NAME tle-db COMMAND tle-db-t)

@@ -316,14 +316,11 @@ void test_tle_db_merge(void **param)
 	bool oldnew_triggered = false;
 	for (int i=0; i < merged->num_tles; i++) {
 		long satellite_number = merged->tles[i].satellite_number;
-		int corr_entry = tle_db_find_entry(tle_db_1, satellite_number);
-		if (corr_entry != -1) {
-			if (!tle_db_entry_is_newer_than(merged->tles[i], tle_db_1->tles[corr_entry])) {
-				assert_string_equal(merged->tles[i].line1, tle_db_1->tles[corr_entry].line1);
-				assert_string_equal(merged->tles[i].line2, tle_db_1->tles[corr_entry].line2);
-			} else {
-				oldnew_triggered = true;
-			}
+		int old_entry = tle_db_find_entry(tle_db_1, satellite_number);
+		int new_entry = tle_db_find_entry(tle_db_2, satellite_number);
+		if ((old_entry != -1) && (new_entry != -1)) {
+			oldnew_triggered = true;
+			assert_true(tle_db_entry_is_newer_than(merged->tles[i], tle_db_1->tles[old_entry]));
 		}
 	}
 	assert_true(oldnew_triggered);
@@ -333,16 +330,17 @@ void test_tle_db_merge(void **param)
 	tle_db_merge(tle_db_2, merged, TLE_OVERWRITE_OLD);
 	tle_db_merge(tle_db_1, merged, TLE_OVERWRITE_NONE);
 	assert_int_equal(merged->num_tles, expected_num_tles);
+	oldnew_triggered = false;
 	for (int i=0; i < merged->num_tles; i++) {
 		long satellite_number = merged->tles[i].satellite_number;
-		int corr_entry = tle_db_find_entry(tle_db_1, satellite_number);
-		if (corr_entry != -1) {
-			if (!tle_db_entry_is_newer_than(merged->tles[i], tle_db_1->tles[corr_entry])) {
-				assert_string_equal(merged->tles[i].line1, tle_db_1->tles[corr_entry].line1);
-				assert_string_equal(merged->tles[i].line2, tle_db_1->tles[corr_entry].line2);
-			}
+		int old_entry = tle_db_find_entry(tle_db_1, satellite_number);
+		int new_entry = tle_db_find_entry(tle_db_2, satellite_number);
+		if ((old_entry != -1) && (new_entry != -1)) {
+			oldnew_triggered = true;
+			assert_true(tle_db_entry_is_newer_than(merged->tles[i], tle_db_1->tles[old_entry]));
 		}
 	}
+	assert_true(oldnew_triggered);
 
 	tle_db_destroy(&tle_db_1);
 	tle_db_destroy(&tle_db_2);
@@ -416,7 +414,6 @@ int main()
 	cmocka_unit_test(test_tle_db_to_file),
 	cmocka_unit_test(test_tle_db_merge),
 	cmocka_unit_test(test_tle_db_from_search_paths),
-	cmocka_unit_test(test_whitelist_from_search_paths),
 	cmocka_unit_test(test_tle_db_enabled)
 	};
 
