@@ -65,6 +65,15 @@ void tle_db_destroy(struct tle_db **tle_db);
 void tle_db_from_search_paths(struct tle_db *ret_tle_db);
 
 /**
+ * Used in update status array in tle_db_update.
+ **/
+enum tle_db_update_status {
+	TLE_IN_NEW_FILE = (1u << 1), //updated tle was written to new file
+	TLE_FILE_UPDATED = (1u << 2), //original TLE file was updated
+	TLE_DB_UPDATED = (1u << 3) //program tle db entry was updated
+};
+
+/**
  * Update internal TLE database with newer TLE entries located within supplied file, and update the corresponding file databases.
  * Following rules are used:
  *
@@ -75,10 +84,9 @@ void tle_db_from_search_paths(struct tle_db *ret_tle_db);
  *
  * \param filename TLE file database to read
  * \param tle_db TLE database
- * \param ret_was_updated Boolean array of at least size tle_db->num_tles. Will contain true at the entry indices that were updated. Set to NULL if this is not to be used
- * \param ret_in_new_file Boolean array of at least size tle_db->num_tles. Will contain true at the entry indices that were updated and put in a new update file within the TLE folder. Check against tle_db->read_from_xdg_dirs to see whether file actually was created or not
+ * \param update_status Update status. Combines members in tle_db_update_status according to how each entry is treated
  **/
-void tle_db_update(const char *filename, struct tle_db *tle_db, bool *ret_was_updated, bool *ret_in_new_file);
+void tle_db_update(const char *filename, struct tle_db *tle_db, int *update_status);
 
 /**
  * Read TLEs from files in specified directory. When TLE entries are multiply defined
@@ -111,8 +119,9 @@ int tle_db_from_file(const char *tle_file, struct tle_db *ret_db);
  *
  * \param filename Filename
  * \param tle_db TLE database to write
+ * \return 0 if successful, -1 otherwise
  **/
-void tle_db_to_file(const char *filename, struct tle_db *tle_db);
+int tle_db_to_file(const char *filename, struct tle_db *tle_db);
 
 /**
  * Defines whether to overwrite only older TLE entries or all existing TLE entries when merging two databases.

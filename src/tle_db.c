@@ -258,7 +258,7 @@ int tle_db_from_file(const char *tle_file, struct tle_db *ret_db)
 	return 0;
 }
 
-void tle_db_to_file(const char *filename, struct tle_db *tle_db)
+int tle_db_to_file(const char *filename, struct tle_db *tle_db)
 {
 	int x;
 	FILE *fd;
@@ -273,6 +273,9 @@ void tle_db_to_file(const char *filename, struct tle_db *tle_db)
 		}
 
 		fclose(fd);
+		return 0;
+	} else {
+		return -1;
 	}
 }
 
@@ -324,12 +327,18 @@ void tle_db_update_file(const char *tle_filename, struct tle_db *tle_db)
 	tle_db_to_file(tle_filename, &subset_db);
 }
 
-void tle_db_update(const char *filename, struct tle_db *tle_db, bool *ret_was_updated, bool *ret_in_new_file)
+void tle_db_update(const char *filename, struct tle_db *tle_db, int *update_status)
 {
 	struct tle_db new_db = {0};
 	int retval = tle_db_from_file(filename, &new_db);
 	if (retval != 0) {
 		return;
+	}
+
+	if (update_status != NULL) {
+		for (int i=0; i < tle_db->num_tles; i++) {
+			update_status[i] = 0;
+		}
 	}
 
 	int num_tles_to_update = 0;
@@ -383,18 +392,17 @@ void tle_db_update(const char *filename, struct tle_db *tle_db, bool *ret_was_up
 						//set db indices to update to -1 in order to ignore them on the next update
 						newer_tle_indices[j] = -1;
 
-						if (ret_was_updated != NULL) {
-							ret_was_updated[tle_index] = true;
+						if (update_status != NULL) {
+							update_status[tle_index] |= TLE_DB_UPDATED;
+							if (file_is_writable) {
+								update_status[tle_index] |= TLE_FILE_UPDATED;
+							}
 						}
 
 						if (!file_is_writable) {
 							//add to list over unwritable TLE filenames
 							unwritable_tles[num_unwritable] = tle_index;
 							num_unwritable++;
-
-							if (ret_in_new_file != NULL) {
-								ret_in_new_file[tle_index] = true;
-							}
 						}
 					}
 				}
@@ -413,11 +421,17 @@ void tle_db_update(const char *filename, struct tle_db *tle_db, bool *ret_was_up
 
 		struct tle_db unwritable_db = {0};
 		for (int i=0; i < num_unwritable; i++) {
-			tle_db_add_entry(&unwritable_db, &(tle_db->tles[unwritable_tles[i]]));
-			strncpy(tle_db->tles[unwritable_tles[i]].filename, new_tle_filename, MAX_NUM_CHARS);
+			int tle_ind = unwritable_tles[i];
+			tle_db_add_entry(&unwritable_db, &(tle_db->tles[tle_ind]));
+			strncpy(tle_db->tles[tle_ind].filename, new_tle_filename, MAX_NUM_CHARS);
 		}
-		tle_db_to_file(new_tle_filename, &unwritable_db);
-
+		int retval = tle_db_to_file(new_tle_filename, &unwritable_db);
+		if ((update_status != NULL) && (retval != -1)) {
+			for (int i=0; i < num_unwritable; i++) {
+				int tle_ind = unwritable_tles[i];
+				update_status[tle_ind] |= TLE_IN_NEW_FILE;
+			}
+		}
 		free(new_tle_filename);
 	}
 

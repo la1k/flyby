@@ -175,28 +175,43 @@ void AutoUpdate(const char *string, struct tle_db *tle_db)
 	}
 
 	//update TLE database with file
-	bool was_updated[MAX_NUM_SATS] = {0};
-	bool in_new_file[MAX_NUM_SATS] = {0};
-	tle_db_update(filename, tle_db, was_updated, in_new_file);
+	int update_status[MAX_NUM_SATS] = {0};
+	tle_db_update(filename, tle_db, update_status);
 
 	if (interactive_mode) {
 		move(12, 0);
 	}
 
 	int num_updated = 0;
+	bool in_new_file = false;
+	bool not_written = false;
+	char new_file[MAX_NUM_CHARS] = {0};
 	for (int i=0; i < tle_db->num_tles; i++) {
-		if (was_updated[i]) {
+		if (update_status[i] & TLE_DB_UPDATED) {
 			//print updated entries
 			if (interactive_mode) {
 				printw("Updated %s (%ld)", tle_db->tles[i].name, tle_db->tles[i].satellite_number);
 			} else {
 				printf("Updated %s (%ld)", tle_db->tles[i].name, tle_db->tles[i].satellite_number);
 			}
-			if (in_new_file[i]) {
+			if (update_status[i] & TLE_IN_NEW_FILE) {
+				if (!in_new_file) {
+					strncpy(new_file, tle_db->tles[i].filename, MAX_NUM_CHARS);
+				}
+
+				in_new_file = true;
 				if (interactive_mode) {
 					printw(" (*)");
 				} else {
 					printf(" (*)");
+				}
+			}
+			if (!(update_status[i] & TLE_IN_NEW_FILE) && !(update_status[i] & TLE_FILE_UPDATED)) {
+				not_written = true;
+				if (interactive_mode) {
+					printw(" (X)");
+				} else {
+					printf(" (X)");
 				}
 			}
 			if (interactive_mode) {
@@ -208,28 +223,20 @@ void AutoUpdate(const char *string, struct tle_db *tle_db)
 		}
 	}
 
-	//print information about new files
-	for (int i=0; i < tle_db->num_tles; i++) {
-		if (in_new_file[i]) {
-			if (interactive_mode) {
-				printw("\nSatellites marked with (*) were ");
-			} else {
-				printf("\nSatellites marked with (*) were ");
-			}
-			if (!tle_db->read_from_xdg) {
-				if (interactive_mode) {
-					printw("located in non-writeable locations and are ignored.\n");
-				} else {
-					printf("located in non-writeable locations and are ignored.\n");
-				}
-			} else {
-				if (interactive_mode) {
-					printw("put in a new file (%s).\n", tle_db->tles[i].filename);
-				} else {
-					printf("put in a new file (%s).\n", tle_db->tles[i].filename);
-				}
-			}
-			break;
+	//print file information
+	if (interactive_mode) {
+		if (in_new_file) {
+			printw("\nSatellites marked with (*) were put in a new file (%s).\n", new_file);
+		}
+		if (not_written) {
+			printw("\nSatellites marked with (X) were not written to file.");
+		}
+	} else {
+		if (in_new_file) {
+			printf("\nSatellites marked with (*) were put in a new file (%s).\n", new_file);
+		}
+		if (not_written) {
+			printf("\nSatellites marked with (X) were not written to file.");
 		}
 	}
 
