@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <errno.h>
+#include <fcntl.h>
 
 #include <setjmp.h>
 #include <stdarg.h>
@@ -45,7 +46,7 @@ void test_tle_db_from_file(void **param)
 	struct tle_db *tle_db = tle_db_create();
 
 	//read empty database
-	int retval = tle_db_from_file("/dev/NULL/", tle_db);
+	int retval = tle_db_from_file("/dev/NULL", tle_db);
 	assert_int_not_equal(retval, 0);
 	assert_int_equal(tle_db->num_tles, 0);
 
@@ -104,7 +105,7 @@ void test_tle_db_from_directory(void **param)
 	struct tle_db *tle_db = tle_db_create();
 
 	//non-existing directory
-	tle_db_from_directory("/dev/NULL/", tle_db);
+	tle_db_from_directory("/dev/NULL", tle_db);
 	assert_int_equal(tle_db->num_tles, 0);
 
 	//correct number from homogeneous directory
@@ -112,7 +113,7 @@ void test_tle_db_from_directory(void **param)
 	assert_int_equal(tle_db->num_tles, 16);
 
 	//check when there is no trailing '/' in directory name
-	tle_db_from_file("/dev/NULL/", tle_db);
+	tle_db_from_file("/dev/NULL", tle_db);
 	assert_int_equal(tle_db->num_tles, 0);
 	tle_db_from_directory(TEST_TLE_DIR "old_tles", tle_db);
 	assert_int_equal(tle_db->num_tles, 16);
@@ -125,7 +126,7 @@ void test_tle_db_from_directory(void **param)
 	tle_db_from_directory(TEST_TLE_DIR "newer_tles/", new_tles);
 	assert_int_equal(new_tles->num_tles, 63);
 
-	tle_db_from_file("/dev/NULL/", tle_db);
+	tle_db_from_file("/dev/NULL", tle_db);
 	tle_db_from_directory(TEST_TLE_DIR "mixture/flyby/tles/", tle_db);
 	assert_true(tle_db->num_tles > 0);
 
@@ -210,7 +211,7 @@ void test_tle_db_to_file(void **param)
 	assert_int_equal(tle_db_2->num_tles, 0);
 
 	//try to write to non-existing location
-	tle_db_to_file("/dev/NULL/", tle_db);
+	tle_db_to_file("/dev/NULL", tle_db);
 
 	unlink(filename);
 }
@@ -224,7 +225,7 @@ void test_whitelist_from_file(void **param)
 	assert_memory_equal((char*)tle_db_copy, (char*)tle_db, sizeof(struct tle_db));
 
 	//read non-existing whitelist
-	whitelist_from_file("/dev/NULL/", tle_db);
+	whitelist_from_file("/dev/NULL", tle_db);
 	assert_memory_equal((char*)tle_db_copy, (char*)tle_db, sizeof(struct tle_db));
 	for (int i=0; i < tle_db->num_tles; i++) {
 		assert_false(tle_db_entry_enabled(tle_db, i));
@@ -252,7 +253,7 @@ void test_whitelist_to_file(void **param)
 	struct tle_db *tle_db = tle_db_create();
 	tle_db_from_file(TEST_TLE_DIR "old_tles/part1.tle", tle_db);
 	int index = 0;
-	whitelist_from_file("/dev/NULL/", tle_db);
+	whitelist_from_file("/dev/NULL", tle_db);
 	tle_db_entry_set_enabled(tle_db, index, true);
 
 	//write whitelist to file
@@ -266,13 +267,13 @@ void test_whitelist_to_file(void **param)
 	//read back whitelist
 	struct tle_db *tle_db_new = tle_db_create();
 	tle_db_from_file(TEST_TLE_DIR "old_tles/part1.tle", tle_db_new);
-	whitelist_from_file("/dev/NULL/", tle_db_new);
+	whitelist_from_file("/dev/NULL", tle_db_new);
 	assert_false(tle_db_entry_enabled(tle_db_new, index));
 	whitelist_from_file(filename, tle_db_new);
 	assert_true(tle_db_entry_enabled(tle_db_new, index));
 
 	//write whitelist to impossible location
-	whitelist_to_file("/dev/NULL/", tle_db);
+	whitelist_to_file("/dev/NULL", tle_db);
 
 	tle_db_destroy(&tle_db_new);
 }
@@ -293,7 +294,7 @@ void test_tle_db_merge(void **param)
 	//check merge behavior for two completely overlapping databases
 	tle_db_from_file(TEST_TLE_DIR "old_tles/part1.tle", tle_db_1);
 	tle_db_from_file(TEST_TLE_DIR "old_tles/part1.tle", tle_db_2);
-	tle_db_from_file("/dev/NULL/", merged);
+	tle_db_from_file("/dev/NULL", merged);
 	tle_db_merge(tle_db_1, merged, TLE_OVERWRITE_NONE);
 	tle_db_merge(tle_db_2, merged, TLE_OVERWRITE_NONE);
 	assert_int_equal(tle_db_1->num_tles, merged->num_tles);
@@ -302,14 +303,14 @@ void test_tle_db_merge(void **param)
 	//check merge behavior for two partially overlapping databases
 	tle_db_from_directory(TEST_TLE_DIR "old_tles/", tle_db_1);
 	tle_db_from_file(TEST_TLE_DIR "newer_tles/amateur.txt", tle_db_2);
-	tle_db_from_file("/dev/NULL/", merged);
+	tle_db_from_file("/dev/NULL", merged);
 	tle_db_merge(tle_db_1, merged, TLE_OVERWRITE_NONE);
 	tle_db_merge(tle_db_2, merged, TLE_OVERWRITE_NONE);
 	int expected_num_tles = 66;
 	assert_int_equal(merged->num_tles, expected_num_tles);
 
 	//check that old entries are overwritten with new when this option is chosen
-	tle_db_from_file("/dev/NULL/", merged);
+	tle_db_from_file("/dev/NULL", merged);
 	tle_db_merge(tle_db_1, merged, TLE_OVERWRITE_NONE);
 	tle_db_merge(tle_db_2, merged, TLE_OVERWRITE_OLD);
 	assert_int_equal(merged->num_tles, expected_num_tles);
@@ -326,7 +327,7 @@ void test_tle_db_merge(void **param)
 	assert_true(oldnew_triggered);
 
 	//check the same, but with opposite order of merge
-	tle_db_from_file("/dev/NULL/", merged);
+	tle_db_from_file("/dev/NULL", merged);
 	tle_db_merge(tle_db_2, merged, TLE_OVERWRITE_OLD);
 	tle_db_merge(tle_db_1, merged, TLE_OVERWRITE_NONE);
 	assert_int_equal(merged->num_tles, expected_num_tles);
@@ -372,10 +373,11 @@ void test_tle_db_from_search_paths(void **param)
 	struct tle_db *tle_db_direct = tle_db_create();
 	tle_db_from_directory(TEST_TLE_DIR "old_tles/flyby/tles/", tle_db_direct);
 
-	will_return(xdg_data_dirs, "/dev/NULL/");
+	will_return(xdg_data_dirs, "/dev/NULL");
 	will_return(xdg_data_home, TEST_TLE_DIR "old_tles/");
 	struct tle_db *tle_db_searchpaths = tle_db_create();
 	tle_db_from_search_paths(tle_db_searchpaths);
+	assert_true(tle_db_searchpaths->read_from_xdg);
 
 	assert_int_equal(tle_db_direct->num_tles, tle_db_searchpaths->num_tles);
 
@@ -387,7 +389,7 @@ void test_tle_db_from_search_paths(void **param)
 
 	will_return(xdg_data_dirs, TEST_TLE_DIR "newer_tles/");
 	will_return(xdg_data_home, TEST_TLE_DIR "old_tles/");
-	tle_db_from_file("/dev/NULL/", tle_db_searchpaths);
+	tle_db_from_file("/dev/NULL", tle_db_searchpaths);
 	tle_db_from_search_paths(tle_db_searchpaths);
 
 	bool in_both = false;
@@ -436,6 +438,143 @@ void test_whitelist_from_search_paths(void **param)
 	}
 }
 
+void set_filenames(struct tle_db *tle_db, const char *filename)
+{
+	for (int i=0; i < tle_db->num_tles; i++) {
+		strcpy(tle_db->tles[i].filename, filename);
+	}
+}
+
+void test_tle_db_update(void **param)
+{
+	struct tle_db *new_tles = tle_db_create();
+	tle_db_from_file(TEST_TLE_DIR "newer_tles/amateur.txt", new_tles);
+
+	struct tle_db *orig_db = tle_db_create();
+	tle_db_from_directory(TEST_TLE_DIR "old_tles/", orig_db);
+	struct tle_db *tle_db = tle_db_create();
+	tle_db_from_directory(TEST_TLE_DIR "old_tles/", tle_db);
+	set_filenames(tle_db, "/dev/NULL");
+	assert_false(tle_db->read_from_xdg);
+	int num_tles = tle_db->num_tles;
+
+	//test with no new TLEs in file
+	int update_status[MAX_NUM_SATS] = {0};
+	tle_db_update(TEST_TLE_DIR "old_tles/part1.txt", tle_db, update_status);
+	for (int i=0; i < tle_db->num_tles; i++) {
+		assert_false(update_status[i] & TLE_IN_NEW_FILE);
+		assert_false(update_status[i] & TLE_FILE_UPDATED);
+		assert_false(update_status[i] & TLE_DB_UPDATED);
+		update_status[i] = 0;
+	}
+
+	//test with new TLEs in updatefile
+
+	//non-writable file locations, not read from XDG
+	tle_db_from_file("/dev/NULL", tle_db);
+	tle_db_from_directory(TEST_TLE_DIR "old_tles/", tle_db);
+	set_filenames(tle_db, "/dev/NULL");
+	tle_db_update(TEST_TLE_DIR "newer_tles/amateur.txt", tle_db, update_status);
+	bool updated = false;
+	for (int i=0; i < tle_db->num_tles; i++) {
+		assert_false(update_status[i] & TLE_IN_NEW_FILE);
+		assert_false(update_status[i] & TLE_FILE_UPDATED);
+
+		if (update_status[i] & TLE_DB_UPDATED) {
+			updated = true;
+			assert_true(tle_db_entry_is_newer_than(tle_db->tles[i], orig_db->tles[i]));
+		} else {
+			assert_int_equal(tle_db_find_entry(new_tles, tle_db->tles[i].satellite_number), -1);
+		}
+
+		update_status[i] = 0;
+	}
+	assert_true(updated);
+	assert_int_equal(num_tles, tle_db->num_tles);
+
+	//writable location for all, not read from XDG
+	tle_db_from_file("/dev/NULL", tle_db);
+	tle_db_from_directory(TEST_TLE_DIR "old_tles/", tle_db);
+	char temp_dir[] = "/tmp/flybytestXXXXXX";
+	mkdtemp(temp_dir);
+	char dirpath[MAX_NUM_CHARS];
+	snprintf(dirpath, MAX_NUM_CHARS, "%s/", temp_dir);
+
+	char filename[MAX_NUM_CHARS];
+	snprintf(filename, MAX_NUM_CHARS, "%s/test.tle", temp_dir);
+	int fid = open(filename, O_WRONLY|O_CREAT|O_TRUNC, 0777);
+	close(fid);
+	set_filenames(tle_db, filename);
+	tle_db_update(TEST_TLE_DIR "newer_tles/amateur.txt", tle_db, update_status);
+	updated = false;
+	for (int i=0; i < tle_db->num_tles; i++) {
+		assert_false(update_status[i] & TLE_IN_NEW_FILE); //all should be in the original file
+		if (update_status[i] & TLE_DB_UPDATED) {
+			updated = true;
+			assert_true(update_status[i] & TLE_FILE_UPDATED);
+		}
+		update_status[i] = 0;
+	}
+	assert_true(updated);
+	unlink(filename);
+
+	//unwriteable location for all, writeable location for XDG_DATA_HOME
+	tle_db_from_file("/dev/NULL", tle_db);
+	tle_db_from_directory(TEST_TLE_DIR "old_tles/", tle_db);
+	set_filenames(tle_db, "/dev/NULL");
+	updated = false;
+
+	char tle_path[MAX_NUM_CHARS];
+	snprintf(tle_path, MAX_NUM_CHARS, "%s/flyby/", temp_dir);
+	mkdir(tle_path, 0777);
+	snprintf(tle_path, MAX_NUM_CHARS, "%s/flyby/tles/", temp_dir);
+	mkdir(tle_path, 0777);
+	will_return(xdg_data_home, dirpath);
+	tle_db->read_from_xdg = true;
+	tle_db_update(TEST_TLE_DIR "newer_tles/amateur.txt", tle_db, update_status);
+	char updatefile[MAX_NUM_CHARS];
+	bool updatefile_set = false;
+	for (int i=0; i < tle_db->num_tles; i++) {
+		if (update_status[i] & TLE_DB_UPDATED) {
+			updated = true;
+			assert_true(update_status[i] & TLE_IN_NEW_FILE);
+			assert_false(update_status[i] & TLE_FILE_UPDATED);
+
+			if (!updatefile_set) {
+				updatefile_set = true;
+				strncpy(updatefile, tle_db->tles[i].filename, MAX_NUM_CHARS);
+			}
+		}
+		update_status[i] = 0;
+	}
+	assert_true(updated);
+	unlink(updatefile);
+
+	//unwritable location for all, non-writable location for XDG_DATA_HOME
+	tle_db_from_file("/dev/NULL", tle_db);
+	tle_db_from_directory(TEST_TLE_DIR "old_tles/", tle_db);
+	tle_db->read_from_xdg = true;
+	will_return(xdg_data_home, "/dev/NULL");
+	set_filenames(tle_db, "/dev/NULL");
+	updated = false;
+	tle_db_update(TEST_TLE_DIR "newer_tles/amateur.txt", tle_db, update_status);
+	for (int i=0; i < tle_db->num_tles; i++) {
+		assert_false(update_status[i] & TLE_IN_NEW_FILE);
+		assert_false(update_status[i] & TLE_FILE_UPDATED);
+		if (update_status[i] & TLE_DB_UPDATED) {
+			updated = true;
+		}
+		update_status[i] = 0;
+	}
+	assert_true(updated);
+
+	//cleanup folders
+	rmdir(tle_path);
+	snprintf(tle_path, MAX_NUM_CHARS, "%s/flyby", temp_dir);
+	rmdir(tle_path);
+	rmdir(temp_dir);
+}
+
 int main()
 {
 	struct CMUnitTest tests[] = {cmocka_unit_test(test_tle_db_add_entry),
@@ -449,10 +588,10 @@ int main()
 	cmocka_unit_test(test_tle_db_to_file),
 	cmocka_unit_test(test_tle_db_merge),
 	cmocka_unit_test(test_whitelist_from_search_paths),
+	cmocka_unit_test(test_tle_db_update),
 	cmocka_unit_test(test_tle_db_from_search_paths),
 	cmocka_unit_test(test_tle_db_enabled)
 	};
-
 
 	int rc = cmocka_run_group_tests(tests, NULL, NULL);
 	return rc;
