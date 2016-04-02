@@ -39,7 +39,7 @@ target_link_libraries(tle-db-t ${CMOCKA_LIBRARY} predict)
 add_test(NAME tle-db COMMAND tle-db-t)
 
 #transponder db test file
-configure_file(test_data/test-transponder-db.db test_data/flyby/flyby.db)
+configure_file(test_data/flyby.db.in test_data/flyby/flyby.db)
 
 #transponder db tests
 add_executable(transponder-db-t transponder-db-t.c ${CMAKE_SOURCE_DIR}/src/transponder_db.c ${CMAKE_SOURCE_DIR}/src/string_array.c ${CMAKE_SOURCE_DIR}/src/tle_db.c)
