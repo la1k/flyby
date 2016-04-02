@@ -37,3 +37,11 @@ configure_file(test_data/newer_tles/amateur.txt.in test_data/mixture/flyby/tles/
 add_executable(tle-db-t tle-db-t.c ${CMAKE_SOURCE_DIR}/src/tle_db.c ${CMAKE_SOURCE_DIR}/src/string_array.c)
 target_link_libraries(tle-db-t ${CMOCKA_LIBRARY} predict)
 add_test(NAME tle-db COMMAND tle-db-t)
+
+#transponder db test file
+configure_file(test_data/test-transponder-db.db test_data/flyby/flyby.db)
+
+#transponder db tests
+add_executable(transponder-db-t transponder-db-t.c ${CMAKE_SOURCE_DIR}/src/transponder_db.c ${CMAKE_SOURCE_DIR}/src/string_array.c ${CMAKE_SOURCE_DIR}/src/tle_db.c)
+target_link_libraries(transponder-db-t ${CMOCKA_LIBRARY} predict)
+add_test(NAME transponder-db COMMAND transponder-db-t)

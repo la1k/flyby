@@ -163,33 +163,35 @@ void transponder_db_to_file(const char *filename, struct tle_db *tle_db, struct 
 {
 	FILE *fd;
 	fd = fopen(filename,"w");
-	for (int i=0; i < transponder_db->num_sats; i++) {
-		if (should_write[i]) {
-			struct sat_db_entry *entry = &(transponder_db->sats[i]);
-			fprintf(fd, "%s\n", tle_db->tles[i].name);
-			fprintf(fd, "%ld\n", tle_db->tles[i].satellite_number);
+	if (fd != NULL) {
+		for (int i=0; i < transponder_db->num_sats; i++) {
+			if (should_write[i]) {
+				struct sat_db_entry *entry = &(transponder_db->sats[i]);
+				fprintf(fd, "%s\n", tle_db->tles[i].name);
+				fprintf(fd, "%ld\n", tle_db->tles[i].satellite_number);
 
-			//squint properties
-			if (entry->squintflag) {
-				fprintf(fd, "%f, %f\n", entry->alat, entry->alon);
-			} else {
-				fprintf(fd, "No alat, alon\n");
-			}
-
-			//transponders
-			for (int j=0; j < entry->num_transponders; j++) {
-				if ((entry->uplink_start[j] != 0.0) || (entry->downlink_start[j] != 0.0)) {
-					fprintf(fd, "%s\n", entry->transponder_name[j]);
-					fprintf(fd, "%f, %f\n", entry->uplink_start[j], entry->uplink_end[j]);
-					fprintf(fd, "%f, %f\n", entry->downlink_start[j], entry->downlink_end[j]);
-					fprintf(fd, "No weekly schedule\n"); //FIXME: See issue #29.
-					fprintf(fd, "No orbital schedule\n");
+				//squint properties
+				if (entry->squintflag) {
+					fprintf(fd, "%f, %f\n", entry->alat, entry->alon);
+				} else {
+					fprintf(fd, "No alat, alon\n");
 				}
+
+				//transponders
+				for (int j=0; j < entry->num_transponders; j++) {
+					if ((entry->uplink_start[j] != 0.0) || (entry->downlink_start[j] != 0.0)) {
+						fprintf(fd, "%s\n", entry->transponder_name[j]);
+						fprintf(fd, "%f, %f\n", entry->uplink_start[j], entry->uplink_end[j]);
+						fprintf(fd, "%f, %f\n", entry->downlink_start[j], entry->downlink_end[j]);
+						fprintf(fd, "No weekly schedule\n"); //FIXME: See issue #29.
+						fprintf(fd, "No orbital schedule\n");
+					}
+				}
+				fprintf(fd, "end\n");
 			}
-			fprintf(fd, "end\n");
 		}
+		fclose(fd);
 	}
-	fclose(fd);
 }
 
 void transponder_db_write_to_default(struct tle_db *tle_db, struct transponder_db *transponder_db)

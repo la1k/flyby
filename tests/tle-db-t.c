@@ -5,6 +5,7 @@
 #include <unistd.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <sys/stat.h>
 
 #include <setjmp.h>
 #include <stdarg.h>
