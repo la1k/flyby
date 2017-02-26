@@ -654,7 +654,7 @@ bool multitrack_handle_listing(multitrack_listing_t *listing, int input_key)
 {
 	if (multitrack_option_selector_visible(listing->option_selector)) {
 		return multitrack_option_selector_handle(listing->option_selector, input_key);
-	} else {
+	} else if (listing->num_entries > 0) {
 		bool handled = false;
 		switch (input_key) {
 			case KEY_UP:
@@ -749,6 +749,7 @@ bool multitrack_handle_listing(multitrack_listing_t *listing, int input_key)
 		}
 		return handled;
 	}
+	return false;
 }
 
 int multitrack_selected_entry(multitrack_listing_t *listing)
