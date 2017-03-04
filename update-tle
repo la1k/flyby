@@ -3,16 +3,17 @@
 tempfolder="/tmp/flyby-tle"
 tleurl="http://celestrak.com/NORAD/elements"
 
+# check if flyby is known to environment
+if hash flyby 2>/dev/null; then
+  flybybin=flyby
+fi
+
 if [ -x "./flyby" ]; then
   flybybin="./flyby"
 fi
 
 if [ -x "build/flyby" ]; then
   flybybin="build/flyby";
-fi
-
-if [ -x "/usr/local/bin/flyby" ]; then
-  flybybin="/usr/local/bin/flyby";
 fi
 
 if [ -n "$flybybin" ]; then
