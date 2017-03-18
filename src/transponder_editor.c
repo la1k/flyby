@@ -84,6 +84,9 @@ void transponder_editor_line_clear(struct transponder_editor_line *line)
 //height of fields
 #define FIELD_HEIGHT 1
 
+//height of description field (Transponder     Uplink ...)
+#define DESCRIPTION_FIELD_HEIGHT (FIELD_HEIGHT+1)
+
 //lengths of transponder editor line fields
 #define TRANSPONDER_DESCRIPTION_LENGTH 42
 #define TRANSPONDER_FREQUENCY_LENGTH 10
@@ -254,9 +257,11 @@ struct transponder_editor* transponder_editor_create(const struct tle_db_entry *
 	row++;
 
 	//create FIELDs for each editable field
-	new_editor->transponder_description = new_field(FIELD_HEIGHT, TRANSPONDER_DESCRIPTION_LENGTH, row++, 1, 0, 0);
+	new_editor->transponder_description = new_field(DESCRIPTION_FIELD_HEIGHT, TRANSPONDER_DESCRIPTION_LENGTH, row, 1, 0, 0);
+	row += DESCRIPTION_FIELD_HEIGHT;
 	set_field_back(new_editor->transponder_description, COLOR_PAIR(4)|A_BOLD);
-	set_field_buffer(new_editor->transponder_description, 0, "Transponder name      Uplink      Downlink");
+	set_field_buffer(new_editor->transponder_description, 0, "Transponder name      Uplink      Downlink"
+								 "                      (MHz)       (Mhz)   ");
 	field_opts_off(new_editor->transponder_description, O_ACTIVE);
 
 	int win_row = getbegy(window);
