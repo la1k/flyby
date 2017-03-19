@@ -9,7 +9,7 @@ target_link_libraries(xdg-dirs-t ${CMOCKA_LIBRARY})
 add_test(NAME xdg-dirs COMMAND xdg-dirs-t)
 
 #qth file operation tests
-configure_file(test_data/flyby.qth.in test_data/flyby/flyby.qth ONLY)
+configure_file(test_data/flyby.qth.in test_data/flyby/flyby.qth COPYONLY)
 add_executable(qth-t qth-t.c ${CMAKE_SOURCE_DIR}/src/qth_config.c ${CMAKE_SOURCE_DIR}/src/string_array.c)
 target_link_libraries(qth-t ${CMOCKA_LIBRARY} predict)
 add_test(NAME qth COMMAND qth-t)
@@ -20,18 +20,18 @@ target_link_libraries(string-array-t ${CMOCKA_LIBRARY})
 add_test(NAME string-array COMMAND string-array-t)
 
 #TLE test files
-configure_file(test_data/old_tles/part1.tle.in test_data/old_tles/part1.tle ONLY)
-configure_file(test_data/old_tles/part2.tle.in test_data/old_tles/part2.tle ONLY)
-configure_file(test_data/newer_tles/amateur.txt.in test_data/newer_tles/amateur.txt ONLY)
-configure_file(test_data/flyby.whitelist.in test_data/flyby/flyby.whitelist ONLY)
+configure_file(test_data/old_tles/part1.tle.in test_data/old_tles/part1.tle COPYONLY)
+configure_file(test_data/old_tles/part2.tle.in test_data/old_tles/part2.tle COPYONLY)
+configure_file(test_data/newer_tles/amateur.txt.in test_data/newer_tles/amateur.txt COPYONLY)
+configure_file(test_data/flyby.whitelist.in test_data/flyby/flyby.whitelist COPYONLY)
 
 #TLEs in paths compatible with the XDG_DATA_HOME setup
-configure_file(test_data/old_tles/part1.tle.in test_data/old_tles/flyby/tles/part1.tle ONLY)
-configure_file(test_data/old_tles/part2.tle.in test_data/old_tles/flyby/tles/part2.tle ONLY)
-configure_file(test_data/newer_tles/amateur.txt.in test_data/newer_tles/flyby/tles/amateur.txt ONLY)
-configure_file(test_data/old_tles/part1.tle.in test_data/mixture/flyby/tles/part1.tle ONLY)
-configure_file(test_data/old_tles/part2.tle.in test_data/mixture/flyby/tles/part2.tle ONLY)
-configure_file(test_data/newer_tles/amateur.txt.in test_data/mixture/flyby/tles/amateur.txt ONLY)
+configure_file(test_data/old_tles/part1.tle.in test_data/old_tles/flyby/tles/part1.tle COPYONLY)
+configure_file(test_data/old_tles/part2.tle.in test_data/old_tles/flyby/tles/part2.tle COPYONLY)
+configure_file(test_data/newer_tles/amateur.txt.in test_data/newer_tles/flyby/tles/amateur.txt COPYONLY)
+configure_file(test_data/old_tles/part1.tle.in test_data/mixture/flyby/tles/part1.tle COPYONLY)
+configure_file(test_data/old_tles/part2.tle.in test_data/mixture/flyby/tles/part2.tle COPYONLY)
+configure_file(test_data/newer_tles/amateur.txt.in test_data/mixture/flyby/tles/amateur.txt COPYONLY)
 
 #TLE db tests
 add_executable(tle-db-t tle-db-t.c ${CMAKE_SOURCE_DIR}/src/tle_db.c ${CMAKE_SOURCE_DIR}/src/string_array.c)
