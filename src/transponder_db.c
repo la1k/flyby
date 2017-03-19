@@ -26,8 +26,6 @@ int transponder_db_from_file(const char *dbfile, const struct tle_db *tle_db, st
 		return -1;
 	}
 
-	long satellite_number;
-
 	char templine[MAX_NUM_CHARS];
 
 	//NOTE: The database file format is the one used in Predict, with
@@ -37,10 +35,14 @@ int transponder_db_from_file(const char *dbfile, const struct tle_db *tle_db, st
 	//with Predict.
 
 	while (!feof(fd)) {
+		long satellite_number;
 		struct sat_db_entry new_entry = {0};
 
 		//satellite name. Ignored, present in database for readability reasons
 		fgets(templine, MAX_NUM_CHARS, fd);
+		if (strncmp(templine, "end", 3) == 0) {
+			break;
+		}
 
 		//satellite category number
 		fgets(templine, MAX_NUM_CHARS, fd);
@@ -87,15 +89,15 @@ int transponder_db_from_file(const char *dbfile, const struct tle_db *tle_db, st
 				transponder_index++;
 			}
 		}
-		new_entry.num_transponders=transponder_index;
-		new_entry.location |= location_info;
+		new_entry.num_transponders = transponder_index;
 
-		//find corresponding entry in TLE database
+		//add to transponder database only when we can find corresponding entry in TLE database
 		int tle_index = tle_db_find_entry(tle_db, satellite_number);
 		bool in_tle_database = tle_index != -1;
-
 		if (in_tle_database) {
+			int new_location = ret_db->sats[tle_index].location | location_info; //ensure correct flag combination for entry location
 			transponder_db_entry_copy(&(ret_db->sats[tle_index]), &new_entry);
+			ret_db->sats[tle_index].location = new_location;
 			ret_db->loaded = true;
 		}
 	}
