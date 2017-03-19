@@ -60,7 +60,7 @@ with open(expanduser("~")+"/.local/share/flyby/flyby.db","w") as db:
             else:
                 db.write(" - Non-inverting")
         if transponder['baud']>0:
-            db.write(" - Baud = %s " %transponder['baud'])
+            db.write(" - Baud = %s" %transponder['baud'])
         if not transponder['alive']:
             db.write(" - (dead)\n")
         else:
