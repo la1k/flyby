@@ -24,95 +24,86 @@ int transponder_db_from_file(const char *dbfile, const struct tle_db *tle_db, st
 
 	/* Load satellite database file */
 	ret_db->num_sats = tle_db->num_tles;
-	FILE *fd=fopen(dbfile,"r");
-	long catnum;
-	char line1[80] = {0};
-	int y = 0, match = 0, transponders = 0, entry = 0;
-	if (fd!=NULL) {
-		fgets(line1,40,fd);
-
-		while (strncmp(line1,"end",3)!=0 && line1[0]!='\n' && feof(fd)==0) {
-			/* The first line is the satellite
-			   name which is ignored here. */
-
-			fgets(line1,40,fd);
-			sscanf(line1,"%ld",&catnum);
-
-			/* Search for match */
-
-			for (y=0, match=0; y<tle_db->num_tles && match==0; y++) {
-				if (catnum==tle_db->tles[y].satellite_number)
-					match=1;
-			}
-
-			if (match) {
-				transponders=0;
-				entry=0;
-				y--;
-			}
-
-			fgets(line1,40,fd);
-
-			if (match) {
-				if (strncmp(line1,"No",2)!=0) {
-					sscanf(line1,"%lf, %lf",&(ret_db->sats[y].alat), &(ret_db->sats[y].alon));
-					ret_db->sats[y].squintflag=1;
-				}
-
-				else
-					ret_db->sats[y].squintflag=0;
-			}
-
-			fgets(line1,80,fd);
-
-			while (strncmp(line1,"end",3)!=0 && line1[0]!='\n' && feof(fd)==0) {
-				if (entry<MAX_NUM_TRANSPONDERS) {
-					if (match) {
-						if (strncmp(line1,"No",2)!=0) {
-							line1[strlen(line1)-1]=0;
-							strcpy(ret_db->sats[y].transponder_name[entry],line1);
-						} else
-							ret_db->sats[y].transponder_name[entry][0]=0;
-					}
-
-					fgets(line1,40,fd);
-
-					if (match)
-						sscanf(line1,"%lf, %lf", &(ret_db->sats[y].uplink_start[entry]), &(ret_db->sats[y].uplink_end[entry]));
-
-					fgets(line1,40,fd);
-
-					if (match)
-						sscanf(line1,"%lf, %lf", &(ret_db->sats[y].downlink_start[entry]), &(ret_db->sats[y].downlink_end[entry]));
-
-					fgets(line1,40,fd); //FIXME: Unused information: weekly schedule for transponder. See issue #29.
-					fgets(line1,40,fd); //Unused information: orbital schedule for transponder.
-
-					if (match) {
-						if (ret_db->sats[y].uplink_start[entry]!=0.0 || ret_db->sats[y].downlink_start[entry]!=0.0)
-							transponders++;
-
-						entry++;
-					}
-				}
-				fgets(line1,80,fd);
-			}
-			fgets(line1,80,fd);
-
-			if (match) {
-				ret_db->sats[y].num_transponders=transponders;
-				ret_db->loaded = true;
-				ret_db->sats[y].location |= location_info;
-			}
-
-			entry=0;
-			transponders=0;
-		}
-
-		fclose(fd);
-	} else {
+	FILE *fd = fopen(dbfile,"r");
+	if (fd == NULL) {
 		return -1;
 	}
+
+	long satellite_number;
+
+	size_t length = 0;
+	char *templine = (char*)malloc(sizeof(char)*MAX_NUM_CHARS);
+
+	//NOTE: The database file format is the one used in Predict, with
+	//redundant fields like orbital schedule. Kept for legacy reasons, but
+	//might change at some point in the future when we find new fields we
+	//want to define, and have no reason to retain backwards-compatibility
+	//with Predict.
+
+	while (!feof(fd)) {
+		struct sat_db_entry new_entry = {0};
+
+		//satellite name. Ignored, present in database for readability reasons
+		getline(&templine, &length, fd);
+
+		//satellite category number
+		getline(&templine, &length, fd);
+		sscanf(templine,"%ld",&satellite_number);
+
+		//attitude longitude and attitude latitude, for squint angle calculation
+		getline(&templine, &length, fd);
+		if (strncmp(templine,"No",2)!=0) {
+			sscanf(templine,"%lf, %lf",&(new_entry.alat), &(new_entry.alon));
+			new_entry.squintflag=1;
+		} else {
+			new_entry.squintflag=0;
+		}
+
+		//get transponders
+		int transponder_index = 0;
+		while (!feof(fd)) {
+			getline(&templine, &length, fd);
+			if (strncmp(templine, "end", 3) == 0) {
+				//end transponder entries, move to next satellite
+				break;
+			}
+
+			//transponder name
+			strncpy(new_entry.transponder_name[transponder_index], templine, MAX_NUM_CHARS);
+
+			//uplink frequencies
+			getline(&templine, &length, fd);
+			sscanf(templine,"%lf, %lf", &(new_entry.uplink_start[transponder_index]), &(new_entry.uplink_end[transponder_index]));
+
+			//downlink frequencies
+			getline(&templine, &length, fd);
+			sscanf(templine,"%lf, %lf", &(new_entry.downlink_start[transponder_index]), &(new_entry.downlink_end[transponder_index]));
+
+			//unused information: weekly schedule for transponder. See issue #29.
+			getline(&templine, &length, fd);
+
+			//unused information: orbital schedule for transponder. See issue #29.
+			getline(&templine, &length, fd);
+
+			//check whether transponder is well-defined
+			if ((new_entry.uplink_start[transponder_index]!=0.0 || new_entry.downlink_start[transponder_index]!=0.0) && (transponder_index < MAX_NUM_TRANSPONDERS)) {
+				transponder_index++;
+			}
+		}
+		new_entry.num_transponders=transponder_index;
+		new_entry.location |= location_info;
+
+		//find corresponding entry in TLE database
+		int tle_index = tle_db_find_entry(tle_db, satellite_number);
+		bool in_tle_database = tle_index != -1;
+
+		if (in_tle_database) {
+			transponder_db_entry_copy(&(ret_db->sats[tle_index]), &new_entry);
+			ret_db->loaded = true;
+		}
+	}
+
+	fclose(fd);
 	return 0;
 }
 
