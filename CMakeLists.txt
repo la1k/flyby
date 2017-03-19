@@ -23,7 +23,7 @@ set(FLYBY_VERSION ${PROJECT_VERSION})
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall")
 
 configure_file(config.h.in config.h @ONLY)
-include_directories(${CMAKE_BINARY_DIR})
+include_directories(${CMAKE_BINARY_DIR} ${CMAKE_SOURCE_DIR}/src)
 add_executable(flyby src/ui.c src/hamlib.c src/main.c src/string_array.c src/xdg_basedirs.c src/tle_db.c src/transponder_db.c src/qth_config.c src/filtered_menu.c src/transponder_editor.c src/multitrack.c)
 install(TARGETS flyby RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 
@@ -33,3 +33,8 @@ target_link_libraries(flyby ncurses)
 target_link_libraries(flyby menu)
 target_link_libraries(flyby form)
 target_link_libraries(flyby predict)
+
+if (WITH_TESTING)
+	enable_testing()
+	add_subdirectory(tests)
+endif (WITH_TESTING)
