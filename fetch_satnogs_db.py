@@ -53,11 +53,16 @@ with open(expanduser("~")+"/.local/share/flyby/flyby.db","w") as db:
         previous_norad_id = transponder['norad_cat_id']
         
         # Add transponder data
-        db.write("%s - Inverting = %r " %(transponder['description'], transponder['invert']))
-        if not transponder['baud']:
-            db.write("- Baud = %s " %transponder['baud'])
+        db.write("%s" %(transponder['description']))
+        if transponder['uplink_low']>0 and transponder['downlink_low']>0:
+            if transponder['invert']:
+                db.write(" - Inverting")
+            else:
+                db.write(" - Non-inverting")
+        if transponder['baud']>0:
+            db.write(" - Baud = %s " %transponder['baud'])
         if not transponder['alive']:
-            db.write("Not currently alive\n")
+            db.write(" - (dead)\n")
         else:
             db.write("\n")
 
