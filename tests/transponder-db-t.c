@@ -49,6 +49,10 @@ void test_transponder_db_from_file(void **param)
 	assert_true(transponder_db_entry_empty(&(transponder_db->sats[sat_ind[0]])));
 	assert_int_equal(transponder_db->sats[sat_ind[1]].num_transponders, 1);
 	assert_string_equal(transponder_db->sats[sat_ind[1]].transponder_name[0], "test_1");
+	assert_true(transponder_db->sats[sat_ind[1]].uplink_start[0] == 1.0);
+	assert_true(transponder_db->sats[sat_ind[1]].uplink_end[0] == 3.0);
+	assert_true(transponder_db->sats[sat_ind[1]].downlink_start[0] == 0.0);
+	assert_true(transponder_db->sats[sat_ind[1]].downlink_end[0] == 0.0);
 	assert_int_equal(transponder_db->sats[sat_ind[2]].num_transponders, 0);
 	assert_true(transponder_db->sats[sat_ind[2]].squintflag);
 
