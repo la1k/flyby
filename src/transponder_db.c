@@ -20,9 +20,6 @@ void transponder_db_destroy(struct transponder_db **transponder_db)
 
 int transponder_db_from_file(const char *dbfile, const struct tle_db *tle_db, struct transponder_db *ret_db, enum sat_db_location location_info)
 {
-	//copied from ReadDataFiles().
-
-	/* Load satellite database file */
 	ret_db->num_sats = tle_db->num_tles;
 	FILE *fd = fopen(dbfile,"r");
 	if (fd == NULL) {
@@ -31,8 +28,7 @@ int transponder_db_from_file(const char *dbfile, const struct tle_db *tle_db, st
 
 	long satellite_number;
 
-	size_t length = 0;
-	char *templine = (char*)malloc(sizeof(char)*MAX_NUM_CHARS);
+	char templine[MAX_NUM_CHARS];
 
 	//NOTE: The database file format is the one used in Predict, with
 	//redundant fields like orbital schedule. Kept for legacy reasons, but
@@ -44,14 +40,14 @@ int transponder_db_from_file(const char *dbfile, const struct tle_db *tle_db, st
 		struct sat_db_entry new_entry = {0};
 
 		//satellite name. Ignored, present in database for readability reasons
-		getline(&templine, &length, fd);
+		fgets(templine, MAX_NUM_CHARS, fd);
 
 		//satellite category number
-		getline(&templine, &length, fd);
+		fgets(templine, MAX_NUM_CHARS, fd);
 		sscanf(templine,"%ld",&satellite_number);
 
 		//attitude longitude and attitude latitude, for squint angle calculation
-		getline(&templine, &length, fd);
+		fgets(templine, MAX_NUM_CHARS, fd);
 		if (strncmp(templine,"No",2)!=0) {
 			sscanf(templine,"%lf, %lf",&(new_entry.alat), &(new_entry.alon));
 			new_entry.squintflag=1;
@@ -62,28 +58,29 @@ int transponder_db_from_file(const char *dbfile, const struct tle_db *tle_db, st
 		//get transponders
 		int transponder_index = 0;
 		while (!feof(fd)) {
-			getline(&templine, &length, fd);
+			fgets(templine, MAX_NUM_CHARS, fd);
 			if (strncmp(templine, "end", 3) == 0) {
 				//end transponder entries, move to next satellite
 				break;
 			}
 
 			//transponder name
+			templine[strlen(templine)-1] = '\0'; //remove newline
 			strncpy(new_entry.transponder_name[transponder_index], templine, MAX_NUM_CHARS);
 
 			//uplink frequencies
-			getline(&templine, &length, fd);
+			fgets(templine, MAX_NUM_CHARS, fd);
 			sscanf(templine,"%lf, %lf", &(new_entry.uplink_start[transponder_index]), &(new_entry.uplink_end[transponder_index]));
 
 			//downlink frequencies
-			getline(&templine, &length, fd);
+			fgets(templine, MAX_NUM_CHARS, fd);
 			sscanf(templine,"%lf, %lf", &(new_entry.downlink_start[transponder_index]), &(new_entry.downlink_end[transponder_index]));
 
 			//unused information: weekly schedule for transponder. See issue #29.
-			getline(&templine, &length, fd);
+			fgets(templine, MAX_NUM_CHARS, fd);
 
 			//unused information: orbital schedule for transponder. See issue #29.
-			getline(&templine, &length, fd);
+			fgets(templine, MAX_NUM_CHARS, fd);
 
 			//check whether transponder is well-defined
 			if ((new_entry.uplink_start[transponder_index]!=0.0 || new_entry.downlink_start[transponder_index]!=0.0) && (transponder_index < MAX_NUM_TRANSPONDERS)) {
