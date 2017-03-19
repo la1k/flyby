@@ -17,16 +17,17 @@ while True:
 request = urllib2.urlopen("https://db.satnogs.org/api/transmitters")
 data = json.load(request)
 
-#Step 2: Generate transponder database as expected by flyby.
-
 # Order data by norad_cat_id entry
 sorteddata = sorted(data, key=itemgetter('norad_cat_id'))
+
+#Step 2: Generate transponder database as expected by flyby.
 
 # Write to $HOME/.local/share/flyby/flyby.db
 with open(expanduser("~")+"/.local/share/flyby/flyby.db","w") as db:
     previous_norad_id = False
 
-    for i in sorteddata: # Iterate through all entries in SatNOGS database.
+    # Iterate through SatNOGS database
+    for i in sorteddata:
         
         # Fill null fields with 0
         for key in ['uplink_low','uplink_high','downlink_low','downlink_high', 'baud']:
@@ -59,6 +60,7 @@ with open(expanduser("~")+"/.local/share/flyby/flyby.db","w") as db:
             db.write("Not currently alive\n")
         else:
             db.write("\n")
+
         # Convert frequency input to MHz
         db.write("%f, %f\n" %(i['uplink_low']/1e6,i['uplink_high']/1e6))
         db.write("%f, %f\n" %((i['downlink_low']/1e6),(i['downlink_high']/1e6)))
