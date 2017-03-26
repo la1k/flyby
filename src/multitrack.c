@@ -612,7 +612,14 @@ void multitrack_display_listing(multitrack_listing_t *listing)
 	//show header
 	wbkgd(listing->header_window, HEADER_STYLE);
 	wattrset(listing->header_window, HEADER_STYLE);
-	mvwprintw(listing->header_window, 0, 0, "  Satellite  Azim   Elev Lat Long   Alt   Range     Next AOS/LOS   ");
+	char header_text[] = "  Satellite  Azim   Elev Lat Long   Alt   Range     Next AOS/LOS    ";
+	mvwprintw(listing->header_window, 0, 0, header_text);
+
+	//show UTC clock in header
+	time_t epoch = time(NULL);
+	char time_string[MAX_NUM_CHARS] = {0};
+	strftime(time_string, MAX_NUM_CHARS, "%H:%M:%SZ", gmtime(&epoch));
+	mvwprintw(listing->header_window, 0, strlen(header_text), "%s", time_string);
 
 	//show entries
 	if (listing->num_entries > 0) {
