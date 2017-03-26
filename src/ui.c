@@ -1141,6 +1141,13 @@ double inverse_doppler_shift(enum dopp_shift_frequency_type type, const predict_
 	return doppler_shifted_frequency/(1.0 + sign*predict_doppler_shift(observer, orbit, 1));
 }
 
+//defines at which rows transponder information will be displayed
+#define TRANSPONDER_START_ROW 10
+
+#define RAD2DEG (180.0/M_PI)
+
+#define AOSLOS_INFORMATION_ROW 20
+
 void SingleTrack(int orbit_ind, predict_observer_t *qth, struct transponder_db *sat_db, struct tle_db *tle_db, rotctld_info_t *rotctld, rigctld_info_t *downlink_info, rigctld_info_t *uplink_info)
 {
 	double horizon = rotctld->tracking_horizon;
@@ -1249,16 +1256,15 @@ void SingleTrack(int orbit_ind, predict_observer_t *qth, struct transponder_db *
 
 		mvprintw(17,1,"Eclipse Depth   Orbital Phase   Orbital Model   Squint Angle      AutoTracking");
 
-
 		if (comsat) {
-			mvprintw(11,1,"Uplink   :");
-			mvprintw(12,1,"Downlink :");
-			mvprintw(13,1,"Delay    :");
-			mvprintw(13,55,"Echo      :");
-			mvprintw(12,29,"RX:");
-			mvprintw(12,55,"Path loss :");
-			mvprintw(11,29,"TX:");
-			mvprintw(11,55,"Path loss :");
+			mvprintw(TRANSPONDER_START_ROW+1,1,"Uplink   :");
+			mvprintw(TRANSPONDER_START_ROW+2,1,"Downlink :");
+			mvprintw(TRANSPONDER_START_ROW+3,1,"Delay    :");
+			mvprintw(TRANSPONDER_START_ROW+3,55,"Echo      :");
+			mvprintw(TRANSPONDER_START_ROW+2,29,"RX:");
+			mvprintw(TRANSPONDER_START_ROW+2,55,"Path loss :");
+			mvprintw(TRANSPONDER_START_ROW+1,29,"TX:");
+			mvprintw(TRANSPONDER_START_ROW+1,55,"Path loss :");
 		}
 
 		do {
@@ -1292,7 +1298,7 @@ void SingleTrack(int orbit_ind, predict_observer_t *qth, struct transponder_db *
 				predict_observe_orbit(qth, &temp_orbit, &los);
 
 				//max elevation of current or next pass
-				predict_orbit(orbital_elements, &temp_orbit, predict_max_elevation(qth, orbital_elements, daynum));
+				max_elevation = predict_at_max_elevation(qth, orbital_elements, daynum);
 				predict_observe_orbit(qth, &temp_orbit, &max_elevation);
 			}
 
@@ -1331,8 +1337,6 @@ void SingleTrack(int orbit_ind, predict_observer_t *qth, struct transponder_db *
 			mvprintw(6,42,"%0.f ",orbit.footprint);
 
 			attrset(COLOR_PAIR(1)|A_BOLD);
-			mvprintw(20,1,"Orbit Number: %ld", orbit.revolutions);
-
 			mvprintw(22,1,"Spacecraft is currently ");
 			if (obs.visible) {
 				mvprintw(22,25,"visible    ");
@@ -1342,19 +1346,30 @@ void SingleTrack(int orbit_ind, predict_observer_t *qth, struct transponder_db *
 				mvprintw(22,25,"in eclipse ");
 			}
 
-			//display satellite AOS/LOS information
+			//display AOS/LOS times
 			if (geostationary && (obs.elevation>=0.0)) {
-				mvprintw(21,1,"Satellite orbit is geostationary");
+				mvprintw(AOSLOS_INFORMATION_ROW,1,"Satellite orbit is geostationary");
 			} else if (decayed || !aos_happens || (geostationary && (obs.elevation<0.0))){
-				mvprintw(21,1,"This satellite never reaches AOS");
+				mvprintw(AOSLOS_INFORMATION_ROW,1,"This satellite never reaches AOS");
 			} else if (obs.elevation >= 0.0) {
 				time_t epoch = predict_from_julian(los.time);
-				strftime(time_string, MAX_NUM_CHARS, "%a %d%b%y %j.%H:%M:%S", gmtime(&epoch));
-				mvprintw(21,1,"LOS at: %s %s  ",time_string, "UTC");
+				strftime(time_string, MAX_NUM_CHARS, "%H:%M:%S", gmtime(&epoch));
+				mvprintw(AOSLOS_INFORMATION_ROW,1,"LOS at:   %s UTC (%0.f Az)   ",time_string,los.azimuth*RAD2DEG);
 			} else if (obs.elevation < 0.0) {
 				time_t epoch = predict_from_julian(aos.time);
-				strftime(time_string, MAX_NUM_CHARS, "%a %d%b%y %j.%H:%M:%S", gmtime(&epoch));
-				mvprintw(21,1,"Next AOS: %s %s",time_string, "UTC");
+				strftime(time_string, MAX_NUM_CHARS, "%H:%M:%S", gmtime(&epoch));
+				mvprintw(AOSLOS_INFORMATION_ROW,1,"Next AOS: %s UTC (%0.f Az)   ",time_string, aos.azimuth*RAD2DEG);
+			}
+
+			//display pass information
+			if (!geostationary && !decayed && aos_happens) {
+				//max elevation time
+				time_t epoch = predict_from_julian(max_elevation.time);
+				char time_string[MAX_NUM_CHARS];
+				strftime(time_string, MAX_NUM_CHARS, "%H:%M:%S UTC", gmtime(&epoch));
+
+				//pass properties
+				mvprintw(AOSLOS_INFORMATION_ROW+1, 1, "Max ele   %s (%0.f Az, %2.f El)", time_string, max_elevation.azimuth*RAD2DEG, max_elevation.elevation*RAD2DEG);
 			}
 
 			//predict and observe sun and moon
@@ -1387,27 +1402,28 @@ void SingleTrack(int orbit_ind, predict_observer_t *qth, struct transponder_db *
 
 			//display downlink/uplink information
 			if (comsat) {
+
 				length=strlen(sat_db.transponders[xponder].name)/2;
-	      mvprintw(10,0,"                                                                                ");
-				mvprintw(10,40-length,"%s",sat_db.transponders[xponder].name);
+	      mvprintw(TRANSPONDER_START_ROW,0,"                                                                                ");
+				mvprintw(TRANSPONDER_START_ROW,40-length,"%s",sat_db.transponders[xponder].name);
 
 				if (downlink!=0.0)
-					mvprintw(12,11,"%11.5f MHz%c%c%c",downlink,
+					mvprintw(TRANSPONDER_START_ROW+2,11,"%11.5f MHz%c%c%c",downlink,
 					readfreq ? '<' : ' ',
 					(readfreq || downlink_update) ? '=' : ' ',
 					downlink_update ? '>' : ' ');
 
 				else
-					mvprintw(12,11,"               ");
+					mvprintw(TRANSPONDER_START_ROW+2,11,"               ");
 
 				if (uplink!=0.0)
-					mvprintw(11,11,"%11.5f MHz%c%c%c",uplink,
+					mvprintw(TRANSPONDER_START_ROW+1,11,"%11.5f MHz%c%c%c",uplink,
 					readfreq ? '<' : ' ',
 					(readfreq || uplink_update) ? '=' : ' ',
 					uplink_update ? '>' : ' ');
 
 				else
-					mvprintw(11,11,"               ");
+					mvprintw(TRANSPONDER_START_ROW+1,11,"               ");
 			}
 
 			//calculate and display downlink/uplink information during pass, and control rig if available
@@ -1422,64 +1438,64 @@ void SingleTrack(int orbit_ind, predict_observer_t *qth, struct transponder_db *
 					attrset(COLOR_PAIR(4)|A_BOLD);
 
 					if (fabs(obs.range_rate)<0.1)
-						mvprintw(13,34,"    TCA    ");
+						mvprintw(TRANSPONDER_START_ROW+3,34,"    TCA    ");
 					else {
 						if (obs.range_rate<0.0)
-							mvprintw(13,34,"Approaching");
+							mvprintw(TRANSPONDER_START_ROW+3,34,"Approaching");
 
 						if (obs.range_rate>0.0)
-							mvprintw(13,34,"  Receding ");
+							mvprintw(TRANSPONDER_START_ROW+3,34,"  Receding ");
 					}
 
 					attrset(COLOR_PAIR(2)|A_BOLD);
 
 					if (downlink!=0.0) {
 						double downlink_doppler = downlink + predict_doppler_shift(qth, &orbit, downlink);
-						mvprintw(12,32,"%11.5f MHz",downlink_doppler);
+						mvprintw(TRANSPONDER_START_ROW+2,32,"%11.5f MHz",downlink_doppler);
 						loss=32.4+(20.0*log10(downlink))+(20.0*log10(obs.range));
-						mvprintw(12,67,"%7.3f dB",loss);
-						mvprintw(13,13,"%7.3f   ms",delay);
+						mvprintw(TRANSPONDER_START_ROW+2,67,"%7.3f dB",loss);
+						mvprintw(TRANSPONDER_START_ROW+3,13,"%7.3f   ms",delay);
 						if (downlink_info->connected && downlink_update)
 							rigctld_set_frequency(downlink_info, downlink_doppler);
 					}
 
 					else
 					{
-						mvprintw(12,32,"                ");
-						mvprintw(12,67,"          ");
-						mvprintw(13,13,"            ");
+						mvprintw(TRANSPONDER_START_ROW+2,32,"                ");
+						mvprintw(TRANSPONDER_START_ROW+2,67,"          ");
+						mvprintw(TRANSPONDER_START_ROW+3,13,"            ");
 					}
 					if (uplink!=0.0) {
 						double uplink_doppler = uplink - predict_doppler_shift(qth, &orbit, uplink);
-						mvprintw(11,32,"%11.5f MHz",uplink_doppler);
+						mvprintw(TRANSPONDER_START_ROW+1,32,"%11.5f MHz",uplink_doppler);
 						loss=32.4+(20.0*log10(uplink))+(20.0*log10(obs.range));
-						mvprintw(11,67,"%7.3f dB",loss);
+						mvprintw(TRANSPONDER_START_ROW+1,67,"%7.3f dB",loss);
 						if (uplink_info->connected && uplink_update)
 							rigctld_set_frequency(uplink_info, uplink_doppler);
 					}
 					else
 					{
-						mvprintw(11,32,"                ");
-						mvprintw(11,67,"          ");
+						mvprintw(TRANSPONDER_START_ROW+1,32,"                ");
+						mvprintw(TRANSPONDER_START_ROW+1,67,"          ");
 					}
 
 					if (uplink!=0.0 && downlink!=0.0)
-						mvprintw(13,67,"%7.3f ms",2.0*delay);
+						mvprintw(TRANSPONDER_START_ROW+3,67,"%7.3f ms",2.0*delay);
 					else
-						mvprintw(13,67,"              ");
+						mvprintw(TRANSPONDER_START_ROW+3,67,"              ");
 				}
 
 			} else {
 				aos_alarm=0;
 
 				if (comsat) {
-					mvprintw(11,32,"                ");
-					mvprintw(11,67,"          ");
-					mvprintw(12,32,"                ");
-					mvprintw(12,67,"          ");
-					mvprintw(13,13,"            ");
-					mvprintw(13,34,"           ");
-					mvprintw(13,67,"          ");
+					mvprintw(TRANSPONDER_START_ROW+1,32,"                ");
+					mvprintw(TRANSPONDER_START_ROW+1,67,"          ");
+					mvprintw(TRANSPONDER_START_ROW+2,32,"                ");
+					mvprintw(TRANSPONDER_START_ROW+2,67,"          ");
+					mvprintw(TRANSPONDER_START_ROW+3,13,"            ");
+					mvprintw(TRANSPONDER_START_ROW+3,34,"           ");
+					mvprintw(TRANSPONDER_START_ROW+3,67,"          ");
 				}
 			}
 
