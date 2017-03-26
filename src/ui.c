@@ -1225,14 +1225,14 @@ void SingleTrack(int orbit_ind, predict_observer_t *qth, struct transponder_db *
 				lostime = predict_next_los(qth, orbital_elements, calc_time);
 				time_t epoch = predict_from_julian(lostime);
 				strftime(time_string, MAX_NUM_CHARS, "%a %d%b%y %j.%H:%M:%S", gmtime(&epoch));
-				mvprintw(21,1,"LOS at: %s %s  ",time_string, "GMT");
+				mvprintw(21,1,"LOS at: %s %s  ",time_string, "UTC");
 				aoslos=lostime;
 			} else if (obs.elevation<0.0 && !geostationary && !decayed && aos_happens && daynum>aoslos) {
 				predict_julian_date_t calc_time = daynum + 0.003;  /* Move ahead slightly... */
 				nextaos=predict_next_aos(qth, orbital_elements, calc_time);
 				time_t epoch = predict_from_julian(nextaos);
 				strftime(time_string, MAX_NUM_CHARS, "%a %d%b%y %j.%H:%M:%S", gmtime(&epoch));
-				mvprintw(21,1,"Next AOS: %s %s",time_string, "GMT");
+				mvprintw(21,1,"Next AOS: %s %s",time_string, "UTC");
 				aoslos=nextaos;
 			} else if (decayed || !aos_happens || (geostationary && (obs.elevation<0.0))){
 				mvprintw(21,1,"This satellite never reaches AOS");
