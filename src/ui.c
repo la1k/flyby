@@ -2315,23 +2315,28 @@ void RunFlybyUI(bool new_user, const char *qthfile, predict_observer_t *observer
 			if (!handled) {
 				if (!handled) {
 					switch (key) {
+						case 'N':
 						case 'n':
 							PredictSunMoon(PREDICT_MOON, observer);
 							break;
 
+						case 'O':
 						case 'o':
 							PredictSunMoon(PREDICT_SUN, observer);
 							break;
 
+						case 'U':
 						case 'u':
 							AutoUpdate("", tle_db);
 							break;
 
+						case 'G':
 						case 'g':
 							QthEdit(qthfile, observer);
 							multitrack_refresh_tles(listing, tle_db);
 							break;
 
+						case 'I':
 						case 'i':
 							ProgramInfo(qthfile, tle_db, sat_db, rotctld);
 							break;
