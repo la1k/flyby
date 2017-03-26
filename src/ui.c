@@ -1347,7 +1347,7 @@ void SingleTrack(int orbit_ind, predict_observer_t *qth, struct transponder_db *
 					}
 
 					if (uplink!=0.0 && downlink!=0.0)
-						mvprintw(12,67,"%7.3f ms",2.0*delay);
+						mvprintw(13,67,"%7.3f ms",2.0*delay);
 					else
 						mvprintw(13,67,"              ");
 				}
