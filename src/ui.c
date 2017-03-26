@@ -1155,9 +1155,12 @@ void SingleTrack(int orbit_ind, predict_observer_t *qth, struct transponder_db *
 		int     length, xponder=0,
 			polarity=0;
 		bool	aos_alarm=0;
-		double	nextaos=0.0, lostime=0.0, aoslos=0.0,
-			downlink=0.0, uplink=0.0, downlink_start=0.0,
+		double	downlink=0.0, uplink=0.0, downlink_start=0.0,
 			downlink_end=0.0, uplink_start=0.0, uplink_end=0.0;
+
+		struct predict_observation aos = {0};
+		struct predict_observation los = {0};
+		struct predict_observation max_elevation = {0};
 
 		double delay;
 		double loss;
@@ -1276,6 +1279,23 @@ void SingleTrack(int orbit_ind, predict_observer_t *qth, struct transponder_db *
 			double sat_vel = sqrt(pow(orbit.velocity[0], 2.0) + pow(orbit.velocity[1], 2.0) + pow(orbit.velocity[2], 2.0));
 			double squint = predict_squint_angle(qth, &orbit, sat_db.alon, sat_db.alat);
 
+			//update pass information
+			if (!decayed && aos_happens && !geostationary && (daynum > los.time)) {
+				struct predict_orbit temp_orbit;
+
+				//aos of next pass
+				predict_orbit(orbital_elements, &temp_orbit, predict_next_aos(qth, orbital_elements, daynum));
+				predict_observe_orbit(qth, &temp_orbit, &aos);
+
+				//los of current or next pass
+				predict_orbit(orbital_elements, &temp_orbit, predict_next_los(qth, orbital_elements, daynum));
+				predict_observe_orbit(qth, &temp_orbit, &los);
+
+				//max elevation of current or next pass
+				predict_orbit(orbital_elements, &temp_orbit, predict_max_elevation(qth, orbital_elements, daynum));
+				predict_observe_orbit(qth, &temp_orbit, &max_elevation);
+			}
+
 			//display current time
 			attrset(COLOR_PAIR(6)|A_REVERSE|A_BOLD);
 			strftime(time_string, MAX_NUM_CHARS, "%a %d%b%y %j.%H:%M:%S", gmtime(&epoch));
@@ -1325,24 +1345,16 @@ void SingleTrack(int orbit_ind, predict_observer_t *qth, struct transponder_db *
 			//display satellite AOS/LOS information
 			if (geostationary && (obs.elevation>=0.0)) {
 				mvprintw(21,1,"Satellite orbit is geostationary");
-				aoslos=-3651.0;
-			} else if ((obs.elevation>=0.0) && !geostationary && !decayed && daynum>lostime) {
-				predict_julian_date_t calc_time = daynum;
-				lostime = predict_next_los(qth, orbital_elements, calc_time);
-				time_t epoch = predict_from_julian(lostime);
-				strftime(time_string, MAX_NUM_CHARS, "%a %d%b%y %j.%H:%M:%S", gmtime(&epoch));
-				mvprintw(21,1,"LOS at: %s %s  ",time_string, "UTC");
-				aoslos=lostime;
-			} else if (obs.elevation<0.0 && !geostationary && !decayed && aos_happens && daynum>aoslos) {
-				predict_julian_date_t calc_time = daynum + 0.003;  /* Move ahead slightly... */
-				nextaos=predict_next_aos(qth, orbital_elements, calc_time);
-				time_t epoch = predict_from_julian(nextaos);
-				strftime(time_string, MAX_NUM_CHARS, "%a %d%b%y %j.%H:%M:%S", gmtime(&epoch));
-				mvprintw(21,1,"Next AOS: %s %s",time_string, "UTC");
-				aoslos=nextaos;
 			} else if (decayed || !aos_happens || (geostationary && (obs.elevation<0.0))){
 				mvprintw(21,1,"This satellite never reaches AOS");
-				aoslos=-3651.0;
+			} else if (obs.elevation >= 0.0) {
+				time_t epoch = predict_from_julian(los.time);
+				strftime(time_string, MAX_NUM_CHARS, "%a %d%b%y %j.%H:%M:%S", gmtime(&epoch));
+				mvprintw(21,1,"LOS at: %s %s  ",time_string, "UTC");
+			} else if (obs.elevation < 0.0) {
+				time_t epoch = predict_from_julian(aos.time);
+				strftime(time_string, MAX_NUM_CHARS, "%a %d%b%y %j.%H:%M:%S", gmtime(&epoch));
+				mvprintw(21,1,"Next AOS: %s %s",time_string, "UTC");
 			}
 
 			//predict and observe sun and moon
@@ -1458,7 +1470,6 @@ void SingleTrack(int orbit_ind, predict_observer_t *qth, struct transponder_db *
 				}
 
 			} else {
-				lostime=0.0;
 				aos_alarm=0;
 
 				if (comsat) {
