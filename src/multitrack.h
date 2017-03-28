@@ -27,6 +27,8 @@ typedef struct {
 	double next_aos;
 	///Time for next LOS
 	double next_los;
+	///Maximum elevation of the next or current pass
+	double max_elevation;
 	///Whether satellite currently is above horizon
 	bool above_horizon;
 	///Whether satellite is geostationary
