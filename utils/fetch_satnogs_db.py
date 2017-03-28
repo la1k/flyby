@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 #This is a script that fetches transponder data from db.satnogs.org and parses it to flyby transponder data.
 import urllib2
 import json
