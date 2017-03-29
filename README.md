@@ -47,4 +47,4 @@ Transponder database
 
 Transponder database is read from `$BASEDIR/flyby/flyby.db`. `$BASEDIR` is assumed to be the same as above. 
 
-As a user, you can put your transponder database in `$HOME/.local/share/flyby/flyby.db`. An example can be found in `$SOURCE_DIR/default/flyby.db`.
+As a user, you can put your transponder database in `$HOME/.local/share/flyby/flyby.db`.
