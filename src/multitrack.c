@@ -526,6 +526,12 @@ void multitrack_update_entry(predict_observer_t *qth, multitrack_entry_t *entry,
 	/* Calculate Next Event (AOS/LOS) Times */
 	if (can_predict && (time > entry->next_los) && (obs.elevation > 0)) {
 		entry->next_los= predict_next_los(qth, entry->orbital_elements, time);
+	}
+
+	if (can_predict && (time > entry->next_aos)) {
+		if (obs.elevation < 0) {
+			entry->next_aos = predict_next_aos(qth, entry->orbital_elements, time);
+		}
 		predict_julian_date_t max_ele_time = predict_max_elevation(qth, entry->orbital_elements, time);
 
 		struct predict_orbit orbit;
@@ -533,12 +539,6 @@ void multitrack_update_entry(predict_observer_t *qth, multitrack_entry_t *entry,
 		predict_orbit(entry->orbital_elements, &orbit, max_ele_time);
 		predict_observe_orbit(qth, &orbit, &observation);
 		entry->max_elevation = observation.elevation;
-	}
-
-	if (can_predict && (time > entry->next_aos)) {
-		if (obs.elevation < 0) {
-			entry->next_aos = predict_next_aos(qth, entry->orbital_elements, time);
-		}
 	}
 
 	//altitude and range in km/miles
