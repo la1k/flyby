@@ -234,15 +234,26 @@ multitrack_entry_t *multitrack_create_entry(const char *name, predict_orbital_el
 	return entry;
 }
 
+void multitrack_update_window_size(multitrack_listing_t *listing)
+{
+	int sat_list_win_height = LINES-MAIN_MENU_OPTS_WIN_HEIGHT-MULTITRACK_WINDOW_ROW-1;
+	wresize(listing->window, sat_list_win_height, MULTITRACK_WINDOW_WIDTH);
+
+	int window_height, window_width;
+	getmaxyx(listing->window, window_height, window_width);
+	listing->window_height = window_height;
+	listing->window_width = window_width;
+	listing->displayed_entries_per_page = window_height;
+	int window_row = getbegy(listing->window);
+	listing->window_row = window_row;
+}
+
 multitrack_listing_t* multitrack_create_listing(WINDOW *window, predict_observer_t *observer, struct tle_db *tle_db)
 {
 	multitrack_listing_t *listing = (multitrack_listing_t*)malloc(sizeof(multitrack_listing_t));
 	listing->window = window;
 
-	int window_height, window_width;
-	getmaxyx(window, window_height, window_width);
-	listing->window_height = window_height;
-	listing->window_width = window_width;
+	multitrack_update_window_size(listing);
 
 	listing->num_entries = 0;
 	listing->entries = NULL;
@@ -250,18 +261,15 @@ multitrack_listing_t* multitrack_create_listing(WINDOW *window, predict_observer
 	listing->sorted_index = NULL;
 
 	//prepare window for header printing
-	int window_row = getbegy(listing->window);
-	listing->header_window = newwin(1, window_width+11, window_row-2, 0);
-	listing->window_row = window_row;
+	listing->header_window = newwin(1, listing->window_width+11, listing->window_row-2, 0);
 
 	listing->qth = observer;
-	listing->displayed_entries_per_page = window_height;
 
 	multitrack_refresh_tles(listing, tle_db);
 
 	listing->option_selector = multitrack_option_selector_create();
 
-	int search_row = window_row + window_height + 1;
+	int search_row = listing->window_row + listing->window_height + 1;
 	int search_col = 0;
 	listing->search_field = multitrack_search_field_create(search_row, search_col);
 	return listing;

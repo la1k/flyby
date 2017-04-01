@@ -5,6 +5,10 @@
 #include "form.h"
 #include "menu.h"
 
+#define MULTITRACK_WINDOW_WIDTH 67
+
+#define MULTITRACK_WINDOW_ROW 2
+
 /**
  * Structs and functions used for showing a navigateable real-time satellite listing.
  **/
