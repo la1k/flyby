@@ -214,17 +214,19 @@ void filtered_menu_toggle(struct filtered_menu *list)
 	}
 }
 
-int filtered_menu_index(struct filtered_menu *list)
+int filtered_menu_index(struct filtered_menu *list, int index)
 {
-	return list->entry_mapping[item_index(current_item(list->menu))];
+	return list->entry_mapping[index];
 }
 
-void filtered_menu_select_index(struct filtered_menu *list, int index)
+int filtered_menu_current_index(struct filtered_menu *list)
 {
-	int display_index = list->inverse_entry_mapping[index];
-	if (display_index >= 0) {
-		set_current_item(list->menu, list->displayed_entries[display_index]);
-	}
+	return filtered_menu_index(list, item_index(current_item(list->menu)));
+}
+
+void filtered_menu_select_index(struct filtered_menu *list, int display_index)
+{
+	set_current_item(list->menu, list->displayed_entries[display_index]);
 }
 
 void filtered_menu_show_whitelisted(struct filtered_menu *list, const struct tle_db *db)
@@ -270,7 +272,7 @@ bool filtered_menu_handle(struct filtered_menu *list, int c)
 			pos_menu_cursor(list->menu);
 			menu_driver(list->menu, REQ_TOGGLE_ITEM);
 
-			index = filtered_menu_index(list);
+			index = filtered_menu_current_index(list);
 			list->entries[index].enabled = !(list->entries[index].enabled);
 			break;
 		default:

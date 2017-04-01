@@ -58,20 +58,29 @@ void filtered_menu_from_stringarray(struct filtered_menu *list, string_array_t *
 void filtered_menu_from_tle_db(struct filtered_menu *list, const struct tle_db *db, WINDOW *my_menu_win);
 
 /**
+ * Get true underlying index of input displayed menu index.
+ *
+ * \param list Menu
+ * \param index Input index
+ * \return Mapped index
+ **/
+int filtered_menu_index(struct filtered_menu *list, int index);
+
+/**
  * Get true underlying index of currently selected item in menu.
  *
  * \param list Menu
  * \return Mapped index
  **/
-int filtered_menu_index(struct filtered_menu *list);
+int filtered_menu_current_index(struct filtered_menu *list);
 
 /**
- * Select input index so that corresponding entry in displayed menu is selected.
+ * Make menu set current index to the input index in the displayed menu (not the underlying array).
  *
  * \param list Menu
- * \param index Index to select in original array
+ * \param display_index Index to select in displayed menu
  **/
-void filtered_menu_select_index(struct filtered_menu *list, int index);
+void filtered_menu_select_index(struct filtered_menu *list, int display_index);
 
 /**
  * Free memory allocated in menu struct.
