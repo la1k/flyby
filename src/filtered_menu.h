@@ -89,6 +89,14 @@ void filtered_menu_free(struct filtered_menu *list);
 void filtered_menu_pattern_match(struct filtered_menu *list, const char *pattern);
 
 /**
+ * Filter displayed menu entries according to whitelist field in TLE db.
+ *
+ * \param list Menu
+ * \param db TLE db
+ **/
+void filtered_menu_show_whitelisted(struct filtered_menu *list, const struct tle_db *db);
+
+/**
  * Modify "enabled"-flag in TLE db entries based on the current enabled/disabled flags in the menu.
  *
  * \param list Menu struct

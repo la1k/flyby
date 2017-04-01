@@ -227,6 +227,21 @@ void filtered_menu_select_index(struct filtered_menu *list, int index)
 	}
 }
 
+void filtered_menu_show_whitelisted(struct filtered_menu *list, const struct tle_db *db)
+{
+	bool *display_items = (bool*)malloc(sizeof(bool)*list->num_entries);
+	for (int i = 0; i < list->num_entries; ++i) {
+		display_items[i] = false;
+		if (tle_db_entry_enabled(db, i)) {
+			display_items[i] = true;
+		}
+	}
+
+	filtered_menu_update(list, display_items);
+
+	free(display_items);
+}
+
 bool filtered_menu_handle(struct filtered_menu *list, int c)
 {
 	int index = 0;
