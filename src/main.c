@@ -176,6 +176,19 @@ int main(int argc, char **argv)
 		rotctld_connect(rotctld_host, rotctld_port, rotctld_update_interval, tracking_horizon, &rotctld);
 	}
 
+	//check rigctld input arguments
+	if (use_rigctld_uplink && use_rigctld_downlink) {
+		if ((strncmp(rigctld_uplink_host, rigctld_downlink_host, MAX_NUM_CHARS) == 0) &&
+		   (strncmp(rigctld_uplink_port, rigctld_downlink_port, MAX_NUM_CHARS) == 0) &&
+		   ((strncmp(rigctld_uplink_vfo, rigctld_downlink_vfo, MAX_NUM_CHARS) == 0) ||
+		   (strlen(rigctld_uplink_vfo) == 0) || strlen(rigctld_downlink_vfo) == 0)) {
+			fprintf(stderr, "VFO names must be specified when the same rigctld instance is used for both uplink and downlink.\n"
+					"Downlink input:\t%s:%s, VFO=\"%s\"\nUplink input:\t%s:%s, VFO=\"%s\"\n",
+					rigctld_downlink_host, rigctld_downlink_port, rigctld_downlink_vfo, rigctld_uplink_host, rigctld_uplink_port, rigctld_uplink_vfo);
+			return 1;
+		}
+	}
+
 	//connect to rigctld
 	rigctld_info_t uplink = {0};
 	if (use_rigctld_uplink) {
@@ -254,7 +267,7 @@ void show_help(const char *name, struct option long_options[], const char *short
 		} else {
 			printf("    ");
 		}
-		
+
 		//display long option
 		printf("--%s", long_options[index].name);
 
