@@ -224,9 +224,12 @@ int filtered_menu_current_index(struct filtered_menu *list)
 	return filtered_menu_index(list, item_index(current_item(list->menu)));
 }
 
-void filtered_menu_select_index(struct filtered_menu *list, int display_index)
+void filtered_menu_select_index(struct filtered_menu *list, int index)
 {
-	set_current_item(list->menu, list->displayed_entries[display_index]);
+	int display_index = list->inverse_entry_mapping[index];
+	if (display_index >= 0) {
+		set_current_item(list->menu, list->displayed_entries[display_index]);
+	}
 }
 
 void filtered_menu_show_whitelisted(struct filtered_menu *list, const struct tle_db *db)

@@ -75,12 +75,12 @@ int filtered_menu_index(struct filtered_menu *list, int index);
 int filtered_menu_current_index(struct filtered_menu *list);
 
 /**
- * Make menu set current index to the input index in the displayed menu (not the underlying array).
+ * Make menu set current index in displayed menu to the original index in the full list.
  *
  * \param list Menu
- * \param display_index Index to select in displayed menu
+ * \param index Index to select
  **/
-void filtered_menu_select_index(struct filtered_menu *list, int display_index);
+void filtered_menu_select_index(struct filtered_menu *list, int index);
 
 /**
  * Free memory allocated in menu struct.

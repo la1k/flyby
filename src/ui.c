@@ -2130,7 +2130,7 @@ void EditTransponderDatabase(int start_index, struct tle_db *tle_db, struct tran
 	if (start_index < 0) {
 		start_index = 0;
 	}
-	if ((start_index == 0) && (menu.inverse_entry_mapping[0] != -1)) {
+	if ((start_index == 0) && (menu.inverse_entry_mapping[0] == -1)) {
 		start_index = menu.entry_mapping[0];
 	}
 
