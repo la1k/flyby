@@ -20,8 +20,9 @@ int sock_readline(int sockd, char *message, size_t bufsize)
 	}
 
 	do {
-		if ((len=recv(sockd, &c, 1, 0)) < 0) {
-			return len;
+		len = recv(sockd, &c, 1, MSG_WAITALL);
+		if (len <= 0) {
+			break;
 		}
 		if (message!=NULL) {
 			message[pos]=c;
