@@ -49,11 +49,18 @@ void filtered_menu_free(struct filtered_menu *list)
 	}
 	free(list->entries);
 	free(list->entry_mapping);
+	free(list->inverse_entry_mapping);
 
 	delwin(list->sub_window);
 }
 
-void filtered_menu_pattern_match(struct filtered_menu *list, const char *pattern)
+/**
+ * Change displayed items in menu according to input boolean array.
+ *
+ * \param list Menu
+ * \param items_to_display Boolean array with entries corresponding to each entry in the filtered menu, with 0 for entry to hide and 1 for entry to show
+ **/
+void filtered_menu_update(struct filtered_menu *list, bool *items_to_display)
 {
 	//keep currently selected item for later cursor jumping
 	if (list->num_displayed_entries > 0) {
@@ -66,15 +73,17 @@ void filtered_menu_pattern_match(struct filtered_menu *list, const char *pattern
 		list->num_displayed_entries = 0;
 	}
 
+	//create new entries based on input boolean array and update entry mapping
 	ITEM **temp_items = (ITEM **)calloc(list->num_entries + 1, sizeof(ITEM *));
 	int item_ind = 0;
-
-	//put all items corresponding to input pattern into current list of displayed items, update entry mapping
-	for (int i = 0; i < list->num_entries; ++i) {
-		if (pattern_match(list->entries[i].displayed_name, pattern)) {
+	for (int i=0; i < list->num_entries; i++) {
+		if (items_to_display[i]) {
 			temp_items[item_ind] = new_item(list->entries[i].displayed_name, "");
 			list->entry_mapping[item_ind] = i;
+			list->inverse_entry_mapping[i] = item_ind;
 			item_ind++;
+		} else {
+			list->inverse_entry_mapping[i] = -1;
 		}
 	}
 	temp_items[item_ind] = NULL; //terminate the menu list
@@ -103,6 +112,23 @@ void filtered_menu_pattern_match(struct filtered_menu *list, const char *pattern
 	}
 }
 
+void filtered_menu_pattern_match(struct filtered_menu *list, const char *pattern)
+{
+	//get boolean array over entries to display or not
+	bool *display_items = (bool*)malloc(sizeof(bool)*list->num_entries);
+	for (int i = 0; i < list->num_entries; ++i) {
+		display_items[i] = false;
+		if (pattern_match(list->entries[i].displayed_name, pattern)) {
+			display_items[i] = true;
+		}
+	}
+
+	//update menu
+	filtered_menu_update(list, display_items);
+
+	free(display_items);
+}
+
 void filtered_menu_from_stringarray(struct filtered_menu *list, string_array_t *names, WINDOW *my_menu_win)
 {
 	//initialize member variables based on tle database
@@ -110,6 +136,7 @@ void filtered_menu_from_stringarray(struct filtered_menu *list, string_array_t *
 	list->num_entries = string_array_size(names);
 	list->displayed_entries = (ITEM **)calloc(list->num_entries + 1, sizeof(ITEM*));
 	list->entry_mapping = (int*)calloc(list->num_entries, sizeof(int));
+	list->inverse_entry_mapping = (int*)calloc(list->num_entries, sizeof(int));
 	list->entries = (struct filtered_menu_entry*)malloc(sizeof(struct filtered_menu_entry)*list->num_entries);
 	for (int i=0; i < list->num_entries; i++) {
 		list->entries[i].displayed_name = strdup(string_array_get(names, i));
@@ -187,8 +214,43 @@ void filtered_menu_toggle(struct filtered_menu *list)
 	}
 }
 
+int filtered_menu_index(struct filtered_menu *list, int index)
+{
+	return list->entry_mapping[index];
+}
+
+int filtered_menu_current_index(struct filtered_menu *list)
+{
+	return filtered_menu_index(list, item_index(current_item(list->menu)));
+}
+
+void filtered_menu_select_index(struct filtered_menu *list, int index)
+{
+	int display_index = list->inverse_entry_mapping[index];
+	if (display_index >= 0) {
+		set_current_item(list->menu, list->displayed_entries[display_index]);
+	}
+}
+
+void filtered_menu_show_whitelisted(struct filtered_menu *list, const struct tle_db *db)
+{
+	bool *display_items = (bool*)malloc(sizeof(bool)*list->num_entries);
+	for (int i = 0; i < list->num_entries; ++i) {
+		display_items[i] = false;
+		if (tle_db_entry_enabled(db, i)) {
+			display_items[i] = true;
+		}
+	}
+
+	filtered_menu_update(list, display_items);
+
+	free(display_items);
+}
+
 bool filtered_menu_handle(struct filtered_menu *list, int c)
 {
+	int index = 0;
+
 	if (list->num_displayed_entries <= 0) {
 		return false;
 	}
@@ -213,7 +275,7 @@ bool filtered_menu_handle(struct filtered_menu *list, int c)
 			pos_menu_cursor(list->menu);
 			menu_driver(list->menu, REQ_TOGGLE_ITEM);
 
-			int index = list->entry_mapping[item_index(current_item(list->menu))];
+			index = filtered_menu_current_index(list);
 			list->entries[index].enabled = !(list->entries[index].enabled);
 			break;
 		default:

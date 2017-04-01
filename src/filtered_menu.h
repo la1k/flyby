@@ -31,6 +31,8 @@ struct filtered_menu {
 	MENU* menu;
 	///mapping between displayed item indices and the actual entries in the menu
 	int *entry_mapping;
+	///mapping between actual indices and displayed items. Has -1 if item is not displayed
+	int *inverse_entry_mapping;
 	///name of currently/last marked item (used for keeping cursor position)
 	char curr_item[MAX_NUM_CHARS];
 	///Subwindow used for MENU
@@ -56,6 +58,31 @@ void filtered_menu_from_stringarray(struct filtered_menu *list, string_array_t *
 void filtered_menu_from_tle_db(struct filtered_menu *list, const struct tle_db *db, WINDOW *my_menu_win);
 
 /**
+ * Get true underlying index of input displayed menu index.
+ *
+ * \param list Menu
+ * \param index Input index
+ * \return Mapped index
+ **/
+int filtered_menu_index(struct filtered_menu *list, int index);
+
+/**
+ * Get true underlying index of currently selected item in menu.
+ *
+ * \param list Menu
+ * \return Mapped index
+ **/
+int filtered_menu_current_index(struct filtered_menu *list);
+
+/**
+ * Make menu set current index in displayed menu to the original index in the full list.
+ *
+ * \param list Menu
+ * \param index Index to select
+ **/
+void filtered_menu_select_index(struct filtered_menu *list, int index);
+
+/**
  * Free memory allocated in menu struct.
  *
  * \param list Menu struct to free
@@ -69,6 +96,14 @@ void filtered_menu_free(struct filtered_menu *list);
  * \param pattern Pattern string
  **/
 void filtered_menu_pattern_match(struct filtered_menu *list, const char *pattern);
+
+/**
+ * Filter displayed menu entries according to whitelist field in TLE db.
+ *
+ * \param list Menu
+ * \param db TLE db
+ **/
+void filtered_menu_show_whitelisted(struct filtered_menu *list, const struct tle_db *db);
 
 /**
  * Modify "enabled"-flag in TLE db entries based on the current enabled/disabled flags in the menu.
