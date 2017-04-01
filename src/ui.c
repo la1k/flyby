@@ -1370,9 +1370,9 @@ void SingleTrack(int orbit_ind, predict_observer_t *qth, struct transponder_db *
 			//display rotation information
 			if (rotctld->connected) {
 				if (obs.elevation>=horizon)
-					mvprintw(17,67,"   Active   ");
+					mvprintw(18,67,"   Active   ");
 				else
-					mvprintw(17,67,"Standing  By");
+					mvprintw(18,67,"Standing  By");
 			} else
 				mvprintw(18,67,"Not  Enabled");
 
@@ -1888,7 +1888,7 @@ void ProgramInfo(const char *qthfile, struct tle_db *tle_db, struct transponder_
 	printw("\t\tQTH file        : %s\n", qthfile);
 	printw("\t\tTLE file        : ");
 	if (tle_db->num_tles > 0) {
-		printw("Loaded\n");
+		printw("%d TLEs loaded\n", tle_db->num_tles);
 	} else {
 		printw("Not loaded\n");
 	}
