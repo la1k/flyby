@@ -1879,6 +1879,30 @@ void PrintMainMenu(WINDOW *window)
 	wrefresh(window);
 }
 
+/**
+ * Print rigctld info to terminal.
+ *
+ * \param name Name used for printing
+ * \param rigctld Rigctl info.
+ **/
+void print_rigctld_info(const char *name, rigctld_info_t *rigctld)
+{
+	if (rigctld->connected) {
+		printw("\n");
+		printw("\t\t%s VFO\t: Enabled\n", name);
+		printw("\t\t - Connected to rigctld: %s:%s\n", rigctld->host, rigctld->port);
+
+		printw("\t\t - VFO name: ");
+		if (strlen(rigctld->vfo_name) > 0) {
+			printw("%s\n", rigctld->vfo_name);
+		} else {
+			printw("Undefined\n");
+		}
+	} else {
+		printw("\t\t%s VFO\t: Not enabled\n", name);
+	}
+}
+
 void ProgramInfo(const char *qthfile, struct tle_db *tle_db, struct transponder_db *transponder_db, rotctld_info_t *rotctld, rigctld_info_t* downlink, rigctld_info_t *uplink)
 {
 	Banner();
@@ -1888,7 +1912,9 @@ void ProgramInfo(const char *qthfile, struct tle_db *tle_db, struct transponder_
 	printw("\t\tQTH file        : %s\n", qthfile);
 	printw("\t\tTLE file        : ");
 	if (tle_db->num_tles > 0) {
-		printw("%d TLEs loaded\n", tle_db->num_tles);
+		string_array_t tle_db_files = tle_db_filenames(tle_db);
+		printw("%d TLEs loaded from %d files\n", tle_db->num_tles, string_array_size(&tle_db_files));
+		string_array_free(&tle_db_files);
 	} else {
 		printw("Not loaded\n");
 	}
@@ -1900,6 +1926,7 @@ void ProgramInfo(const char *qthfile, struct tle_db *tle_db, struct transponder_
 	}
 
 	if (rotctld->connected) {
+		printw("\n");
 		printw("\t\tAutoTracking    : Enabled\n");
 		printw("\t\t - Connected to rotctld: %s:%s\n", rotctld->host, rotctld->port);
 
@@ -1913,21 +1940,8 @@ void ProgramInfo(const char *qthfile, struct tle_db *tle_db, struct transponder_
 		printw("\t\tAutoTracking    : Not enabled\n");
 	}
 
-	if (uplink->connected) {
-		printw("\t\tUplink VFO      : Enabled\n");
-		printf("\t\t - Connected to rigctld: %s:%s\n", uplink->host, uplink->port);
-		printw("\t\t - VFO name: %s\n", downlink->vfo_name);
-	} else {
-		printw("\t\tUplink VFO      : Not enabled\n");
-	}
-
-	if (downlink->connected) {
-		printw("\t\tDownlink VFO      : Enabled\n");
-		printw("\t\t - Connected to rigctld: %s:%s\n", downlink->host, downlink->port);
-		printw("\t\t - VFO name: %s\n", downlink->vfo_name);
-	} else {
-		printw("\t\tDownlink VFO    : Not enabled\n");
-	}
+	print_rigctld_info("Uplink", uplink);
+	print_rigctld_info("Downlink", downlink);
 
 	refresh();
 	attrset(COLOR_PAIR(4)|A_BOLD);
