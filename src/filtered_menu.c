@@ -53,7 +53,13 @@ void filtered_menu_free(struct filtered_menu *list)
 	delwin(list->sub_window);
 }
 
-void filtered_menu_pattern_match(struct filtered_menu *list, const char *pattern)
+/**
+ * Change displayed items in menu according to input boolean array.
+ *
+ * \param list Menu
+ * \param items_to_display Boolean array with entries corresponding to each entry in the filtered menu, with 0 for entry to hide and 1 for entry to show
+ **/
+void filtered_menu_update(struct filtered_menu *list, bool *items_to_display)
 {
 	//keep currently selected item for later cursor jumping
 	if (list->num_displayed_entries > 0) {
@@ -66,12 +72,11 @@ void filtered_menu_pattern_match(struct filtered_menu *list, const char *pattern
 		list->num_displayed_entries = 0;
 	}
 
+	//create new entries based on input boolean array and update entry mapping
 	ITEM **temp_items = (ITEM **)calloc(list->num_entries + 1, sizeof(ITEM *));
 	int item_ind = 0;
-
-	//put all items corresponding to input pattern into current list of displayed items, update entry mapping
-	for (int i = 0; i < list->num_entries; ++i) {
-		if (pattern_match(list->entries[i].displayed_name, pattern)) {
+	for (int i=0; i < list->num_entries; i++) {
+		if (items_to_display[i]) {
 			temp_items[item_ind] = new_item(list->entries[i].displayed_name, "");
 			list->entry_mapping[item_ind] = i;
 			item_ind++;
@@ -101,6 +106,23 @@ void filtered_menu_pattern_match(struct filtered_menu *list, const char *pattern
 			set_item_value(list->displayed_entries[i], FALSE);
 		}
 	}
+}
+
+void filtered_menu_pattern_match(struct filtered_menu *list, const char *pattern)
+{
+	//get boolean array over entries to display or not
+	bool *display_items = (bool*)malloc(sizeof(bool)*list->num_entries);
+	for (int i = 0; i < list->num_entries; ++i) {
+		display_items[i] = false;
+		if (pattern_match(list->entries[i].displayed_name, pattern)) {
+			display_items[i] = true;
+		}
+	}
+
+	//update menu
+	filtered_menu_update(list, display_items);
+
+	free(display_items);
 }
 
 void filtered_menu_from_stringarray(struct filtered_menu *list, string_array_t *names, WINDOW *my_menu_win)
