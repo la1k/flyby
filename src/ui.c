@@ -2276,14 +2276,14 @@ void RunFlybyUI(bool new_user, const char *qthfile, predict_observer_t *observer
 	predict_julian_date_t curr_time = predict_to_julian(time(NULL));
 
 	//prepare multitrack window
-	int sat_list_win_height = 18;
 	int sat_list_win_row = 2;
+	int sat_list_win_height = LINES-MAIN_MENU_OPTS_WIN_HEIGHT-sat_list_win_row-1;
 	int sat_list_win_width = 67;
 	WINDOW *sat_list_win = newwin(sat_list_win_height, sat_list_win_width, sat_list_win_row, 0);
 	multitrack_listing_t *listing = multitrack_create_listing(sat_list_win, observer, tle_db);
 
 	//window for printing main menu options
-	WINDOW *main_menu_win = newwin(3, COLS, sat_list_win_row + sat_list_win_height + 1, 0);
+	WINDOW *main_menu_win = newwin(MAIN_MENU_OPTS_WIN_HEIGHT, COLS, sat_list_win_row + sat_list_win_height + 1, 0);
 
 	refresh();
 
