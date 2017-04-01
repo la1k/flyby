@@ -49,6 +49,7 @@ void filtered_menu_free(struct filtered_menu *list)
 	}
 	free(list->entries);
 	free(list->entry_mapping);
+	free(list->inverse_entry_mapping);
 
 	delwin(list->sub_window);
 }
@@ -79,7 +80,10 @@ void filtered_menu_update(struct filtered_menu *list, bool *items_to_display)
 		if (items_to_display[i]) {
 			temp_items[item_ind] = new_item(list->entries[i].displayed_name, "");
 			list->entry_mapping[item_ind] = i;
+			list->inverse_entry_mapping[i] = item_ind;
 			item_ind++;
+		} else {
+			list->inverse_entry_mapping[i] = -1;
 		}
 	}
 	temp_items[item_ind] = NULL; //terminate the menu list
@@ -132,6 +136,7 @@ void filtered_menu_from_stringarray(struct filtered_menu *list, string_array_t *
 	list->num_entries = string_array_size(names);
 	list->displayed_entries = (ITEM **)calloc(list->num_entries + 1, sizeof(ITEM*));
 	list->entry_mapping = (int*)calloc(list->num_entries, sizeof(int));
+	list->inverse_entry_mapping = (int*)calloc(list->num_entries, sizeof(int));
 	list->entries = (struct filtered_menu_entry*)malloc(sizeof(struct filtered_menu_entry)*list->num_entries);
 	for (int i=0; i < list->num_entries; i++) {
 		list->entries[i].displayed_name = strdup(string_array_get(names, i));
@@ -212,6 +217,14 @@ void filtered_menu_toggle(struct filtered_menu *list)
 int filtered_menu_index(struct filtered_menu *list)
 {
 	return list->entry_mapping[item_index(current_item(list->menu))];
+}
+
+void filtered_menu_select_index(struct filtered_menu *list, int index)
+{
+	int display_index = list->inverse_entry_mapping[index];
+	if (display_index >= 0) {
+		set_current_item(list->menu, list->displayed_entries[display_index]);
+	}
 }
 
 bool filtered_menu_handle(struct filtered_menu *list, int c)

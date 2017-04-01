@@ -31,6 +31,8 @@ struct filtered_menu {
 	MENU* menu;
 	///mapping between displayed item indices and the actual entries in the menu
 	int *entry_mapping;
+	///mapping between actual indices and displayed items. Has -1 if item is not displayed
+	int *inverse_entry_mapping;
 	///name of currently/last marked item (used for keeping cursor position)
 	char curr_item[MAX_NUM_CHARS];
 	///Subwindow used for MENU
@@ -62,6 +64,14 @@ void filtered_menu_from_tle_db(struct filtered_menu *list, const struct tle_db *
  * \return Mapped index
  **/
 int filtered_menu_index(struct filtered_menu *list);
+
+/**
+ * Select input index so that corresponding entry in displayed menu is selected.
+ *
+ * \param list Menu
+ * \param index Index to select in original array
+ **/
+void filtered_menu_select_index(struct filtered_menu *list, int index);
 
 /**
  * Free memory allocated in menu struct.
