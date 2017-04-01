@@ -497,7 +497,7 @@ void multitrack_update_entry(predict_observer_t *qth, multitrack_entry_t *entry,
 	//overwrite everything if orbit was decayed
 	if (orbit.decayed) {
 		entry->display_attributes = COLOR_PAIR(2);
-		sprintf(disp_string, " %-10s ----------------     Decayed       --------------- ", entry->name);
+		sprintf(disp_string, " %-10.8s ----------------     Decayed       --------------- ", entry->name);
 	}
 
 	memcpy(entry->display_string, disp_string, sizeof(char)*MAX_NUM_CHARS);
