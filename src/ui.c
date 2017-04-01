@@ -2134,7 +2134,7 @@ void EditTransponderDatabase(int start_index, struct tle_db *tle_db, struct tran
 		start_index = menu.entry_mapping[0];
 	}
 
-	if (tle_db->num_tles > 0) {
+	if (menu.num_displayed_entries > 0) {
 		int tle_index = start_index;
 		DisplayTransponderEntry(tle_db->tles[tle_index].name, &(sat_db->sats[tle_index]), display_win);
 	}
@@ -2154,7 +2154,7 @@ void EditTransponderDatabase(int start_index, struct tle_db *tle_db, struct tran
 		filtered_menu_handle(&menu, c);
 		int menu_index = filtered_menu_current_index(&menu);
 
-		if ((c == 10) && (tle_db->num_tles > 0)) { //enter
+		if ((c == 10) && (menu.num_displayed_entries > 0)) { //enter
 			EditTransponderDatabaseField(&(tle_db->tles[menu_index]), editor_win, &(sat_db->sats[menu_index]));
 
 			//clear leftovers from transponder editor
@@ -2174,7 +2174,7 @@ void EditTransponderDatabase(int start_index, struct tle_db *tle_db, struct tran
 		}
 
 		//display/refresh transponder entry displayer
-		if (tle_db->num_tles > 0) {
+		if (menu.num_displayed_entries > 0) {
 			DisplayTransponderEntry(tle_db->tles[menu_index].name, &(sat_db->sats[menu_index]), display_win);
 		}
 		wrefresh(display_win);
