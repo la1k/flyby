@@ -136,6 +136,8 @@ void rigctld_connect(const char *rigctld_host, const char *rigctld_port, const c
 	ret_info->socket = rigctld_socket;
 	strncpy(ret_info->vfo_name, vfo_name, MAX_NUM_CHARS);
 	ret_info->connected = true;
+	strncpy(ret_info->host, rigctld_host, MAX_NUM_CHARS);
+	strncpy(ret_info->port, rigctld_port, MAX_NUM_CHARS);
 }
 
 void rigctld_set_frequency(const rigctld_info_t *info, double frequency)

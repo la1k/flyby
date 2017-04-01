@@ -31,6 +31,10 @@ typedef struct {
 	bool connected;
 	///Socket file identificator
 	int socket;
+	///Hostname
+	char host[MAX_NUM_CHARS];
+	///Port
+	char port[MAX_NUM_CHARS];
 	///VFO name
 	char vfo_name[MAX_NUM_CHARS];
 } rigctld_info_t;

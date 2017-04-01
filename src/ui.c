@@ -1879,7 +1879,7 @@ void PrintMainMenu(WINDOW *window)
 	wrefresh(window);
 }
 
-void ProgramInfo(const char *qthfile, struct tle_db *tle_db, struct transponder_db *transponder_db, rotctld_info_t *rotctld)
+void ProgramInfo(const char *qthfile, struct tle_db *tle_db, struct transponder_db *transponder_db, rotctld_info_t *rotctld, rigctld_info_t* downlink, rigctld_info_t *uplink)
 {
 	Banner();
 	attrset(COLOR_PAIR(3)|A_BOLD);
@@ -1903,14 +1903,31 @@ void ProgramInfo(const char *qthfile, struct tle_db *tle_db, struct transponder_
 		printw("\t\tAutoTracking    : Enabled\n");
 		printw("\t\t - Connected to rotctld: %s:%s\n", rotctld->host, rotctld->port);
 
-		printw("\t\tTracking horizon: %.2f degrees. ", rotctld->tracking_horizon);
+		printw("\t\t - Tracking horizon: %.2f degrees. ", rotctld->tracking_horizon);
 
 		if (rotctld->update_time_interval > 0)
 			printw("Update every %d seconds", rotctld->update_time_interval);
 
 		printw("\n");
-	} else
+	} else {
 		printw("\t\tAutoTracking    : Not enabled\n");
+	}
+
+	if (uplink->connected) {
+		printw("\t\tUplink VFO      : Enabled\n");
+		printf("\t\t - Connected to rigctld: %s:%s\n", uplink->host, uplink->port);
+		printw("\t\t - VFO name: %s\n", downlink->vfo_name);
+	} else {
+		printw("\t\tUplink VFO      : Not enabled\n");
+	}
+
+	if (downlink->connected) {
+		printw("\t\tDownlink VFO      : Enabled\n");
+		printw("\t\t - Connected to rigctld: %s:%s\n", downlink->host, downlink->port);
+		printw("\t\t - VFO name: %s\n", downlink->vfo_name);
+	} else {
+		printw("\t\tDownlink VFO    : Not enabled\n");
+	}
 
 	refresh();
 	attrset(COLOR_PAIR(4)|A_BOLD);
@@ -2338,7 +2355,7 @@ void RunFlybyUI(bool new_user, const char *qthfile, predict_observer_t *observer
 
 						case 'I':
 						case 'i':
-							ProgramInfo(qthfile, tle_db, sat_db, rotctld);
+							ProgramInfo(qthfile, tle_db, sat_db, rotctld, downlink, uplink);
 							break;
 
 						case 'w':

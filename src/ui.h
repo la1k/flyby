@@ -121,7 +121,7 @@ void Illumination(const char *name, predict_orbital_elements_t *orbital_elements
 /**
  * Display program information.
  **/
-void ProgramInfo(const char *qthfile, struct tle_db *tle_db, struct transponder_db *transponder_db, rotctld_info_t *rotctld);
+void ProgramInfo(const char *qthfile, struct tle_db *tle_db, struct transponder_db *transponder_db, rotctld_info_t *rotctld, rigctld_info_t *downlink, rigctld_info_t *uplink);
 
 /**
  * Display transponder editor form and edit the transponder entry.
