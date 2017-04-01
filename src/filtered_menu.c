@@ -187,8 +187,15 @@ void filtered_menu_toggle(struct filtered_menu *list)
 	}
 }
 
+int filtered_menu_index(struct filtered_menu *list)
+{
+	return list->entry_mapping[item_index(current_item(list->menu))];
+}
+
 bool filtered_menu_handle(struct filtered_menu *list, int c)
 {
+	int index = 0;
+
 	if (list->num_displayed_entries <= 0) {
 		return false;
 	}
@@ -213,7 +220,7 @@ bool filtered_menu_handle(struct filtered_menu *list, int c)
 			pos_menu_cursor(list->menu);
 			menu_driver(list->menu, REQ_TOGGLE_ITEM);
 
-			int index = list->entry_mapping[item_index(current_item(list->menu))];
+			index = filtered_menu_index(list);
 			list->entries[index].enabled = !(list->entries[index].enabled);
 			break;
 		default:

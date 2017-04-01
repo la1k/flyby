@@ -56,6 +56,14 @@ void filtered_menu_from_stringarray(struct filtered_menu *list, string_array_t *
 void filtered_menu_from_tle_db(struct filtered_menu *list, const struct tle_db *db, WINDOW *my_menu_win);
 
 /**
+ * Get true underlying index of currently selected item in menu.
+ *
+ * \param list Menu
+ * \return Mapped index
+ **/
+int filtered_menu_index(struct filtered_menu *list);
+
+/**
  * Free memory allocated in menu struct.
  *
  * \param list Menu struct to free
