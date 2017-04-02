@@ -2289,16 +2289,18 @@ void RunFlybyUI(bool new_user, const char *qthfile, predict_observer_t *observer
 	int terminal_lines = LINES;
 	while (should_run) {
 		if (terminal_lines != LINES) {
+			//force full redraw
 			erase();
-			multitrack_update_window_size(listing);
-			terminal_lines = LINES;
 
-			int new_mainmenu_pos = LINES - MAIN_MENU_OPTS_WIN_HEIGHT;
-			if (new_mainmenu_pos > MAIN_MENU_OPTS_WIN_HEIGHT) {
-				mvwin(main_menu_win, LINES-MAIN_MENU_OPTS_WIN_HEIGHT, 0);
-				wresize(main_menu_win, MAIN_MENU_OPTS_WIN_HEIGHT, COLS);
-				wrefresh(main_menu_win);
-			}
+			//update multitrack window
+			multitrack_update_window_size(listing);
+
+			//update main menu option window
+			mvwin(main_menu_win, LINES-MAIN_MENU_OPTS_WIN_HEIGHT, 0);
+			wresize(main_menu_win, MAIN_MENU_OPTS_WIN_HEIGHT, COLS);
+			wrefresh(main_menu_win);
+
+			terminal_lines = LINES;
 		}
 
 		curr_time = predict_to_julian(time(NULL));
