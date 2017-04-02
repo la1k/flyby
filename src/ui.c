@@ -2291,8 +2291,12 @@ void RunFlybyUI(bool new_user, const char *qthfile, predict_observer_t *observer
 		if (terminal_lines != LINES) {
 			multitrack_update_window_size(listing);
 			terminal_lines = LINES;
-			mvwin(main_menu_win, LINES-MAIN_MENU_OPTS_WIN_HEIGHT, 0);
-			wrefresh(main_menu_win);
+
+			int new_mainmenu_pos = LINES - MAIN_MENU_OPTS_WIN_HEIGHT;
+			if (new_mainmenu_pos > MAIN_MENU_OPTS_WIN_HEIGHT) {
+				mvwin(main_menu_win, LINES-MAIN_MENU_OPTS_WIN_HEIGHT, 0);
+				wrefresh(main_menu_win);
+			}
 		}
 
 		curr_time = predict_to_julian(time(NULL));

@@ -147,7 +147,7 @@ multitrack_listing_t* multitrack_create_listing(predict_observer_t *observer, st
  *
  * \param listing Multitrack listing
  **/
-void multitrack_update_window_size(multitrack_listing_t *listing)
+void multitrack_update_window_size(multitrack_listing_t *listing);
 
 /**
  * Update satellite listing according to the `enabled`-flag within the TLE database (i.e. hide satellites that are disabled, show satellites that are enabled).

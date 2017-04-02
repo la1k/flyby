@@ -236,19 +236,25 @@ multitrack_entry_t *multitrack_create_entry(const char *name, predict_orbital_el
 
 void multitrack_update_window_size(multitrack_listing_t *listing)
 {
+	//resize main window
 	int sat_list_win_height = LINES-MAIN_MENU_OPTS_WIN_HEIGHT-MULTITRACK_WINDOW_ROW-1;
-	wresize(listing->window, sat_list_win_height, MULTITRACK_WINDOW_WIDTH);
 
-	int window_height, window_width;
-	getmaxyx(listing->window, window_height, window_width);
-	listing->window_height = window_height;
-	listing->window_width = window_width;
-	listing->displayed_entries_per_page = window_height;
-	int window_row = getbegy(listing->window);
-	listing->window_row = window_row;
-	listing->bottom_index = listing->top_index + listing->displayed_entries_per_page - 1;
-	wrefresh(listing->window);
+	if (sat_list_win_height > 0) {
+		wresize(listing->window, sat_list_win_height, MULTITRACK_WINDOW_WIDTH);
 
+		//update internal variables
+		int window_height, window_width;
+		getmaxyx(listing->window, window_height, window_width);
+		listing->window_height = window_height;
+		listing->window_width = window_width;
+		listing->displayed_entries_per_page = window_height;
+		int window_row = getbegy(listing->window);
+		listing->window_row = window_row;
+		listing->bottom_index = listing->top_index + listing->displayed_entries_per_page - 1;
+		wrefresh(listing->window);
+	}
+
+	//make header line behave correctly
 	wresize(listing->header_window, 1, COLS);
 	wrefresh(listing->header_window);
 }
