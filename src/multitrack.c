@@ -248,12 +248,20 @@ void multitrack_update_window_size(multitrack_listing_t *listing)
 	listing->window_row = window_row;
 	listing->bottom_index = listing->top_index + listing->displayed_entries_per_page - 1;
 	wrefresh(listing->window);
+
+	wresize(listing->header_window, 1, COLS);
+	wrefresh(listing->header_window);
 }
 
 multitrack_listing_t* multitrack_create_listing(predict_observer_t *observer, struct tle_db *tle_db)
 {
 	multitrack_listing_t *listing = (multitrack_listing_t*)malloc(sizeof(multitrack_listing_t));
+
+	//prepare main window
 	listing->window = newwin(1, MULTITRACK_WINDOW_WIDTH, MULTITRACK_WINDOW_ROW, 0);
+
+	//prepare window for header printing
+	listing->header_window = newwin(1, COLS, MULTITRACK_WINDOW_ROW-2, 0);
 
 	multitrack_update_window_size(listing);
 
@@ -261,9 +269,6 @@ multitrack_listing_t* multitrack_create_listing(predict_observer_t *observer, st
 	listing->entries = NULL;
 	listing->tle_db_mapping = NULL;
 	listing->sorted_index = NULL;
-
-	//prepare window for header printing
-	listing->header_window = newwin(1, listing->window_width+11, listing->window_row-2, 0);
 
 	listing->qth = observer;
 
