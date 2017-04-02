@@ -5,8 +5,10 @@
 #include "form.h"
 #include "menu.h"
 
+//Width of multitrack window
 #define MULTITRACK_WINDOW_WIDTH 67
 
+//Start row for multitrack window printing
 #define MULTITRACK_WINDOW_ROW 2
 
 /**

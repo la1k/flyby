@@ -265,11 +265,11 @@ multitrack_listing_t* multitrack_create_listing(predict_observer_t *observer, st
 {
 	multitrack_listing_t *listing = (multitrack_listing_t*)malloc(sizeof(multitrack_listing_t));
 
-	//prepare main window
-	listing->window = newwin(1, MULTITRACK_WINDOW_WIDTH, MULTITRACK_WINDOW_ROW, 0);
+	//prepare main window. Proper size and position is set in multitrack_update_window_size().
+	listing->window = newwin(1, 1, 1, 0);
 
-	//prepare window for header printing
-	listing->header_window = newwin(1, COLS, MULTITRACK_WINDOW_ROW-2, 0);
+	//prepare window for header printing. Proper size is set in multitrack_update_window_size().
+	listing->header_window = newwin(1, COLS, 0, 0);
 
 	multitrack_update_window_size(listing);
 
@@ -843,6 +843,7 @@ const char *multitrack_option_selector_name(enum sub_menu_options option)
 	return "";
 }
 
+//Width of option selector window
 #define OPTION_SELECTOR_WINDOW_WIDTH 30
 
 multitrack_option_selector_t* multitrack_option_selector_create()
