@@ -143,6 +143,13 @@ typedef struct {
 multitrack_listing_t* multitrack_create_listing(predict_observer_t *observer, struct tle_db *tle_db);
 
 /**
+ * Update window size according to current terminal height.
+ *
+ * \param listing Multitrack listing
+ **/
+void multitrack_update_window_size(multitrack_listing_t *listing)
+
+/**
  * Update satellite listing according to the `enabled`-flag within the TLE database (i.e. hide satellites that are disabled, show satellites that are enabled).
  *
  * \param listing Multitrack satellite listing
