@@ -246,6 +246,8 @@ void multitrack_update_window_size(multitrack_listing_t *listing)
 	listing->displayed_entries_per_page = window_height;
 	int window_row = getbegy(listing->window);
 	listing->window_row = window_row;
+	listing->bottom_index = listing->top_index + listing->displayed_entries_per_page - 1;
+	wrefresh(listing->window);
 }
 
 multitrack_listing_t* multitrack_create_listing(predict_observer_t *observer, struct tle_db *tle_db)
@@ -362,7 +364,6 @@ void multitrack_refresh_tles(multitrack_listing_t *listing, struct tle_db *tle_d
 
 	listing->selected_entry_index = 0;
 	listing->top_index = 0;
-	listing->bottom_index = listing->top_index + listing->displayed_entries_per_page - 1;
 
 	listing->num_above_horizon = 0;
 	listing->num_below_horizon = 0;
