@@ -1042,6 +1042,7 @@ void multitrack_search_field_display(multitrack_search_field_t *search_field)
 
 	if (search_field->visible) {
 		//ensure correct size and placement despite terminal resize
+		wresize(search_field->window, SEARCH_FIELD_HEIGHT, SEARCH_FIELD_LENGTH);
 		mvwin(search_field->window, LINES-search_field->row_offset, search_field->col);
 
 		//fill window without destroying the styling of the FORM :^)
