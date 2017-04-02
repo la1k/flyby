@@ -841,13 +841,15 @@ const char *multitrack_option_selector_name(enum sub_menu_options option)
 	return "";
 }
 
+#define OPTION_SELECTOR_WINDOW_WIDTH 30
+
 multitrack_option_selector_t* multitrack_option_selector_create()
 {
 	multitrack_option_selector_t *option_selector = (multitrack_option_selector_t*)malloc(sizeof(multitrack_option_selector_t));
 
 	//prepare option selector window
 	option_selector->window_height = NUM_OPTIONS;
-	WINDOW *option_win = newwin(option_selector->window_height, 30, 0, 0);
+	WINDOW *option_win = newwin(option_selector->window_height, OPTION_SELECTOR_WINDOW_WIDTH, 0, 0);
 	wattrset(option_win, COLOR_PAIR(1)|A_REVERSE);
 	werase(option_win);
 	wrefresh(option_win);
@@ -911,7 +913,12 @@ bool multitrack_option_selector_visible(multitrack_option_selector_t *option_sel
 void multitrack_option_selector_display(int row, multitrack_option_selector_t *option_selector)
 {
 	if (option_selector->visible) {
+		wresize(option_selector->window, option_selector->window_height, OPTION_SELECTOR_WINDOW_WIDTH);
 		mvwin(option_selector->window, row, 2);
+
+		int max_height, max_width;
+		getmaxyx(option_selector->window, max_height, max_width);
+		wresize(option_selector->sub_window, max_height, max_width-1);
 		wbkgd(option_selector->window, COLOR_PAIR(4)|A_REVERSE);
 		unpost_menu(option_selector->menu);
 		post_menu(option_selector->menu);
