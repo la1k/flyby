@@ -154,11 +154,11 @@ const char *multitrack_option_selector_name(enum sub_menu_options option);
 /**
  * Create search field.
  *
- * \param row Row
+ * \param row_offset_from_bottom Offset from bottom of terminal
  * \param col Column
  * \return Search field
  **/
-multitrack_search_field_t *multitrack_search_field_create(int row, int col);
+multitrack_search_field_t *multitrack_search_field_create(int row_offset_from_bottom, int col);
 
 /**
  * Make search field visible.
@@ -240,6 +240,7 @@ void multitrack_update_window_size(multitrack_listing_t *listing)
 	int sat_list_win_height = LINES-MAIN_MENU_OPTS_WIN_HEIGHT-MULTITRACK_WINDOW_ROW-1;
 
 	if (sat_list_win_height > 0) {
+		//move and resize listing window to correct location and size
 		wresize(listing->window, sat_list_win_height, MULTITRACK_WINDOW_WIDTH);
 		mvwin(listing->window, MULTITRACK_WINDOW_ROW, 0);
 
@@ -283,7 +284,7 @@ multitrack_listing_t* multitrack_create_listing(predict_observer_t *observer, st
 
 	listing->option_selector = multitrack_option_selector_create();
 
-	int search_row = listing->window_row + listing->window_height + 1;
+	int search_row = 3;
 	int search_col = 0;
 	listing->search_field = multitrack_search_field_create(search_row, search_col);
 	return listing;
@@ -913,12 +914,15 @@ bool multitrack_option_selector_visible(multitrack_option_selector_t *option_sel
 void multitrack_option_selector_display(int row, multitrack_option_selector_t *option_selector)
 {
 	if (option_selector->visible) {
+		//ensure correct size of windows
 		wresize(option_selector->window, option_selector->window_height, OPTION_SELECTOR_WINDOW_WIDTH);
-		mvwin(option_selector->window, row, 2);
 
 		int max_height, max_width;
 		getmaxyx(option_selector->window, max_height, max_width);
 		wresize(option_selector->sub_window, max_height, max_width-1);
+
+		//move and unhide windows
+		mvwin(option_selector->window, row, 2);
 		wbkgd(option_selector->window, COLOR_PAIR(4)|A_REVERSE);
 		unpost_menu(option_selector->menu);
 		post_menu(option_selector->menu);
@@ -990,7 +994,9 @@ void multitrack_option_selector_jump(multitrack_option_selector_t *option_select
 multitrack_search_field_t *multitrack_search_field_create(int row, int col)
 {
 	multitrack_search_field_t *searcher = (multitrack_search_field_t*)malloc(sizeof(multitrack_search_field_t));
-	searcher->window = newwin(SEARCH_FIELD_HEIGHT, SEARCH_FIELD_LENGTH, row, col);
+	searcher->row_offset = row;
+	searcher->col = col;
+	searcher->window = newwin(SEARCH_FIELD_HEIGHT, SEARCH_FIELD_LENGTH, LINES-row, col);
 	searcher->visible = false;
 
 	//prepare form and field
@@ -1034,6 +1040,9 @@ void multitrack_search_field_display(multitrack_search_field_t *search_field)
 	}
 
 	if (search_field->visible) {
+		//ensure correct size and placement despite terminal resize
+		mvwin(search_field->window, LINES-search_field->row_offset, search_field->col);
+
 		//fill window without destroying the styling of the FORM :^)
 		wattrset(search_field->window, COLOR_PAIR(1));
 		mvwprintw(search_field->window, 1, 0, "%-78s", "");

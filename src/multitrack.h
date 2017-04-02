@@ -65,6 +65,10 @@ typedef struct {
  * Search field shown when pressing '/'. (display format inspired by htop)
  **/
 typedef struct {
+	///Location of search field counted from the bottom of the terminal and up
+	int row_offset;
+	///Column location of search field
+	int col;
 	///Display window
 	WINDOW *window;
 	///Search form
