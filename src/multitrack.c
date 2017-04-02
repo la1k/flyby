@@ -1006,10 +1006,11 @@ multitrack_search_field_t *multitrack_search_field_create(int row, int col)
 	searcher->field[1] = NULL;
 	searcher->form = new_form(searcher->field);
 	field_opts_off(searcher->field[0], O_AUTOSKIP);
-	int rows, cols;
-	scale_form(searcher->form, &rows, &cols);
+	int rows;
+	scale_form(searcher->form, &rows, &(searcher->form_window_cols));
 	set_form_win(searcher->form, searcher->window);
-	set_form_sub(searcher->form, derwin(searcher->window, rows, cols, 0, FIELD_START_COL));
+	searcher->form_window = derwin(searcher->window, rows, searcher->form_window_cols, 0, FIELD_START_COL);
+	set_form_sub(searcher->form, searcher->form_window);
 	keypad(searcher->window, TRUE);
 	post_form(searcher->form);
 
@@ -1044,6 +1045,10 @@ void multitrack_search_field_display(multitrack_search_field_t *search_field)
 		//ensure correct size and placement despite terminal resize
 		wresize(search_field->window, SEARCH_FIELD_HEIGHT, SEARCH_FIELD_LENGTH);
 		mvwin(search_field->window, LINES-search_field->row_offset, search_field->col);
+		int rows;
+		scale_form(search_field->form, &rows, &(search_field->form_window_cols));
+		wresize(search_field->form_window, rows, search_field->form_window_cols);
+		set_form_sub(search_field->form, search_field->form_window);
 
 		//fill window without destroying the styling of the FORM :^)
 		wattrset(search_field->window, COLOR_PAIR(1));

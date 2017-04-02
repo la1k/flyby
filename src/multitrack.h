@@ -71,6 +71,10 @@ typedef struct {
 	int col;
 	///Display window
 	WINDOW *window;
+	///Form window
+	WINDOW *form_window;
+	///Number of columns in form window
+	int form_window_cols;
 	///Search form
 	FORM *form;
 	///Search field in form
