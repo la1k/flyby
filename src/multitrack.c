@@ -241,6 +241,7 @@ void multitrack_update_window_size(multitrack_listing_t *listing)
 
 	if (sat_list_win_height > 0) {
 		wresize(listing->window, sat_list_win_height, MULTITRACK_WINDOW_WIDTH);
+		mvwin(listing->window, MULTITRACK_WINDOW_ROW, 0);
 
 		//update internal variables
 		int window_height, window_width;
