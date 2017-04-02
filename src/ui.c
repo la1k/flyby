@@ -2289,6 +2289,7 @@ void RunFlybyUI(bool new_user, const char *qthfile, predict_observer_t *observer
 	int terminal_lines = LINES;
 	while (should_run) {
 		if (terminal_lines != LINES) {
+			erase();
 			multitrack_update_window_size(listing);
 			terminal_lines = LINES;
 
