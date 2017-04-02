@@ -136,12 +136,11 @@ typedef struct {
 /**
  * Create multitrack satellite listing. Only satellites enabled within the TLE database are displayed.
  *
- * \param window Display window
  * \param observer QTH coordinates
  * \param tle_db TLE database
  * \return Multitrack satellite listing
  **/
-multitrack_listing_t* multitrack_create_listing(WINDOW *window, predict_observer_t *observer, struct tle_db *tle_db);
+multitrack_listing_t* multitrack_create_listing(predict_observer_t *observer, struct tle_db *tle_db);
 
 /**
  * Update satellite listing according to the `enabled`-flag within the TLE database (i.e. hide satellites that are disabled, show satellites that are enabled).

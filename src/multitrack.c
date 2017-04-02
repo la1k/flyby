@@ -248,10 +248,10 @@ void multitrack_update_window_size(multitrack_listing_t *listing)
 	listing->window_row = window_row;
 }
 
-multitrack_listing_t* multitrack_create_listing(WINDOW *window, predict_observer_t *observer, struct tle_db *tle_db)
+multitrack_listing_t* multitrack_create_listing(predict_observer_t *observer, struct tle_db *tle_db)
 {
 	multitrack_listing_t *listing = (multitrack_listing_t*)malloc(sizeof(multitrack_listing_t));
-	listing->window = window;
+	listing->window = newwin(1, MULTITRACK_WINDOW_WIDTH, MULTITRACK_WINDOW_ROW, 0);
 
 	multitrack_update_window_size(listing);
 
@@ -784,6 +784,7 @@ void multitrack_destroy_listing(multitrack_listing_t **listing)
 	multitrack_option_selector_destroy(&((*listing)->option_selector));
 	multitrack_search_field_destroy(&((*listing)->search_field));
 	delwin((*listing)->header_window);
+	delwin((*listing)->window);
 	free(*listing);
 	*listing = NULL;
 }

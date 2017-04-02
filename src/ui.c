@@ -2276,9 +2276,7 @@ void RunFlybyUI(bool new_user, const char *qthfile, predict_observer_t *observer
 	predict_julian_date_t curr_time = predict_to_julian(time(NULL));
 
 	//prepare multitrack window
-	int sat_list_win_height = LINES-MAIN_MENU_OPTS_WIN_HEIGHT-MULTITRACK_WINDOW_ROW-1;
-	WINDOW *sat_list_win = newwin(sat_list_win_height, MULTITRACK_WINDOW_WIDTH, MULTITRACK_WINDOW_ROW, 0);
-	multitrack_listing_t *listing = multitrack_create_listing(sat_list_win, observer, tle_db);
+	multitrack_listing_t *listing = multitrack_create_listing(observer, tle_db);
 
 	//window for printing main menu options
 	WINDOW *main_menu_win = newwin(MAIN_MENU_OPTS_WIN_HEIGHT, COLS, LINES-MAIN_MENU_OPTS_WIN_HEIGHT, 0);
@@ -2288,7 +2286,12 @@ void RunFlybyUI(bool new_user, const char *qthfile, predict_observer_t *observer
 	/* Display main menu and handle keyboard input */
 	int key = 0;
 	bool should_run = true;
+	int terminal_lines = LINES;
 	while (should_run) {
+		if (terminal_lines != LINES) {
+			multitrack_update_window_size(listing);
+		}
+
 		curr_time = predict_to_julian(time(NULL));
 
 		if (!multitrack_search_field_visible(listing->search_field)) {
@@ -2399,7 +2402,6 @@ void RunFlybyUI(bool new_user, const char *qthfile, predict_observer_t *observer
 	refresh();
 	endwin();
 
-	delwin(sat_list_win);
 	delwin(main_menu_win);
 	multitrack_destroy_listing(&listing);
 }
