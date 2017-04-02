@@ -346,6 +346,7 @@ void multitrack_free_entries(multitrack_listing_t *listing)
 
 void multitrack_refresh_tles(multitrack_listing_t *listing, struct tle_db *tle_db)
 {
+	werase(listing->window);
 	listing->not_displayed = true;
 	multitrack_free_entries(listing);
 
