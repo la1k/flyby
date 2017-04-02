@@ -2290,6 +2290,8 @@ void RunFlybyUI(bool new_user, const char *qthfile, predict_observer_t *observer
 	while (should_run) {
 		if (terminal_lines != LINES) {
 			multitrack_update_window_size(listing);
+			terminal_lines = LINES;
+			mvwin(main_menu_win, LINES-MAIN_MENU_OPTS_WIN_HEIGHT, 0);
 		}
 
 		curr_time = predict_to_julian(time(NULL));
