@@ -381,7 +381,7 @@ void multitrack_refresh_tles(multitrack_listing_t *listing, struct tle_db *tle_d
 	listing->num_below_horizon = 0;
 	listing->num_decayed = 0;
 	listing->num_nevervisible = 0;
-
+	multitrack_update_window_size(listing);
 }
 
 NCURSES_ATTR_T multitrack_colors(double range, double elevation)
