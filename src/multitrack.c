@@ -846,6 +846,9 @@ const char *multitrack_option_selector_name(enum sub_menu_options option)
 //Width of option selector window
 #define OPTION_SELECTOR_WINDOW_WIDTH 30
 
+//Column offset of option selector window
+#define OPTION_SELECTOR_WINDOW_OFFSET 2
+
 multitrack_option_selector_t* multitrack_option_selector_create()
 {
 	multitrack_option_selector_t *option_selector = (multitrack_option_selector_t*)malloc(sizeof(multitrack_option_selector_t));
@@ -924,7 +927,7 @@ void multitrack_option_selector_display(int row, multitrack_option_selector_t *o
 		wresize(option_selector->sub_window, max_height, max_width-1);
 
 		//move and unhide windows
-		mvwin(option_selector->window, row, 2);
+		mvwin(option_selector->window, row, OPTION_SELECTOR_WINDOW_OFFSET);
 		wbkgd(option_selector->window, COLOR_PAIR(4)|A_REVERSE);
 		unpost_menu(option_selector->menu);
 		post_menu(option_selector->menu);
