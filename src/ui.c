@@ -2295,6 +2295,7 @@ void RunFlybyUI(bool new_user, const char *qthfile, predict_observer_t *observer
 			int new_mainmenu_pos = LINES - MAIN_MENU_OPTS_WIN_HEIGHT;
 			if (new_mainmenu_pos > MAIN_MENU_OPTS_WIN_HEIGHT) {
 				mvwin(main_menu_win, LINES-MAIN_MENU_OPTS_WIN_HEIGHT, 0);
+				wresize(main_menu_win, MAIN_MENU_OPTS_WIN_HEIGHT, COLS);
 				wrefresh(main_menu_win);
 			}
 		}
