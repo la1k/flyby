@@ -115,6 +115,13 @@ void multitrack_option_selector_show(multitrack_option_selector_t *option_select
 bool multitrack_option_selector_visible(multitrack_option_selector_t *option_selector);
 
 /**
+ * Resize option selector windows in order to retain sizes during terminal resize.
+ *
+ * \param option_selector Option selector
+ **/
+void multitrack_option_selector_resize(multitrack_option_selector_t *option_selector);
+
+/**
  * Display option selector on specified row number in the standard screen.
  *
  * \param row Row to place submenu window
@@ -173,6 +180,13 @@ void multitrack_search_field_show(multitrack_search_field_t *search_field);
  * \param search_field Search field
  **/
 void multitrack_search_field_display(multitrack_search_field_t *search_field);
+
+/**
+ * Retain size of search field during terminal resize.
+ *
+ * \param search_field Search field
+ **/
+void multitrack_search_field_resize(multitrack_search_field_t *search_field);
 
 /**
  * Hide search field from view.
