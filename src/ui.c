@@ -2287,10 +2287,11 @@ void RunFlybyUI(bool new_user, const char *qthfile, predict_observer_t *observer
 	int key = 0;
 	bool should_run = true;
 	int terminal_lines = LINES;
+	int terminal_columns = COLS;
 	while (should_run) {
-		if (terminal_lines != LINES) {
+		if ((terminal_lines != LINES) || (terminal_columns != COLS)) {
 			//force full redraw
-			erase();
+			clear();
 
 			//update main menu option window
 			mvwin(main_menu_win, LINES-MAIN_MENU_OPTS_WIN_HEIGHT, 0);
@@ -2298,19 +2299,20 @@ void RunFlybyUI(bool new_user, const char *qthfile, predict_observer_t *observer
 			wrefresh(main_menu_win);
 
 			terminal_lines = LINES;
+			terminal_columns = COLS;
 		}
 
 		curr_time = predict_to_julian(time(NULL));
 
+		//refresh satellite list
+		multitrack_update_listing(listing, curr_time);
+		multitrack_display_listing(listing);
+		
 		if (!multitrack_search_field_visible(listing->search_field)) {
 			PrintMainMenu(main_menu_win);
 		}
 		PrintSunMoon(listing->window_height + listing->window_row - 7, listing->window_width+1, observer, curr_time);
 		PrintQth(listing->window_row, listing->window_width+1, observer);
-
-		//refresh satellite list
-		multitrack_update_listing(listing, curr_time);
-		multitrack_display_listing(listing);
 
 		//get input character
 		refresh();
