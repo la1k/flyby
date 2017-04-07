@@ -115,6 +115,13 @@ void multitrack_option_selector_show(multitrack_option_selector_t *option_select
 bool multitrack_option_selector_visible(multitrack_option_selector_t *option_selector);
 
 /**
+ * Resize option selector windows in order to retain sizes during terminal resize.
+ *
+ * \param option_selector Option selector
+ **/
+void multitrack_option_selector_resize(multitrack_option_selector_t *option_selector);
+
+/**
  * Display option selector on specified row number in the standard screen.
  *
  * \param row Row to place submenu window
@@ -154,11 +161,11 @@ const char *multitrack_option_selector_name(enum sub_menu_options option);
 /**
  * Create search field.
  *
- * \param row Row
+ * \param row_offset_from_bottom Offset from bottom of terminal
  * \param col Column
  * \return Search field
  **/
-multitrack_search_field_t *multitrack_search_field_create(int row, int col);
+multitrack_search_field_t *multitrack_search_field_create(int row_offset_from_bottom, int col);
 
 /**
  * Make search field visible.
@@ -173,6 +180,13 @@ void multitrack_search_field_show(multitrack_search_field_t *search_field);
  * \param search_field Search field
  **/
 void multitrack_search_field_display(multitrack_search_field_t *search_field);
+
+/**
+ * Retain size of search field during terminal resize.
+ *
+ * \param search_field Search field
+ **/
+void multitrack_search_field_resize(multitrack_search_field_t *search_field);
 
 /**
  * Hide search field from view.
@@ -193,6 +207,7 @@ void multitrack_search_field_destroy(multitrack_search_field_t **search_field);
  *
  * \param search_field Search field
  * \param input_key Input key
+ * \return True if an input character was handles, false otherwise
  **/
 bool multitrack_search_field_handle(multitrack_search_field_t *search_field, int input_key);
 
@@ -218,6 +233,13 @@ void multitrack_search_field_add_match(multitrack_search_field_t *search_field, 
  **/
 void multitrack_search_field_clear_matches(multitrack_search_field_t *search_field);
 
+/**
+ * Update window size according to current terminal height.
+ *
+ * \param listing Multitrack listing
+ **/
+void multitrack_resize(multitrack_listing_t *listing);
+
 /** Multitrack satellite listing function implementations. **/
 
 multitrack_entry_t *multitrack_create_entry(const char *name, predict_orbital_elements_t *orbital_elements)
@@ -234,36 +256,62 @@ multitrack_entry_t *multitrack_create_entry(const char *name, predict_orbital_el
 	return entry;
 }
 
-multitrack_listing_t* multitrack_create_listing(WINDOW *window, predict_observer_t *observer, struct tle_db *tle_db)
+void multitrack_resize(multitrack_listing_t *listing)
+{
+	//resize main window
+	int sat_list_win_height = LINES-MAIN_MENU_OPTS_WIN_HEIGHT-MULTITRACK_WINDOW_ROW-1;
+
+	if (sat_list_win_height > 0) {
+		//move and resize listing window to correct location and size
+		wresize(listing->window, sat_list_win_height, MULTITRACK_WINDOW_WIDTH);
+		mvwin(listing->window, MULTITRACK_WINDOW_ROW, 0);
+
+		//update internal variables
+		int window_height, window_width;
+		getmaxyx(listing->window, window_height, window_width);
+		listing->window_height = window_height;
+		listing->window_width = window_width;
+		listing->displayed_entries_per_page = window_height;
+		int window_row = getbegy(listing->window);
+		listing->window_row = window_row;
+		listing->bottom_index = listing->top_index + listing->displayed_entries_per_page - 1;
+		wrefresh(listing->window);
+	}
+
+	//make header line behave correctly
+	wresize(listing->header_window, 1, COLS);
+	wrefresh(listing->header_window);
+}
+
+multitrack_listing_t* multitrack_create_listing(predict_observer_t *observer, struct tle_db *tle_db)
 {
 	multitrack_listing_t *listing = (multitrack_listing_t*)malloc(sizeof(multitrack_listing_t));
-	listing->window = window;
 
-	int window_height, window_width;
-	getmaxyx(window, window_height, window_width);
-	listing->window_height = window_height;
-	listing->window_width = window_width;
+	//prepare main window. Proper size and position is set in multitrack_resize().
+	listing->window = newwin(1, 1, 1, 0);
+
+	//prepare window for header printing. Proper size is set in multitrack_resize().
+	listing->header_window = newwin(1, COLS, 0, 0);
+
+	multitrack_resize(listing);
 
 	listing->num_entries = 0;
 	listing->entries = NULL;
 	listing->tle_db_mapping = NULL;
 	listing->sorted_index = NULL;
 
-	//prepare window for header printing
-	int window_row = getbegy(listing->window);
-	listing->header_window = newwin(1, window_width+11, window_row-2, 0);
-	listing->window_row = window_row;
-
 	listing->qth = observer;
-	listing->displayed_entries_per_page = window_height;
 
 	multitrack_refresh_tles(listing, tle_db);
 
 	listing->option_selector = multitrack_option_selector_create();
 
-	int search_row = window_row + window_height + 1;
+	int search_row = 3;
 	int search_col = 0;
 	listing->search_field = multitrack_search_field_create(search_row, search_col);
+
+	listing->terminal_height = LINES;
+	listing->terminal_width = LINES;
 	return listing;
 }
 
@@ -323,6 +371,7 @@ void multitrack_free_entries(multitrack_listing_t *listing)
 
 void multitrack_refresh_tles(multitrack_listing_t *listing, struct tle_db *tle_db)
 {
+	werase(listing->window);
 	listing->not_displayed = true;
 	multitrack_free_entries(listing);
 
@@ -354,13 +403,12 @@ void multitrack_refresh_tles(multitrack_listing_t *listing, struct tle_db *tle_d
 
 	listing->selected_entry_index = 0;
 	listing->top_index = 0;
-	listing->bottom_index = listing->top_index + listing->displayed_entries_per_page - 1;
 
 	listing->num_above_horizon = 0;
 	listing->num_below_horizon = 0;
 	listing->num_decayed = 0;
 	listing->num_nevervisible = 0;
-
+	multitrack_resize(listing);
 }
 
 NCURSES_ATTR_T multitrack_colors(double range, double elevation)
@@ -508,7 +556,7 @@ void multitrack_update_entry(predict_observer_t *qth, multitrack_entry_t *entry,
 	entry->never_visible = !predict_aos_happens(entry->orbital_elements, qth->latitude) || (predict_is_geostationary(entry->orbital_elements) && (obs.elevation <= 0.0));
 }
 
-void multitrack_update_listing(multitrack_listing_t *listing, predict_julian_date_t time)
+void multitrack_update_listing_data(multitrack_listing_t *listing, predict_julian_date_t time)
 {
 	for (int i=0; i < listing->num_entries; i++) {
 		if (listing->not_displayed) {
@@ -609,6 +657,15 @@ void multitrack_print_scrollbar(multitrack_listing_t *listing)
 
 void multitrack_display_listing(multitrack_listing_t *listing)
 {
+	if ((listing->terminal_height != LINES) || (listing->terminal_width != COLS)) {
+		multitrack_resize(listing);
+		multitrack_search_field_resize(listing->search_field);
+		multitrack_option_selector_resize(listing->option_selector);
+
+		listing->terminal_height = LINES;
+		listing->terminal_width = COLS;
+	}
+
 	//show header
 	wbkgd(listing->header_window, HEADER_STYLE);
 	wattrset(listing->header_window, HEADER_STYLE);
@@ -687,14 +744,13 @@ bool multitrack_handle_listing(multitrack_listing_t *listing, int input_key)
 				}
 				handled = true;
 				break;
-			case '/':
-				multitrack_search_field_show(listing->search_field);
-				handled = true;
-				break;
 			case 27:
-				multitrack_search_field_hide(listing->search_field);
+				if (multitrack_search_field_visible(listing->search_field)) {
+					multitrack_search_field_hide(listing->search_field);
+				}
 				handled = true;
 				break;
+			case '/':
 			case KEY_F(3):
 				if (multitrack_search_field_visible(listing->search_field)) {
 					multitrack_listing_next_match(listing);
@@ -727,8 +783,9 @@ bool multitrack_handle_listing(multitrack_listing_t *listing, int input_key)
 				}
 			default:
 				if (multitrack_search_field_visible(listing->search_field)) {
-					multitrack_search_field_handle(listing->search_field, input_key);
-					multitrack_search_listing(listing);
+					if (multitrack_search_field_handle(listing->search_field, input_key)) {
+						multitrack_search_listing(listing);
+					}
 					handled = true;
 				}
 			break;
@@ -776,6 +833,7 @@ void multitrack_destroy_listing(multitrack_listing_t **listing)
 	multitrack_option_selector_destroy(&((*listing)->option_selector));
 	multitrack_search_field_destroy(&((*listing)->search_field));
 	delwin((*listing)->header_window);
+	delwin((*listing)->window);
 	free(*listing);
 	*listing = NULL;
 }
@@ -819,13 +877,19 @@ const char *multitrack_option_selector_name(enum sub_menu_options option)
 	return "";
 }
 
+//Width of option selector window
+#define OPTION_SELECTOR_WINDOW_WIDTH 30
+
+//Column offset of option selector window
+#define OPTION_SELECTOR_WINDOW_OFFSET 2
+
 multitrack_option_selector_t* multitrack_option_selector_create()
 {
 	multitrack_option_selector_t *option_selector = (multitrack_option_selector_t*)malloc(sizeof(multitrack_option_selector_t));
 
 	//prepare option selector window
 	option_selector->window_height = NUM_OPTIONS;
-	WINDOW *option_win = newwin(option_selector->window_height, 30, 0, 0);
+	WINDOW *option_win = newwin(option_selector->window_height, OPTION_SELECTOR_WINDOW_WIDTH, 0, 0);
 	wattrset(option_win, COLOR_PAIR(1)|A_REVERSE);
 	werase(option_win);
 	wrefresh(option_win);
@@ -886,10 +950,22 @@ bool multitrack_option_selector_visible(multitrack_option_selector_t *option_sel
 	return option_selector->visible;
 }
 
+void multitrack_option_selector_resize(multitrack_option_selector_t *option_selector)
+{
+	//ensure correct size of windows
+	wresize(option_selector->window, option_selector->window_height, OPTION_SELECTOR_WINDOW_WIDTH);
+
+	int max_height, max_width;
+	getmaxyx(option_selector->window, max_height, max_width);
+	wresize(option_selector->sub_window, max_height, max_width-1);
+
+}
+
 void multitrack_option_selector_display(int row, multitrack_option_selector_t *option_selector)
 {
 	if (option_selector->visible) {
-		mvwin(option_selector->window, row, 2);
+		//move and unhide windows
+		mvwin(option_selector->window, row, OPTION_SELECTOR_WINDOW_OFFSET);
 		wbkgd(option_selector->window, COLOR_PAIR(4)|A_REVERSE);
 		unpost_menu(option_selector->menu);
 		post_menu(option_selector->menu);
@@ -961,21 +1037,10 @@ void multitrack_option_selector_jump(multitrack_option_selector_t *option_select
 multitrack_search_field_t *multitrack_search_field_create(int row, int col)
 {
 	multitrack_search_field_t *searcher = (multitrack_search_field_t*)malloc(sizeof(multitrack_search_field_t));
-	searcher->window = newwin(SEARCH_FIELD_HEIGHT, SEARCH_FIELD_LENGTH, row, col);
+	searcher->row_offset = row;
+	searcher->col = col;
+	searcher->window = newwin(SEARCH_FIELD_HEIGHT, SEARCH_FIELD_LENGTH, LINES-row, col);
 	searcher->visible = false;
-
-	//prepare form and field
-	searcher->field = (FIELD**)malloc(sizeof(FIELD*)*2);
-	searcher->field[0] = new_field(1, FIELD_LENGTH, 0, 0, 0, 0);
-	searcher->field[1] = NULL;
-	searcher->form = new_form(searcher->field);
-	field_opts_off(searcher->field[0], O_AUTOSKIP);
-	int rows, cols;
-	scale_form(searcher->form, &rows, &cols);
-	set_form_win(searcher->form, searcher->window);
-	set_form_sub(searcher->form, derwin(searcher->window, rows, cols, 0, FIELD_START_COL));
-	keypad(searcher->window, TRUE);
-	post_form(searcher->form);
 
 	//prepare search match control
 	searcher->matches = NULL;
@@ -986,6 +1051,22 @@ multitrack_search_field_t *multitrack_search_field_create(int row, int col)
 
 void multitrack_search_field_show(multitrack_search_field_t *search_field)
 {
+	//create field
+	if (!search_field->visible) {
+		search_field->field = (FIELD**)malloc(sizeof(FIELD*)*2);
+		search_field->field[0] = new_field(1, FIELD_LENGTH, 0, 0, 0, 0);
+		search_field->field[1] = NULL;
+		search_field->form = new_form(search_field->field);
+		field_opts_off(search_field->field[0], O_AUTOSKIP);
+		int rows;
+		scale_form(search_field->form, &rows, &(search_field->form_window_cols));
+		set_form_win(search_field->form, search_field->window);
+		search_field->form_window = derwin(search_field->window, rows, search_field->form_window_cols, 0, FIELD_START_COL);
+		set_form_sub(search_field->form, search_field->form_window);
+		keypad(search_field->window, TRUE);
+		post_form(search_field->form);
+	}
+
 	search_field->visible = true;
 	multitrack_search_field_display(search_field);
 }
@@ -993,6 +1074,17 @@ void multitrack_search_field_show(multitrack_search_field_t *search_field)
 bool multitrack_search_field_visible(multitrack_search_field_t *search_field)
 {
 	return search_field->visible;
+}
+
+void multitrack_search_field_resize(multitrack_search_field_t *search_field)
+{
+	wresize(search_field->window, SEARCH_FIELD_HEIGHT, SEARCH_FIELD_LENGTH);
+	mvwin(search_field->window, LINES-search_field->row_offset, search_field->col);
+
+	if (search_field->visible) {
+		multitrack_search_field_hide(search_field);
+		multitrack_search_field_show(search_field);
+	}
 }
 
 void multitrack_search_field_display(multitrack_search_field_t *search_field)
@@ -1043,15 +1135,18 @@ void multitrack_search_field_hide(multitrack_search_field_t *search_field)
 	form_driver(search_field->form, REQ_CLR_FIELD);
 	search_field->visible = false;
 	multitrack_search_field_clear_matches(search_field);
+
+	//remove field and form
+	unpost_form(search_field->form);
+	free_form(search_field->form);
+	free_field(search_field->field[0]);
+	free(search_field->field);
+	delwin(search_field->form_window);
 }
 
 void multitrack_search_field_destroy(multitrack_search_field_t **search_field)
 {
 	multitrack_search_field_clear_matches(*search_field);
-	unpost_form((*search_field)->form);
-	free_form((*search_field)->form);
-	free_field((*search_field)->field[0]);
-	free((*search_field)->field);
 	delwin((*search_field)->window);
 	free(*search_field);
 	*search_field = NULL;
@@ -1071,6 +1166,7 @@ bool multitrack_search_field_handle(multitrack_search_field_t *search_field, int
 				//delete characters
 				form_driver(search_field->form, REQ_DEL_PREV);
 				form_driver(search_field->form, REQ_VALIDATION);
+				character_handled = true;
 			}
 			free(expression);
 			break;

@@ -2276,32 +2276,43 @@ void RunFlybyUI(bool new_user, const char *qthfile, predict_observer_t *observer
 	predict_julian_date_t curr_time = predict_to_julian(time(NULL));
 
 	//prepare multitrack window
-	int sat_list_win_height = 18;
-	int sat_list_win_row = 2;
-	int sat_list_win_width = 67;
-	WINDOW *sat_list_win = newwin(sat_list_win_height, sat_list_win_width, sat_list_win_row, 0);
-	multitrack_listing_t *listing = multitrack_create_listing(sat_list_win, observer, tle_db);
+	multitrack_listing_t *listing = multitrack_create_listing(observer, tle_db);
 
 	//window for printing main menu options
-	WINDOW *main_menu_win = newwin(3, COLS, sat_list_win_row + sat_list_win_height + 1, 0);
+	WINDOW *main_menu_win = newwin(MAIN_MENU_OPTS_WIN_HEIGHT, COLS, LINES-MAIN_MENU_OPTS_WIN_HEIGHT, 0);
 
 	refresh();
 
 	/* Display main menu and handle keyboard input */
 	int key = 0;
 	bool should_run = true;
+	int terminal_lines = LINES;
+	int terminal_columns = COLS;
 	while (should_run) {
+		if ((terminal_lines != LINES) || (terminal_columns != COLS)) {
+			//force full redraw
+			clear();
+
+			//update main menu option window
+			mvwin(main_menu_win, LINES-MAIN_MENU_OPTS_WIN_HEIGHT, 0);
+			wresize(main_menu_win, MAIN_MENU_OPTS_WIN_HEIGHT, COLS);
+			wrefresh(main_menu_win);
+
+			terminal_lines = LINES;
+			terminal_columns = COLS;
+		}
+
 		curr_time = predict_to_julian(time(NULL));
 
+		//refresh satellite list
+		multitrack_update_listing_data(listing, curr_time);
+		multitrack_display_listing(listing);
+		
 		if (!multitrack_search_field_visible(listing->search_field)) {
 			PrintMainMenu(main_menu_win);
 		}
-		PrintSunMoon(listing->window_height + listing->window_row - 7, sat_list_win_width+1, observer, curr_time);
-		PrintQth(listing->window_row, sat_list_win_width+1, observer);
-
-		//refresh satellite list
-		multitrack_update_listing(listing, curr_time);
-		multitrack_display_listing(listing);
+		PrintSunMoon(listing->window_height + listing->window_row - 7, listing->window_width+1, observer, curr_time);
+		PrintQth(listing->window_row, listing->window_width+1, observer);
 
 		//get input character
 		refresh();
@@ -2401,7 +2412,6 @@ void RunFlybyUI(bool new_user, const char *qthfile, predict_observer_t *observer
 	refresh();
 	endwin();
 
-	delwin(sat_list_win);
 	delwin(main_menu_win);
 	multitrack_destroy_listing(&listing);
 }

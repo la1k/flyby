@@ -5,6 +5,12 @@
 #include "form.h"
 #include "menu.h"
 
+//Width of multitrack window
+#define MULTITRACK_WINDOW_WIDTH 67
+
+//Start row for multitrack window printing
+#define MULTITRACK_WINDOW_ROW 2
+
 /**
  * Structs and functions used for showing a navigateable real-time satellite listing.
  **/
@@ -61,8 +67,16 @@ typedef struct {
  * Search field shown when pressing '/'. (display format inspired by htop)
  **/
 typedef struct {
+	///Location of search field counted from the bottom of the terminal and up
+	int row_offset;
+	///Column location of search field
+	int col;
 	///Display window
 	WINDOW *window;
+	///Form window
+	WINDOW *form_window;
+	///Number of columns in form window
+	int form_window_cols;
 	///Search form
 	FORM *form;
 	///Search field in form
@@ -127,17 +141,20 @@ typedef struct {
 	multitrack_option_selector_t *option_selector;
 	///Search field
 	multitrack_search_field_t *search_field;
+	///Current terminal height
+	int terminal_height;
+	///Current terminal width
+	int terminal_width;
 } multitrack_listing_t;
 
 /**
  * Create multitrack satellite listing. Only satellites enabled within the TLE database are displayed.
  *
- * \param window Display window
  * \param observer QTH coordinates
  * \param tle_db TLE database
  * \return Multitrack satellite listing
  **/
-multitrack_listing_t* multitrack_create_listing(WINDOW *window, predict_observer_t *observer, struct tle_db *tle_db);
+multitrack_listing_t* multitrack_create_listing(predict_observer_t *observer, struct tle_db *tle_db);
 
 /**
  * Update satellite listing according to the `enabled`-flag within the TLE database (i.e. hide satellites that are disabled, show satellites that are enabled).
@@ -148,12 +165,12 @@ multitrack_listing_t* multitrack_create_listing(WINDOW *window, predict_observer
 void multitrack_refresh_tles(multitrack_listing_t *listing, struct tle_db *tle_db);
 
 /**
- * Update satellite listing.
+ * Update satellite listing data.
  *
  * \param listing Multitrack satellite listing
  * \param time Time at which satellite listing should be calculated
  **/
-void multitrack_update_listing(multitrack_listing_t *listing, predict_julian_date_t time);
+void multitrack_update_listing_data(multitrack_listing_t *listing, predict_julian_date_t time);
 
 /**
  * Print satellite listing and refresh associated windows.
