@@ -637,6 +637,7 @@ void multitrack_display_listing(multitrack_listing_t *listing)
 {
 	if ((listing->terminal_height != LINES) || (listing->terminal_width != COLS)) {
 		multitrack_update_window_size(listing);
+		multitrack_search_field_resize(listing->search_field);
 
 		listing->terminal_height = LINES;
 		listing->terminal_width = COLS;
