@@ -638,6 +638,7 @@ void multitrack_display_listing(multitrack_listing_t *listing)
 	if ((listing->terminal_height != LINES) || (listing->terminal_width != COLS)) {
 		multitrack_update_window_size(listing);
 		multitrack_search_field_resize(listing->search_field);
+		multitrack_option_selector_resize(listing->option_selector);
 
 		listing->terminal_height = LINES;
 		listing->terminal_width = COLS;
@@ -927,16 +928,20 @@ bool multitrack_option_selector_visible(multitrack_option_selector_t *option_sel
 	return option_selector->visible;
 }
 
+void multitrack_option_selector_resize(multitrack_option_selector_t *option_selector)
+{
+	//ensure correct size of windows
+	wresize(option_selector->window, option_selector->window_height, OPTION_SELECTOR_WINDOW_WIDTH);
+
+	int max_height, max_width;
+	getmaxyx(option_selector->window, max_height, max_width);
+	wresize(option_selector->sub_window, max_height, max_width-1);
+
+}
+
 void multitrack_option_selector_display(int row, multitrack_option_selector_t *option_selector)
 {
 	if (option_selector->visible) {
-		//ensure correct size of windows
-		wresize(option_selector->window, option_selector->window_height, OPTION_SELECTOR_WINDOW_WIDTH);
-
-		int max_height, max_width;
-		getmaxyx(option_selector->window, max_height, max_width);
-		wresize(option_selector->sub_window, max_height, max_width-1);
-
 		//move and unhide windows
 		mvwin(option_selector->window, row, OPTION_SELECTOR_WINDOW_OFFSET);
 		wbkgd(option_selector->window, COLOR_PAIR(4)|A_REVERSE);
