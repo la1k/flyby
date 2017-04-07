@@ -738,7 +738,9 @@ bool multitrack_handle_listing(multitrack_listing_t *listing, int input_key)
 				handled = true;
 				break;
 			case 27:
-				multitrack_search_field_hide(listing->search_field);
+				if (multitrack_search_field_visible(listing->search_field)) {
+					multitrack_search_field_hide(listing->search_field);
+				}
 				handled = true;
 				break;
 			case '/':
