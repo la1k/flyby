@@ -2305,7 +2305,7 @@ void RunFlybyUI(bool new_user, const char *qthfile, predict_observer_t *observer
 		curr_time = predict_to_julian(time(NULL));
 
 		//refresh satellite list
-		multitrack_update_listing(listing, curr_time);
+		multitrack_update_listing_data(listing, curr_time);
 		multitrack_display_listing(listing);
 		
 		if (!multitrack_search_field_visible(listing->search_field)) {

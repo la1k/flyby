@@ -165,12 +165,12 @@ multitrack_listing_t* multitrack_create_listing(predict_observer_t *observer, st
 void multitrack_refresh_tles(multitrack_listing_t *listing, struct tle_db *tle_db);
 
 /**
- * Update satellite listing.
+ * Update satellite listing data.
  *
  * \param listing Multitrack satellite listing
  * \param time Time at which satellite listing should be calculated
  **/
-void multitrack_update_listing(multitrack_listing_t *listing, predict_julian_date_t time);
+void multitrack_update_listing_data(multitrack_listing_t *listing, predict_julian_date_t time);
 
 /**
  * Print satellite listing and refresh associated windows.

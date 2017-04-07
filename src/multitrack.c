@@ -556,7 +556,7 @@ void multitrack_update_entry(predict_observer_t *qth, multitrack_entry_t *entry,
 	entry->never_visible = !predict_aos_happens(entry->orbital_elements, qth->latitude) || (predict_is_geostationary(entry->orbital_elements) && (obs.elevation <= 0.0));
 }
 
-void multitrack_update_listing(multitrack_listing_t *listing, predict_julian_date_t time)
+void multitrack_update_listing_data(multitrack_listing_t *listing, predict_julian_date_t time)
 {
 	for (int i=0; i < listing->num_entries; i++) {
 		if (listing->not_displayed) {
