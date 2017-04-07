@@ -2292,9 +2292,6 @@ void RunFlybyUI(bool new_user, const char *qthfile, predict_observer_t *observer
 			//force full redraw
 			erase();
 
-			//update multitrack window
-			multitrack_update_window_size(listing);
-
 			//update main menu option window
 			mvwin(main_menu_win, LINES-MAIN_MENU_OPTS_WIN_HEIGHT, 0);
 			wresize(main_menu_win, MAIN_MENU_OPTS_WIN_HEIGHT, COLS);

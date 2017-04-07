@@ -141,6 +141,10 @@ typedef struct {
 	multitrack_option_selector_t *option_selector;
 	///Search field
 	multitrack_search_field_t *search_field;
+	///Current terminal height
+	int terminal_height;
+	///Current terminal width
+	int terminal_width;
 } multitrack_listing_t;
 
 /**

@@ -287,6 +287,9 @@ multitrack_listing_t* multitrack_create_listing(predict_observer_t *observer, st
 	int search_row = 3;
 	int search_col = 0;
 	listing->search_field = multitrack_search_field_create(search_row, search_col);
+
+	listing->terminal_height = LINES;
+	listing->terminal_width = LINES;
 	return listing;
 }
 
@@ -632,6 +635,13 @@ void multitrack_print_scrollbar(multitrack_listing_t *listing)
 
 void multitrack_display_listing(multitrack_listing_t *listing)
 {
+	if ((listing->terminal_height != LINES) || (listing->terminal_width != COLS)) {
+		multitrack_update_window_size(listing);
+
+		listing->terminal_height = LINES;
+		listing->terminal_width = COLS;
+	}
+
 	//show header
 	wbkgd(listing->header_window, HEADER_STYLE);
 	wattrset(listing->header_window, HEADER_STYLE);
@@ -1004,20 +1014,6 @@ multitrack_search_field_t *multitrack_search_field_create(int row, int col)
 	searcher->window = newwin(SEARCH_FIELD_HEIGHT, SEARCH_FIELD_LENGTH, LINES-row, col);
 	searcher->visible = false;
 
-	//prepare form and field
-	searcher->field = (FIELD**)malloc(sizeof(FIELD*)*2);
-	searcher->field[0] = new_field(1, FIELD_LENGTH, 0, 0, 0, 0);
-	searcher->field[1] = NULL;
-	searcher->form = new_form(searcher->field);
-	field_opts_off(searcher->field[0], O_AUTOSKIP);
-	int rows;
-	scale_form(searcher->form, &rows, &(searcher->form_window_cols));
-	set_form_win(searcher->form, searcher->window);
-	searcher->form_window = derwin(searcher->window, rows, searcher->form_window_cols, 0, FIELD_START_COL);
-	set_form_sub(searcher->form, searcher->form_window);
-	keypad(searcher->window, TRUE);
-	post_form(searcher->form);
-
 	//prepare search match control
 	searcher->matches = NULL;
 	multitrack_search_field_clear_matches(searcher);
@@ -1027,6 +1023,22 @@ multitrack_search_field_t *multitrack_search_field_create(int row, int col)
 
 void multitrack_search_field_show(multitrack_search_field_t *search_field)
 {
+	//create field
+	if (!search_field->visible) {
+		search_field->field = (FIELD**)malloc(sizeof(FIELD*)*2);
+		search_field->field[0] = new_field(1, FIELD_LENGTH, 0, 0, 0, 0);
+		search_field->field[1] = NULL;
+		search_field->form = new_form(search_field->field);
+		field_opts_off(search_field->field[0], O_AUTOSKIP);
+		int rows;
+		scale_form(search_field->form, &rows, &(search_field->form_window_cols));
+		set_form_win(search_field->form, search_field->window);
+		search_field->form_window = derwin(search_field->window, rows, search_field->form_window_cols, 0, FIELD_START_COL);
+		set_form_sub(search_field->form, search_field->form_window);
+		keypad(search_field->window, TRUE);
+		post_form(search_field->form);
+	}
+
 	search_field->visible = true;
 	multitrack_search_field_display(search_field);
 }
@@ -1034,6 +1046,17 @@ void multitrack_search_field_show(multitrack_search_field_t *search_field)
 bool multitrack_search_field_visible(multitrack_search_field_t *search_field)
 {
 	return search_field->visible;
+}
+
+void multitrack_search_field_resize(multitrack_search_field_t *search_field)
+{
+	wresize(search_field->window, SEARCH_FIELD_HEIGHT, SEARCH_FIELD_LENGTH);
+	mvwin(search_field->window, LINES-search_field->row_offset, search_field->col);
+
+	if (search_field->visible) {
+		multitrack_search_field_hide(search_field);
+		multitrack_search_field_show(search_field);
+	}
 }
 
 void multitrack_search_field_display(multitrack_search_field_t *search_field)
@@ -1046,14 +1069,6 @@ void multitrack_search_field_display(multitrack_search_field_t *search_field)
 	}
 
 	if (search_field->visible) {
-		//ensure correct size and placement despite terminal resize
-		wresize(search_field->window, SEARCH_FIELD_HEIGHT, SEARCH_FIELD_LENGTH);
-		mvwin(search_field->window, LINES-search_field->row_offset, search_field->col);
-		int rows;
-		scale_form(search_field->form, &rows, &(search_field->form_window_cols));
-		wresize(search_field->form_window, rows, search_field->form_window_cols);
-		set_form_sub(search_field->form, search_field->form_window);
-
 		//fill window without destroying the styling of the FORM :^)
 		wattrset(search_field->window, COLOR_PAIR(1));
 		mvwprintw(search_field->window, 1, 0, "%-78s", "");
@@ -1092,15 +1107,18 @@ void multitrack_search_field_hide(multitrack_search_field_t *search_field)
 	form_driver(search_field->form, REQ_CLR_FIELD);
 	search_field->visible = false;
 	multitrack_search_field_clear_matches(search_field);
+
+	//remove field and form
+	unpost_form(search_field->form);
+	free_form(search_field->form);
+	free_field(search_field->field[0]);
+	free(search_field->field);
+	delwin(search_field->form_window);
 }
 
 void multitrack_search_field_destroy(multitrack_search_field_t **search_field)
 {
 	multitrack_search_field_clear_matches(*search_field);
-	unpost_form((*search_field)->form);
-	free_form((*search_field)->form);
-	free_field((*search_field)->field[0]);
-	free((*search_field)->field);
 	delwin((*search_field)->window);
 	free(*search_field);
 	*search_field = NULL;
