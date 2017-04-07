@@ -207,6 +207,7 @@ void multitrack_search_field_destroy(multitrack_search_field_t **search_field);
  *
  * \param search_field Search field
  * \param input_key Input key
+ * \return True if an input character was handles, false otherwise
  **/
 bool multitrack_search_field_handle(multitrack_search_field_t *search_field, int input_key);
 
@@ -736,14 +737,11 @@ bool multitrack_handle_listing(multitrack_listing_t *listing, int input_key)
 				}
 				handled = true;
 				break;
-			case '/':
-				multitrack_search_field_show(listing->search_field);
-				handled = true;
-				break;
 			case 27:
 				multitrack_search_field_hide(listing->search_field);
 				handled = true;
 				break;
+			case '/':
 			case KEY_F(3):
 				if (multitrack_search_field_visible(listing->search_field)) {
 					multitrack_listing_next_match(listing);
@@ -776,8 +774,9 @@ bool multitrack_handle_listing(multitrack_listing_t *listing, int input_key)
 				}
 			default:
 				if (multitrack_search_field_visible(listing->search_field)) {
-					multitrack_search_field_handle(listing->search_field, input_key);
-					multitrack_search_listing(listing);
+					if (multitrack_search_field_handle(listing->search_field, input_key)) {
+						multitrack_search_listing(listing);
+					}
 					handled = true;
 				}
 			break;
@@ -1158,6 +1157,7 @@ bool multitrack_search_field_handle(multitrack_search_field_t *search_field, int
 				//delete characters
 				form_driver(search_field->form, REQ_DEL_PREV);
 				form_driver(search_field->form, REQ_VALIDATION);
+				character_handled = true;
 			}
 			free(expression);
 			break;
