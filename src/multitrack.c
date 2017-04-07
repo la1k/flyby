@@ -233,6 +233,13 @@ void multitrack_search_field_add_match(multitrack_search_field_t *search_field, 
  **/
 void multitrack_search_field_clear_matches(multitrack_search_field_t *search_field);
 
+/**
+ * Update window size according to current terminal height.
+ *
+ * \param listing Multitrack listing
+ **/
+void multitrack_resize(multitrack_listing_t *listing);
+
 /** Multitrack satellite listing function implementations. **/
 
 multitrack_entry_t *multitrack_create_entry(const char *name, predict_orbital_elements_t *orbital_elements)
@@ -249,7 +256,7 @@ multitrack_entry_t *multitrack_create_entry(const char *name, predict_orbital_el
 	return entry;
 }
 
-void multitrack_update_window_size(multitrack_listing_t *listing)
+void multitrack_resize(multitrack_listing_t *listing)
 {
 	//resize main window
 	int sat_list_win_height = LINES-MAIN_MENU_OPTS_WIN_HEIGHT-MULTITRACK_WINDOW_ROW-1;
@@ -280,13 +287,13 @@ multitrack_listing_t* multitrack_create_listing(predict_observer_t *observer, st
 {
 	multitrack_listing_t *listing = (multitrack_listing_t*)malloc(sizeof(multitrack_listing_t));
 
-	//prepare main window. Proper size and position is set in multitrack_update_window_size().
+	//prepare main window. Proper size and position is set in multitrack_resize().
 	listing->window = newwin(1, 1, 1, 0);
 
-	//prepare window for header printing. Proper size is set in multitrack_update_window_size().
+	//prepare window for header printing. Proper size is set in multitrack_resize().
 	listing->header_window = newwin(1, COLS, 0, 0);
 
-	multitrack_update_window_size(listing);
+	multitrack_resize(listing);
 
 	listing->num_entries = 0;
 	listing->entries = NULL;
@@ -401,7 +408,7 @@ void multitrack_refresh_tles(multitrack_listing_t *listing, struct tle_db *tle_d
 	listing->num_below_horizon = 0;
 	listing->num_decayed = 0;
 	listing->num_nevervisible = 0;
-	multitrack_update_window_size(listing);
+	multitrack_resize(listing);
 }
 
 NCURSES_ATTR_T multitrack_colors(double range, double elevation)
@@ -651,7 +658,7 @@ void multitrack_print_scrollbar(multitrack_listing_t *listing)
 void multitrack_display_listing(multitrack_listing_t *listing)
 {
 	if ((listing->terminal_height != LINES) || (listing->terminal_width != COLS)) {
-		multitrack_update_window_size(listing);
+		multitrack_resize(listing);
 		multitrack_search_field_resize(listing->search_field);
 		multitrack_option_selector_resize(listing->option_selector);
 
