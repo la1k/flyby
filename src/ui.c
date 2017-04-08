@@ -1144,7 +1144,6 @@ void SingleTrack(int orbit_ind, predict_observer_t *qth, struct transponder_db *
 			downlink_end=0.0, uplink_start=0.0, uplink_end=0.0;
 
 		double doppler100, delay;
-		double dopp;
 		double loss;
 
 		//elevation and azimuth at previous timestep, for checking when to send messages to rotctld
@@ -1407,7 +1406,6 @@ void SingleTrack(int orbit_ind, predict_observer_t *qth, struct transponder_db *
 
 					if (downlink!=0.0) {
 						double downlink_doppler = downlink + predict_doppler_shift(qth, &orbit, downlink);
-						dopp=1.0e-08*(doppler100*downlink);
 						mvprintw(12,32,"%11.5f MHz",downlink_doppler);
 						loss=32.4+(20.0*log10(downlink))+(20.0*log10(obs.range));
 						mvprintw(12,67,"%7.3f dB",loss);
@@ -1424,7 +1422,6 @@ void SingleTrack(int orbit_ind, predict_observer_t *qth, struct transponder_db *
 					}
 					if (uplink!=0.0) {
 						double uplink_doppler = uplink - predict_doppler_shift(qth, &orbit, uplink);
-						dopp=1.0e-08*(doppler100*uplink);
 						mvprintw(11,32,"%11.5f MHz",uplink_doppler);
 						loss=32.4+(20.0*log10(uplink))+(20.0*log10(obs.range));
 						mvprintw(11,67,"%7.3f dB",loss);
