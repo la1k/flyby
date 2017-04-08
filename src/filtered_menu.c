@@ -4,6 +4,7 @@
 #include <libgen.h>
 #include "defines.h"
 #include "tle_db.h"
+#include <ctype.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -146,12 +147,16 @@ void filtered_menu_simple_pattern_match(struct filtered_menu *list, const char *
 	free(display_items);
 }
 
-void filtered_menu_pattern_match(struct filtered_menu *list, struct tle_db *tle_db, const char *pattern)
+void filtered_menu_pattern_match(struct filtered_menu *list, const struct tle_db *tle_db, const struct transponder_db *transponder_db, const char *pattern)
 {
 	//get boolean array over entries to display or not
 	bool *display_items = (bool*)malloc(sizeof(bool)*list->num_entries);
 	for (int i = 0; i < list->num_entries; ++i) {
 		display_items[i] = false;
+
+		if (list->display_only_entries_with_transponders && (transponder_db->sats[i].num_transponders == 0)) {
+			continue;
+		}
 
 		//check against display name
 		if (pattern_match(list->entries[i].displayed_name, pattern)) {
@@ -171,13 +176,17 @@ void filtered_menu_pattern_match(struct filtered_menu *list, struct tle_db *tle_
 		if (pattern_match(satnum_str, pattern)) {
 			display_items[i] = true;
 		}
-
 	}
 
 	//update menu
 	filtered_menu_update(list, display_items);
 
 	free(display_items);
+}
+
+void filtered_menu_only_comsats(struct filtered_menu *list, bool on)
+{
+	list->display_only_entries_with_transponders = on;
 }
 
 void filtered_menu_from_stringarray(struct filtered_menu *list, string_array_t *names, WINDOW *my_menu_win)
@@ -217,6 +226,8 @@ void filtered_menu_from_stringarray(struct filtered_menu *list, string_array_t *
 
 	//display all items, ensure the rest of the variables are correctly set
 	filtered_menu_simple_pattern_match(list, "");
+
+	list->display_only_entries_with_transponders = false;
 }
 
 void filtered_menu_from_tle_db(struct filtered_menu *list, const struct tle_db *db, WINDOW *my_menu_win)

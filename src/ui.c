@@ -1759,7 +1759,11 @@ void prepare_pattern(char *string)
 	}
 }
 
-void EditWhitelist(struct tle_db *tle_db)
+#define WHITELIST_KEYHINT_COL 42
+
+#define WHITELIST_TRANSPONDER_TOGGLE_INFO_ROW 24
+
+void EditWhitelist(struct tle_db *tle_db, const struct transponder_db *transponder_db)
 {
 	/* Print header */
 	attrset(COLOR_PAIR(6)|A_REVERSE|A_BOLD);
@@ -1828,7 +1832,7 @@ void EditWhitelist(struct tle_db *tle_db)
 	if (tle_db->num_tles > 0) {
 		/* Print description */
 		attrset(COLOR_PAIR(3)|A_BOLD);
-		int col = 42;
+		int col = WHITELIST_KEYHINT_COL;
 		row = 5;
 		mvprintw( 6,col,"Use upper-case characters to ");
 		mvprintw( 7,col,"filter satellites by name.");
@@ -1842,6 +1846,8 @@ void EditWhitelist(struct tle_db *tle_db)
 		mvprintw( 15,col,"wipe query field if filled.");
 		mvprintw( 17,col,"Press  a  to toggle visible entries.");
 		mvprintw( 19,col,"Press  w  to wipe query field.");
+		mvprintw( 21,col,"Press  t  to enable/disable");
+		mvprintw( 22,col,"transponder filter.");
 		mvprintw(5, 6, "Filter TLEs by name:");
 		row = 18;
 
@@ -1851,6 +1857,7 @@ void EditWhitelist(struct tle_db *tle_db)
 		mvprintw( 14,col+6," q ");
 		mvprintw( 17,col+6," a ");
 		mvprintw( 19,col+6," w ");
+		mvprintw( 21,col+6," t ");
 	}
 
 	refresh();
@@ -1907,6 +1914,25 @@ void EditWhitelist(struct tle_db *tle_db)
 
 		if (!handled) {
 			switch (c) {
+				case 't':
+					filtered_menu_only_comsats(&menu, !menu.display_only_entries_with_transponders);
+					filtered_menu_pattern_match(&menu, tle_db, transponder_db, field_contents);
+					if (menu.display_only_entries_with_transponders) {
+						attrset(COLOR_PAIR(1));
+						int row = WHITELIST_TRANSPONDER_TOGGLE_INFO_ROW;
+						mvprintw(row++, WHITELIST_KEYHINT_COL, "Only entries with transponders");
+						mvprintw(row, WHITELIST_KEYHINT_COL, "are shown.");
+						refresh();
+					} else {
+						int row = WHITELIST_TRANSPONDER_TOGGLE_INFO_ROW;
+						move(row++, WHITELIST_KEYHINT_COL);
+						clrtoeol();
+						move(row, WHITELIST_KEYHINT_COL);
+						clrtoeol();
+						refresh();
+					}
+
+					break;
 				case 'q':
 					strncpy(field_contents, field_buffer(field[0], 0), MAX_NUM_CHARS);
 					prepare_pattern(field_contents);
@@ -1934,7 +1960,7 @@ void EditWhitelist(struct tle_db *tle_db)
 					strncpy(field_contents, field_buffer(field[0], 0), MAX_NUM_CHARS);
 					prepare_pattern(field_contents);
 
-					filtered_menu_pattern_match(&menu, tle_db, field_contents);
+					filtered_menu_pattern_match(&menu, tle_db, transponder_db, field_contents);
 
 					wrefresh(form_win);
 					break;
@@ -2503,7 +2529,7 @@ void RunFlybyUI(bool new_user, const char *qthfile, predict_observer_t *observer
 
 						case 'w':
 						case 'W':
-							EditWhitelist(tle_db);
+							EditWhitelist(tle_db, sat_db);
 							multitrack_refresh_tles(listing, tle_db);
 							break;
 						case 'E':
