@@ -957,7 +957,6 @@ void QthEdit(const char *qthfile, predict_observer_t *qth)
 
 	//handle input characters to QTH form
 	bool run_form = true;
-	double curr_latitude, curr_longitude;
 	while (run_form) {
 		int key = wgetch(form_win);
 
@@ -994,8 +993,23 @@ void QthEdit(const char *qthfile, predict_observer_t *qth)
 			default:
 				form_driver(form, key);
 				form_driver(form, REQ_VALIDATION); //update buffer with field contents
-				curr_longitude = strtod(field_buffer(longitude, 0), NULL);
-				curr_latitude = strtod(field_buffer(latitude, 0), NULL);
+				if (current_field(form) == locator) {
+					//update longitude and latitude fields using current locator value
+					double longitude_new = 0, latitude_new = 0;
+					char temp[MAX_NUM_CHARS];
+					snprintf(temp, MAX_NUM_CHARS, "%f", longitude_new);
+					set_field_buffer(longitude, 0, temp);
+					snprintf(temp, MAX_NUM_CHARS, "%f", latitude_new);
+					set_field_buffer(latitude, 0, temp);
+				} else {
+					//update locator value
+					double curr_longitude = strtod(field_buffer(longitude, 0), NULL);
+					double curr_latitude = strtod(field_buffer(latitude, 0), NULL);
+					char locator_str[MAX_NUM_CHARS];
+					getMaidenHead(curr_latitude, -curr_longitude, locator_str);
+					set_field_buffer(locator, 0, locator_str);
+				}
+
 				break;
 		}
 	}
