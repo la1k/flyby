@@ -24,6 +24,23 @@ void free_menu_items(ITEM ***items)
 	free(*items);
 }
 
+/**
+ * Change case of string to uppercase.
+ *
+ * \param input Input string
+ * \return String with all characters set to uppercase. Has to be freed manually.
+ **/
+char *str_to_uppercase(const char *input)
+{
+	char *ret_str = strdup(input);
+	for (int i=0; i < strlen(ret_str); i++) {
+		if (isalpha(ret_str[i])) {
+			ret_str[i] = toupper(ret_str[i]);
+		}
+	}
+	return ret_str;
+}
+
 bool pattern_match(const char *string, const char *pattern)
 {
 	return (strlen(pattern) == 0) || (strstr(string, pattern) != NULL);
@@ -121,6 +138,40 @@ void filtered_menu_simple_pattern_match(struct filtered_menu *list, const char *
 		if (pattern_match(list->entries[i].displayed_name, pattern)) {
 			display_items[i] = true;
 		}
+	}
+
+	//update menu
+	filtered_menu_update(list, display_items);
+
+	free(display_items);
+}
+
+void filtered_menu_pattern_match(struct filtered_menu *list, struct tle_db *tle_db, const char *pattern)
+{
+	//get boolean array over entries to display or not
+	bool *display_items = (bool*)malloc(sizeof(bool)*list->num_entries);
+	for (int i = 0; i < list->num_entries; ++i) {
+		display_items[i] = false;
+
+		//check against display name
+		if (pattern_match(list->entries[i].displayed_name, pattern)) {
+			display_items[i] = true;
+		}
+
+		//check against TLE filename
+		char *fname_uppercase = str_to_uppercase(tle_db->tles[i].filename);
+		if (pattern_match(fname_uppercase, pattern)) {
+			display_items[i] = true;
+		}
+		free(fname_uppercase);
+
+		//check against satellite number
+		char satnum_str[MAX_NUM_CHARS];
+		snprintf(satnum_str, MAX_NUM_CHARS, "%ld", tle_db->tles[i].satellite_number);
+		if (pattern_match(satnum_str, pattern)) {
+			display_items[i] = true;
+		}
+
 	}
 
 	//update menu

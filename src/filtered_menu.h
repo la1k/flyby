@@ -99,6 +99,15 @@ void filtered_menu_free(struct filtered_menu *list);
 void filtered_menu_simple_pattern_match(struct filtered_menu *list, const char *pattern);
 
 /**
+ * Filter displayed menu entries according to satellite name, TLE filename or satellite number.
+ *
+ * \param list Filtered menu
+ * \param tle_db TLE database
+ * \param pattern Search pattern
+ **/
+void filtered_menu_pattern_match(struct filtered_menu *list, struct tle_db *tle_db, const char *pattern);
+
+/**
  * Filter displayed menu entries according to whitelist field in TLE db.
  *
  * \param list Menu
