@@ -87,6 +87,7 @@ void getMaidenHead(double mLtd, double mLng, char* mStr)
 	mLng = reduce(180.0 - mLng, 0.0, 360.0);
 	mLtd = reduce(90.0 + mLtd, 0.0, 360.0);
 
+
 	i = (int) (mLng / 20.0);
 	j = (int) (mLtd / 10.0);
 
@@ -885,6 +886,43 @@ void ShowOrbitData(const char *name, predict_orbital_elements_t *orbital_element
  **/
 void maidenhead_to_coordinates(const char *locator, double *ret_longitude, double *ret_latitude)
 {
+	//using the same setup as in getMaidenhead defined above, and applying the algorithm in reverse
+	int i, j, k, l, m, n;
+
+	double mLng = 0, mLtd = 0;
+	int pos = 0;
+	if (strlen(locator) > pos+1) {
+		i = (int)(toupper(locator[pos]) - 'A');
+		mLng = i*20.0;
+	}
+	pos++;
+	if (strlen(locator) > pos+1) {
+		j = (int)(toupper(locator[pos]) - 'A');
+		mLtd = j*10.0;
+	}
+	pos++;
+	if (strlen(locator) > pos+1) {
+		k = (int)(locator[pos] - 'A');
+		mLng += k*2.0;
+	}
+	pos++;
+	if (strlen(locator) > pos+1) {
+		l = (int)(locator[pos] - 'A');
+		mLtd += l*1.0;
+	}
+	pos++;
+	if (strlen(locator) > pos+1) {
+		m = (int)(toupper(locator[pos]) - 'A');
+		mLng += m/12.0;
+	}
+	pos++;
+	if (strlen(locator) > pos+1) {
+		n = (int)(toupper(locator[pos]) - 'A');
+		mLtd += n/24.0;
+	}
+	*ret_longitude = -1*(180 + mLng);
+	*ret_latitude = 90 - mLtd;
+
 }
 
 void update_latlon_fields_from_locator(FIELD *locator, FIELD *longitude, FIELD *latitude)
