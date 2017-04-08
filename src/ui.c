@@ -877,7 +877,7 @@ void ShowOrbitData(const char *name, predict_orbital_elements_t *orbital_element
 }
 
 #define QTH_FIELD_LENGTH 10
-#define NUM_QTH_FIELDS 4
+#define NUM_QTH_FIELDS 5
 #define INPUT_NUM_CHARS 128
 void QthEdit(const char *qthfile, predict_observer_t *qth)
 {
@@ -898,11 +898,13 @@ void QthEdit(const char *qthfile, predict_observer_t *qth)
 		new_field(1, QTH_FIELD_LENGTH, 1, 0, 0, 0),
 		new_field(1, QTH_FIELD_LENGTH, 2, 0, 0, 0),
 		new_field(1, QTH_FIELD_LENGTH, 3, 0, 0, 0),
+		new_field(1, QTH_FIELD_LENGTH, 4, 0, 0, 0),
 		NULL};
 	FIELD *name = fields[0];
 	FIELD *latitude = fields[1];
 	FIELD *longitude = fields[2];
 	FIELD *altitude = fields[3];
+	FIELD *locator = fields[4];
 	FORM *form = new_form(fields);
 	for (int i=0; i < NUM_QTH_FIELDS; i++) {
 		set_field_fore(fields[i], COLOR_PAIR(2)|A_BOLD);
@@ -911,7 +913,7 @@ void QthEdit(const char *qthfile, predict_observer_t *qth)
 	}
 
 	//set up windows
-	int win_height = 5;
+	int win_height = NUM_QTH_FIELDS+1;
 	int win_width = QTH_FIELD_LENGTH;
 	int win_row = 11;
 	int win_col = 40;
@@ -930,6 +932,7 @@ void QthEdit(const char *qthfile, predict_observer_t *qth)
 	mvprintw(win_row+1,info_col,"Station Latitude  : ");
 	mvprintw(win_row+2,info_col,"Station Longitude : ");
 	mvprintw(win_row+3,info_col,"Station Altitude  : ");
+	mvprintw(win_row+4,info_col,"Locator           : ");
 	mvprintw(win_row+6,info_col-5," Only decimal notation (e.g. 74.2467) allowed");
 	mvprintw(win_row+7,info_col-5," for longitude and latitude.");
 
@@ -954,6 +957,7 @@ void QthEdit(const char *qthfile, predict_observer_t *qth)
 
 	//handle input characters to QTH form
 	bool run_form = true;
+	double curr_latitude, curr_longitude;
 	while (run_form) {
 		int key = wgetch(form_win);
 
@@ -990,6 +994,8 @@ void QthEdit(const char *qthfile, predict_observer_t *qth)
 			default:
 				form_driver(form, key);
 				form_driver(form, REQ_VALIDATION); //update buffer with field contents
+				curr_longitude = strtod(field_buffer(longitude, 0), NULL);
+				curr_latitude = strtod(field_buffer(latitude, 0), NULL);
 				break;
 		}
 	}
