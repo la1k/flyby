@@ -1125,6 +1125,29 @@ void singletrack_help()
 	delwin(help_window);
 }
 
+enum dopp_shift_frequency_type {
+	DOPP_UPLINK,
+	DOPP_DOWNLINK
+};
+
+/**
+ * Calculate what would be the original frequency when given a doppler shifted frequency.
+ *
+ * \param type Whether it is a downlink or uplink frequency (determines sign of doppler shift)
+ * \param observer Observer
+ * \param orbit Predicted orbit
+ * \param doppler_shifted_frequency Input frequency
+ * \return Original frequency
+ **/
+double inverse_doppler_shift(enum dopp_shift_frequency_type type, const predict_observer_t *observer, const struct predict_orbit *orbit, double doppler_shifted_frequency)
+{
+	int sign = 1;
+	if (type == DOPP_UPLINK) {
+		sign = -1;
+	}
+	return doppler_shifted_frequency/(1.0 + sign*predict_doppler_shift(observer, orbit, 1));
+}
+
 void SingleTrack(int orbit_ind, predict_observer_t *qth, struct transponder_db *sat_db, struct tle_db *tle_db, rotctld_info_t *rotctld, rigctld_info_t *downlink_info, rigctld_info_t *uplink_info)
 {
 	double horizon = rotctld->tracking_horizon;
@@ -1143,8 +1166,7 @@ void SingleTrack(int orbit_ind, predict_observer_t *qth, struct transponder_db *
 			downlink=0.0, uplink=0.0, downlink_start=0.0,
 			downlink_end=0.0, uplink_start=0.0, uplink_end=0.0;
 
-		double doppler100, delay;
-		double dopp;
+		double delay;
 		double loss;
 
 		//elevation and azimuth at previous timestep, for checking when to send messages to rotctld
@@ -1244,10 +1266,12 @@ void SingleTrack(int orbit_ind, predict_observer_t *qth, struct transponder_db *
 		}
 
 		do {
-			if (downlink_info->connected && readfreq)
-				downlink = rigctld_read_frequency(downlink_info)/(1+1.0e-08*doppler100);
-			if (uplink_info->connected && readfreq)
-				uplink = rigctld_read_frequency(uplink_info)/(1-1.0e-08*doppler100);
+			if (downlink_info->connected && readfreq) {
+				downlink = inverse_doppler_shift(DOPP_DOWNLINK, qth, &orbit, rigctld_read_frequency(downlink_info));
+			}
+			if (uplink_info->connected && readfreq) {
+				uplink = inverse_doppler_shift(DOPP_UPLINK, qth, &orbit, rigctld_read_frequency(uplink_info));
+			}
 
 
 			//predict and observe satellite orbit
@@ -1382,7 +1406,6 @@ void SingleTrack(int orbit_ind, predict_observer_t *qth, struct transponder_db *
 			}
 
 			//calculate and display downlink/uplink information during pass, and control rig if available
-			doppler100=-100.0e06*((obs.range_rate*1000.0)/299792458.0);
 			delay=1000.0*((1000.0*obs.range)/299792458.0);
 			if (obs.elevation>=horizon) {
 				if (obs.elevation>=0 && aos_alarm==0) {
@@ -1406,13 +1429,13 @@ void SingleTrack(int orbit_ind, predict_observer_t *qth, struct transponder_db *
 					attrset(COLOR_PAIR(2)|A_BOLD);
 
 					if (downlink!=0.0) {
-						dopp=1.0e-08*(doppler100*downlink);
-						mvprintw(12,32,"%11.5f MHz",downlink+dopp);
+						double downlink_doppler = downlink + predict_doppler_shift(qth, &orbit, downlink);
+						mvprintw(12,32,"%11.5f MHz",downlink_doppler);
 						loss=32.4+(20.0*log10(downlink))+(20.0*log10(obs.range));
 						mvprintw(12,67,"%7.3f dB",loss);
 						mvprintw(13,13,"%7.3f   ms",delay);
 						if (downlink_info->connected && downlink_update)
-							rigctld_set_frequency(downlink_info, downlink+dopp);
+							rigctld_set_frequency(downlink_info, downlink_doppler);
 					}
 
 					else
@@ -1422,12 +1445,12 @@ void SingleTrack(int orbit_ind, predict_observer_t *qth, struct transponder_db *
 						mvprintw(13,13,"            ");
 					}
 					if (uplink!=0.0) {
-						dopp=1.0e-08*(doppler100*uplink);
-						mvprintw(11,32,"%11.5f MHz",uplink-dopp);
+						double uplink_doppler = uplink - predict_doppler_shift(qth, &orbit, uplink);
+						mvprintw(11,32,"%11.5f MHz",uplink_doppler);
 						loss=32.4+(20.0*log10(uplink))+(20.0*log10(obs.range));
 						mvprintw(11,67,"%7.3f dB",loss);
 						if (uplink_info->connected && uplink_update)
-							rigctld_set_frequency(uplink_info, uplink-dopp);
+							rigctld_set_frequency(uplink_info, uplink_doppler);
 					}
 					else
 					{
@@ -1556,9 +1579,9 @@ void SingleTrack(int orbit_ind, predict_observer_t *qth, struct transponder_db *
 				if (ans=='f' || ans=='F')
 				{
 					if (downlink_info->connected)
-						downlink = rigctld_read_frequency(downlink_info)/(1+1.0e-08*doppler100);
+						downlink = inverse_doppler_shift(DOPP_DOWNLINK, qth, &orbit, rigctld_read_frequency(downlink_info));
 					if (uplink_info->connected)
-						uplink = rigctld_read_frequency(uplink_info)/(1-1.0e-08*doppler100);
+						uplink = inverse_doppler_shift(DOPP_UPLINK, qth, &orbit, rigctld_read_frequency(uplink_info));
 					if (ans=='f')
 					{
 						downlink_update=true;
