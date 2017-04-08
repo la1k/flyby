@@ -1036,9 +1036,6 @@ int singletrack_get_next_enabled_satellite(int curr_index, int step, struct tle_
 	return curr_index;
 }
 
-//Help window height
-#define SINGLETRACK_HELP_HEIGHT 30
-
 //Help window width
 #define SINGLETRACK_HELP_WIDTH 80
 
@@ -1067,7 +1064,10 @@ int singletrack_get_next_enabled_satellite(int curr_index, int step, struct tle_
  **/
 void singletrack_help_print_keyhint(WINDOW *window, int *row, const char *key_str, const char *desc_str)
 {
+	wattrset(window, COLOR_PAIR(3)|A_BOLD);
 	mvwprintw(window, *row, SINGLETRACK_HELP_KEY_COL, key_str);
+
+	wattrset(window, COLOR_PAIR(1));
 
 	//ensure nice linebreaks on long descriptions
 	int desc_length = SINGLETRACK_HELP_WIDTH - SINGLETRACK_HELP_DESC_COL - 1;
@@ -1092,9 +1092,7 @@ void singletrack_help_print_keyhint(WINDOW *window, int *row, const char *key_st
 void singletrack_help()
 {
 	//prepare help window
-	WINDOW *help_window = newwin(SINGLETRACK_HELP_HEIGHT, SINGLETRACK_HELP_WIDTH, SINGLETRACK_HELP_ROW, SINGLETRACK_HELP_COL);
-	wattrset(help_window, COLOR_PAIR(4));
-	box(help_window, 0, 0);
+	WINDOW *help_window = newwin(LINES, SINGLETRACK_HELP_WIDTH, SINGLETRACK_HELP_ROW, SINGLETRACK_HELP_COL);
 
 	//print help information
 	int row = 1;
@@ -1111,6 +1109,11 @@ void singletrack_help()
 	singletrack_help_print_keyhint(help_window, &row, "m/M", "Turns on/off a continuous version of the above");
 	singletrack_help_print_keyhint(help_window, &row, "x", "Reverse downlink and uplink VFO names");
 	singletrack_help_print_keyhint(help_window, &row, "q/ESC", "Escape single track mode");
+	row++;
+	mvwprintw(help_window, row++, 1, "Press any key to continue");
+	wresize(help_window, row+1, SINGLETRACK_HELP_WIDTH);
+	wattrset(help_window, COLOR_PAIR(4));
+	box(help_window, 0, 0);
 	wrefresh(help_window);
 
 	cbreak(); //turn off halfdelay mode so that getch blocks
