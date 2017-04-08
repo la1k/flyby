@@ -1078,7 +1078,18 @@ void singletrack_help()
 	int col = 1;
 	mvwprintw(help_window, row++, col, "Singletrack help");
 	singletrack_help_print_keyhint(help_window, row++, "+/-", "Next/previous satellite");
-	singletrack_help_print_keyhint(help_window, row++, "<-/->", "Next/previous satellite");
+	singletrack_help_print_keyhint(help_window, row++, "Key left/Key right", "------\"\"-----");
+	singletrack_help_print_keyhint(help_window, row++, "SPACE", "Next transponder");
+	singletrack_help_print_keyhint(help_window, row++, "Key down/key up", "Step through defined frequency range in 1 KHz steps");
+	singletrack_help_print_keyhint(help_window, row++, "</>", "------\"\"-------");
+	singletrack_help_print_keyhint(help_window, row++, ",/.", "Steps through defined frequency range in 100 Hz steps");
+	singletrack_help_print_keyhint(help_window, row++, "d/D", "Turn on/off downlink frequency updates to rigctld");
+	singletrack_help_print_keyhint(help_window, row++, "u/U", "Turn on/off uplink frequency updates to rigctld");
+	singletrack_help_print_keyhint(help_window, row++, "f", "Turn on downlink and uplink frequency updates to rigctld ");
+	singletrack_help_print_keyhint(help_window, row++, "f/F", "Overwrite current uplink and downlink frequencies with the current frequency in the rig (inversely doppler-corrected)");
+	singletrack_help_print_keyhint(help_window, row++, "m/M", "Turns on/off automatic frequency reading from rigctld (overwrites current downlink and uplink frequencies, inversely doppler-corrected)");
+	singletrack_help_print_keyhint(help_window, row++, "x", "Reverse downlink and uplink VFO names");
+	singletrack_help_print_keyhint(help_window, row++, "q/ESC", "Escape single track mode");
 	wrefresh(help_window);
 
 	cbreak(); //turn off halfdelay mode so that getch blocks
