@@ -1036,24 +1036,55 @@ int singletrack_get_next_enabled_satellite(int curr_index, int step, struct tle_
 	return curr_index;
 }
 
+//Help window height
 #define SINGLETRACK_HELP_HEIGHT 30
+
+//Help window width
 #define SINGLETRACK_HELP_WIDTH 40
+
+//Key used for displaying help window
 #define SINGLETRACK_HELP_KEY 'h'
 
+//Row position of help window
+#define SINGLETRACK_HELP_ROW 0
+
+//Column position of help window
+#define SINGLETRACK_HELP_COL 0
+
+//Column for printing key string
+#define SINGLETRACK_HELP_KEY_COL 1
+
+//Column for printing key description
+#define SINGLETRACK_HELP_DESC_COL 10
+
+void singletrack_help_print_keyhint(WINDOW *window, int row, const char *key_str, const char *desc_str)
+{
+	mvwprintw(window, row, SINGLETRACK_HELP_KEY_COL, key_str);
+	mvwprintw(window, row, SINGLETRACK_HELP_DESC_COL, desc_str);
+}
+
+/**
+ * Display singletrack help window.
+ **/
 void singletrack_help()
 {
-	cbreak(); //turn off halfdelay mode so that getch blocks
-
-	WINDOW *help_window = newwin(SINGLETRACK_HELP_HEIGHT, SINGLETRACK_HELP_WIDTH, 0, 0);
-
+	//prepare help window
+	WINDOW *help_window = newwin(SINGLETRACK_HELP_HEIGHT, SINGLETRACK_HELP_WIDTH, SINGLETRACK_HELP_ROW, SINGLETRACK_HELP_COL);
 	wattrset(help_window, COLOR_PAIR(4));
 	box(help_window, 0, 0);
 
+	//print help information
+	int row = 1;
+	int col = 1;
+	mvwprintw(help_window, row++, col, "Singletrack help");
+	singletrack_help_print_keyhint(help_window, row++, "+/-", "Next/previous satellite");
+	singletrack_help_print_keyhint(help_window, row++, "<-/->", "Next/previous satellite");
 	wrefresh(help_window);
+
+	cbreak(); //turn off halfdelay mode so that getch blocks
 	getch();
 
 	delwin(help_window);
-
 }
 
 void SingleTrack(int orbit_ind, predict_observer_t *qth, struct transponder_db *sat_db, struct tle_db *tle_db, rotctld_info_t *rotctld, rigctld_info_t *downlink_info, rigctld_info_t *uplink_info)
