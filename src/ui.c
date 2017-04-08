@@ -1934,7 +1934,7 @@ void EditWhitelist(struct tle_db *tle_db)
 					strncpy(field_contents, field_buffer(field[0], 0), MAX_NUM_CHARS);
 					prepare_pattern(field_contents);
 
-					filtered_menu_pattern_match(&menu, field_contents);
+					filtered_menu_simple_pattern_match(&menu, field_contents);
 
 					wrefresh(form_win);
 					break;

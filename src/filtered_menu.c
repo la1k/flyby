@@ -112,7 +112,7 @@ void filtered_menu_update(struct filtered_menu *list, bool *items_to_display)
 	}
 }
 
-void filtered_menu_pattern_match(struct filtered_menu *list, const char *pattern)
+void filtered_menu_simple_pattern_match(struct filtered_menu *list, const char *pattern)
 {
 	//get boolean array over entries to display or not
 	bool *display_items = (bool*)malloc(sizeof(bool)*list->num_entries);
@@ -165,7 +165,7 @@ void filtered_menu_from_stringarray(struct filtered_menu *list, string_array_t *
 	post_menu(my_menu);
 
 	//display all items, ensure the rest of the variables are correctly set
-	filtered_menu_pattern_match(list, "");
+	filtered_menu_simple_pattern_match(list, "");
 }
 
 void filtered_menu_from_tle_db(struct filtered_menu *list, const struct tle_db *db, WINDOW *my_menu_win)
@@ -180,7 +180,7 @@ void filtered_menu_from_tle_db(struct filtered_menu *list, const struct tle_db *
 	for (int i=0; i < db->num_tles; i++) {
 		list->entries[i].enabled = tle_db_entry_enabled(db, i);
 	}
-	filtered_menu_pattern_match(list, "");
+	filtered_menu_simple_pattern_match(list, "");
 
 	string_array_free(&string_list);
 }

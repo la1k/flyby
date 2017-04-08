@@ -90,12 +90,13 @@ void filtered_menu_select_index(struct filtered_menu *list, int index);
 void filtered_menu_free(struct filtered_menu *list);
 
 /**
- * Filter displayed menu entries based on input pattern.
+ * Filter displayed menu entries based on their associated names within
+ * the menu struct and the input pattern.
  *
  * \param list Menu struct
  * \param pattern Pattern string
  **/
-void filtered_menu_pattern_match(struct filtered_menu *list, const char *pattern);
+void filtered_menu_simple_pattern_match(struct filtered_menu *list, const char *pattern);
 
 /**
  * Filter displayed menu entries according to whitelist field in TLE db.
