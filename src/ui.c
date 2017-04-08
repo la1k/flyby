@@ -1406,13 +1406,14 @@ void SingleTrack(int orbit_ind, predict_observer_t *qth, struct transponder_db *
 					attrset(COLOR_PAIR(2)|A_BOLD);
 
 					if (downlink!=0.0) {
+						double downlink_doppler = downlink + predict_doppler_shift(qth, &orbit, downlink);
 						dopp=1.0e-08*(doppler100*downlink);
-						mvprintw(12,32,"%11.5f MHz",downlink+predict_doppler_shift(qth, &orbit, downlink));
+						mvprintw(12,32,"%11.5f MHz",downlink_doppler);
 						loss=32.4+(20.0*log10(downlink))+(20.0*log10(obs.range));
 						mvprintw(12,67,"%7.3f dB",loss);
 						mvprintw(13,13,"%7.3f   ms",delay);
 						if (downlink_info->connected && downlink_update)
-							rigctld_set_frequency(downlink_info, downlink+dopp);
+							rigctld_set_frequency(downlink_info, downlink_doppler);
 					}
 
 					else
@@ -1422,12 +1423,13 @@ void SingleTrack(int orbit_ind, predict_observer_t *qth, struct transponder_db *
 						mvprintw(13,13,"            ");
 					}
 					if (uplink!=0.0) {
+						double uplink_doppler = uplink - predict_doppler_shift(qth, &orbit, uplink);
 						dopp=1.0e-08*(doppler100*uplink);
-						mvprintw(11,32,"%11.5f MHz",uplink-predict_doppler_shift(qth, &orbit, uplink));
+						mvprintw(11,32,"%11.5f MHz",uplink_doppler);
 						loss=32.4+(20.0*log10(uplink))+(20.0*log10(obs.range));
 						mvprintw(11,67,"%7.3f dB",loss);
 						if (uplink_info->connected && uplink_update)
-							rigctld_set_frequency(uplink_info, uplink-dopp);
+							rigctld_set_frequency(uplink_info, uplink_doppler);
 					}
 					else
 					{
