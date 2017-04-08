@@ -1023,7 +1023,7 @@ void QthEdit(const char *qthfile, predict_observer_t *qth)
  * \param tle_db TLE database
  * \return Next entry in step direction which is enabled, or curr_index if none was found
  **/
-int get_next_enabled_satellite(int curr_index, int step, struct tle_db *tle_db)
+int singletrack_get_next_enabled_satellite(int curr_index, int step, struct tle_db *tle_db)
 {
 	int index = curr_index;
 	index += step;
@@ -1034,6 +1034,95 @@ int get_next_enabled_satellite(int curr_index, int step, struct tle_db *tle_db)
 		index += step;
 	}
 	return curr_index;
+}
+
+//Help window width
+#define SINGLETRACK_HELP_WIDTH 80
+
+//Key used for displaying help window
+#define SINGLETRACK_HELP_KEY 'h'
+
+//Row position of help window
+#define SINGLETRACK_HELP_ROW 4
+
+//Column position of help window
+#define SINGLETRACK_HELP_COL 1
+
+//Column for printing key string
+#define SINGLETRACK_HELP_KEY_COL 1
+
+//Column for printing key description
+#define SINGLETRACK_HELP_DESC_COL 21
+
+/**
+ * Print singletrack keyhint using uniform formatting.
+ *
+ * \param window Print window
+ * \param row Row number, is incremented by the function
+ * \param key_str String specifying the key
+ * \param desc_str String specifying the keybinding description
+ **/
+void singletrack_help_print_keyhint(WINDOW *window, int *row, const char *key_str, const char *desc_str)
+{
+	wattrset(window, COLOR_PAIR(3)|A_BOLD);
+	mvwprintw(window, *row, SINGLETRACK_HELP_KEY_COL, key_str);
+	mvwprintw(window, *row, SINGLETRACK_HELP_DESC_COL-2, ":");
+
+	wattrset(window, COLOR_PAIR(1));
+
+	//ensure nice linebreaks on long descriptions
+	int desc_length = SINGLETRACK_HELP_WIDTH - SINGLETRACK_HELP_DESC_COL - 1;
+	int print_length = strlen(desc_str);
+	int start_pos = 0;
+	while (print_length > 0) {
+		char *temp_str = strdup(desc_str + start_pos);
+		if (strlen(temp_str) > desc_length) {
+			temp_str[desc_length] = '\0';
+		}
+		mvwprintw(window, *row, SINGLETRACK_HELP_DESC_COL, temp_str);
+		free(temp_str);
+		start_pos += desc_length;
+		print_length -= desc_length;
+		(*row)++;
+	}
+}
+
+/**
+ * Display singletrack help window.
+ **/
+void singletrack_help()
+{
+	//prepare help window
+	WINDOW *help_window = newwin(LINES, SINGLETRACK_HELP_WIDTH, SINGLETRACK_HELP_ROW, SINGLETRACK_HELP_COL);
+
+	//print help information
+	int row = 1;
+	singletrack_help_print_keyhint(help_window, &row, "q/ESC", "Escape single track mode");
+	singletrack_help_print_keyhint(help_window, &row, "+/-", "Next/previous satellite");
+	singletrack_help_print_keyhint(help_window, &row, "Key left/Key right", "---------- \"\" ---------");
+	singletrack_help_print_keyhint(help_window, &row, "SPACE", "Next transponder");
+	row++;
+	singletrack_help_print_keyhint(help_window, &row, "Key down/key up", "Step through defined frequency range in 1 KHz steps");
+	singletrack_help_print_keyhint(help_window, &row, "</>", "------------------------ \"\" -----------------------");
+	singletrack_help_print_keyhint(help_window, &row, ",/.", "Step through defined frequency range in 100 Hz steps");
+	row++;
+	singletrack_help_print_keyhint(help_window, &row, "d/D", "Turn on/off downlink frequency updates to rigctld");
+	singletrack_help_print_keyhint(help_window, &row, "u/U", "Turn on/off uplink frequency updates to rigctld");
+	singletrack_help_print_keyhint(help_window, &row, "f", "Turn on downlink and uplink frequency updates to rigctld ");
+	singletrack_help_print_keyhint(help_window, &row, "f/F", "Overwrite current uplink and downlink frequencies with thecurrent frequency in the rig (inversely doppler-corrected)");
+	singletrack_help_print_keyhint(help_window, &row, "m/M", "Turns on/off a continuous version of the above");
+	singletrack_help_print_keyhint(help_window, &row, "x", "Reverse downlink and uplink VFO names");
+	row++;
+	mvwprintw(help_window, row++, 1, "Press any key to continue");
+	wresize(help_window, row+1, SINGLETRACK_HELP_WIDTH);
+	wattrset(help_window, COLOR_PAIR(4));
+	box(help_window, 0, 0);
+	wrefresh(help_window);
+
+	cbreak(); //turn off halfdelay mode so that getch blocks
+	getch();
+
+	delwin(help_window);
 }
 
 void SingleTrack(int orbit_ind, predict_observer_t *qth, struct transponder_db *sat_db, struct tle_db *tle_db, rotctld_info_t *rotctld, rigctld_info_t *downlink_info, rigctld_info_t *uplink_info)
@@ -1495,18 +1584,22 @@ void SingleTrack(int orbit_ind, predict_observer_t *qth, struct transponder_db *
 			refresh();
 
 			if ((ans == KEY_LEFT) || (ans == '-')) {
-				orbit_ind = get_next_enabled_satellite(orbit_ind, -1, tle_db);
+				orbit_ind = singletrack_get_next_enabled_satellite(orbit_ind, -1, tle_db);
 			}
 
 			if ((ans == KEY_RIGHT) || (ans == '+')) {
-				orbit_ind = get_next_enabled_satellite(orbit_ind, +1, tle_db);
+				orbit_ind = singletrack_get_next_enabled_satellite(orbit_ind, +1, tle_db);
+			}
+
+			if (ans == SINGLETRACK_HELP_KEY) {
+				singletrack_help();
 			}
 
 			halfdelay(HALF_DELAY_TIME);
 
 		} while (ans!='q' && ans!='Q' && ans!=27 &&
 		 	ans!='+' && ans!='-' &&
-		 	ans!=KEY_LEFT && ans!=KEY_RIGHT);
+			ans!=KEY_LEFT && ans!=KEY_RIGHT && ans!=SINGLETRACK_HELP_KEY);
 
 		predict_destroy_orbital_elements(orbital_elements);
 	} while (ans!='q' && ans!=17);
