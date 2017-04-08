@@ -876,6 +876,17 @@ void ShowOrbitData(const char *name, predict_orbital_elements_t *orbital_element
 	}
 }
 
+/**
+ * Convert maidenhead grid locator to WGS84 coordinates.
+ *
+ * \param locator Locator string
+ * \param ret_longitude Returned longitude
+ * \param ret_latitude Returned latitude
+ **/
+void maidenhead_to_coordinates(const char *locator, double *ret_longitude, double *ret_latitude)
+{
+}
+
 #define QTH_FIELD_LENGTH 10
 #define NUM_QTH_FIELDS 5
 #define INPUT_NUM_CHARS 128
@@ -996,6 +1007,7 @@ void QthEdit(const char *qthfile, predict_observer_t *qth)
 				if (current_field(form) == locator) {
 					//update longitude and latitude fields using current locator value
 					double longitude_new = 0, latitude_new = 0;
+					maidenhead_to_coordinates(field_buffer(locator, 0), &longitude_new, &latitude_new);
 					char temp[MAX_NUM_CHARS];
 					snprintf(temp, MAX_NUM_CHARS, "%f", longitude_new);
 					set_field_buffer(longitude, 0, temp);
