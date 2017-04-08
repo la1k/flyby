@@ -982,6 +982,7 @@ void QthEdit(const char *qthfile, predict_observer_t *qth)
 	set_field_buffer(longitude, 0, temp);
 	snprintf(temp, MAX_NUM_CHARS, "%f", qth->altitude);
 	set_field_buffer(altitude, 0, temp);
+	update_locator_field_from_latlon(longitude, latitude, locator);
 
 	refresh();
 	wrefresh(form_win);
