@@ -1023,7 +1023,7 @@ void QthEdit(const char *qthfile, predict_observer_t *qth)
  * \param tle_db TLE database
  * \return Next entry in step direction which is enabled, or curr_index if none was found
  **/
-int get_next_enabled_satellite(int curr_index, int step, struct tle_db *tle_db)
+int singletrack_get_next_enabled_satellite(int curr_index, int step, struct tle_db *tle_db)
 {
 	int index = curr_index;
 	index += step;
@@ -1034,6 +1034,26 @@ int get_next_enabled_satellite(int curr_index, int step, struct tle_db *tle_db)
 		index += step;
 	}
 	return curr_index;
+}
+
+#define SINGLETRACK_HELP_HEIGHT 30
+#define SINGLETRACK_HELP_WIDTH 40
+#define SINGLETRACK_HELP_KEY 'h'
+
+void singletrack_help()
+{
+	cbreak(); //turn off halfdelay mode so that getch blocks
+
+	WINDOW *help_window = newwin(SINGLETRACK_HELP_HEIGHT, SINGLETRACK_HELP_WIDTH, 0, 0);
+
+	wattrset(help_window, COLOR_PAIR(4));
+	box(help_window, 0, 0);
+
+	wrefresh(help_window);
+	getch();
+
+	delwin(help_window);
+
 }
 
 void SingleTrack(int orbit_ind, predict_observer_t *qth, struct transponder_db *sat_db, struct tle_db *tle_db, rotctld_info_t *rotctld, rigctld_info_t *downlink_info, rigctld_info_t *uplink_info)
@@ -1495,18 +1515,22 @@ void SingleTrack(int orbit_ind, predict_observer_t *qth, struct transponder_db *
 			refresh();
 
 			if ((ans == KEY_LEFT) || (ans == '-')) {
-				orbit_ind = get_next_enabled_satellite(orbit_ind, -1, tle_db);
+				orbit_ind = singletrack_get_next_enabled_satellite(orbit_ind, -1, tle_db);
 			}
 
 			if ((ans == KEY_RIGHT) || (ans == '+')) {
-				orbit_ind = get_next_enabled_satellite(orbit_ind, +1, tle_db);
+				orbit_ind = singletrack_get_next_enabled_satellite(orbit_ind, +1, tle_db);
+			}
+
+			if (ans == SINGLETRACK_HELP_KEY) {
+				singletrack_help();
 			}
 
 			halfdelay(HALF_DELAY_TIME);
 
 		} while (ans!='q' && ans!='Q' && ans!=27 &&
 		 	ans!='+' && ans!='-' &&
-		 	ans!=KEY_LEFT && ans!=KEY_RIGHT);
+			ans!=KEY_LEFT && ans!=KEY_RIGHT && ans!=SINGLETRACK_HELP_KEY);
 
 		predict_destroy_orbital_elements(orbital_elements);
 	} while (ans!='q' && ans!=17);
