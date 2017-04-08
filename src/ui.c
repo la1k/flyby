@@ -1759,8 +1759,10 @@ void prepare_pattern(char *string)
 	}
 }
 
+//column at which to print keyhints in whitelist
 #define WHITELIST_KEYHINT_COL 42
 
+//row at which to print info whether only entries with transponders are displayed
 #define WHITELIST_TRANSPONDER_TOGGLE_INFO_ROW 24
 
 void EditWhitelist(struct tle_db *tle_db, const struct transponder_db *transponder_db)
