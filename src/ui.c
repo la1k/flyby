@@ -1835,7 +1835,8 @@ void EditWhitelist(struct tle_db *tle_db, const struct transponder_db *transpond
 		int col = WHITELIST_KEYHINT_COL;
 		row = 5;
 		mvprintw( 6,col,"Use upper-case characters to ");
-		mvprintw( 7,col,"filter satellites by name.");
+		mvprintw( 7,col,"filter satellites by name,");
+		mvprintw( 8,col,"satellite number or TLE filename.");
 
 
 		mvprintw( 10,col,"Use cursor keys to move up/down");
@@ -1848,7 +1849,7 @@ void EditWhitelist(struct tle_db *tle_db, const struct transponder_db *transpond
 		mvprintw( 19,col,"Press  w  to wipe query field.");
 		mvprintw( 21,col,"Press  t  to enable/disable");
 		mvprintw( 22,col,"transponder filter.");
-		mvprintw(5, 6, "Filter TLEs by name:");
+		mvprintw(5, 6, "Filter TLEs by string:");
 		row = 18;
 
 		/* Print keyboard bindings in special format */
