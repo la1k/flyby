@@ -887,6 +887,26 @@ void maidenhead_to_coordinates(const char *locator, double *ret_longitude, doubl
 {
 }
 
+void update_latlon_fields_from_locator(FIELD *locator, FIELD *longitude, FIELD *latitude)
+{
+	double longitude_new = 0, latitude_new = 0;
+	maidenhead_to_coordinates(field_buffer(locator, 0), &longitude_new, &latitude_new);
+	char temp[MAX_NUM_CHARS];
+	snprintf(temp, MAX_NUM_CHARS, "%f", longitude_new);
+	set_field_buffer(longitude, 0, temp);
+	snprintf(temp, MAX_NUM_CHARS, "%f", latitude_new);
+	set_field_buffer(latitude, 0, temp);
+}
+
+void update_locator_field_from_latlon(FIELD *longitude, FIELD *latitude, FIELD *locator)
+{
+	double curr_longitude = strtod(field_buffer(longitude, 0), NULL);
+	double curr_latitude = strtod(field_buffer(latitude, 0), NULL);
+	char locator_str[MAX_NUM_CHARS];
+	getMaidenHead(curr_latitude, -curr_longitude, locator_str);
+	set_field_buffer(locator, 0, locator_str);
+}
+
 #define QTH_FIELD_LENGTH 10
 #define NUM_QTH_FIELDS 5
 #define INPUT_NUM_CHARS 128
@@ -994,6 +1014,11 @@ void QthEdit(const char *qthfile, predict_observer_t *qth)
 			case KEY_BACKSPACE:
 				form_driver(form, REQ_DEL_PREV);
 				form_driver(form, REQ_VALIDATION);
+				if (current_field(form) == locator) {
+					update_latlon_fields_from_locator(locator, longitude, latitude);
+				} else {
+					update_locator_field_from_latlon(longitude, latitude, locator);
+				}
 				break;
 			case KEY_DC:
 				form_driver(form, REQ_DEL_CHAR);
@@ -1005,21 +1030,9 @@ void QthEdit(const char *qthfile, predict_observer_t *qth)
 				form_driver(form, key);
 				form_driver(form, REQ_VALIDATION); //update buffer with field contents
 				if (current_field(form) == locator) {
-					//update longitude and latitude fields using current locator value
-					double longitude_new = 0, latitude_new = 0;
-					maidenhead_to_coordinates(field_buffer(locator, 0), &longitude_new, &latitude_new);
-					char temp[MAX_NUM_CHARS];
-					snprintf(temp, MAX_NUM_CHARS, "%f", longitude_new);
-					set_field_buffer(longitude, 0, temp);
-					snprintf(temp, MAX_NUM_CHARS, "%f", latitude_new);
-					set_field_buffer(latitude, 0, temp);
+					update_latlon_fields_from_locator(locator, longitude, latitude);
 				} else {
-					//update locator value
-					double curr_longitude = strtod(field_buffer(longitude, 0), NULL);
-					double curr_latitude = strtod(field_buffer(latitude, 0), NULL);
-					char locator_str[MAX_NUM_CHARS];
-					getMaidenHead(curr_latitude, -curr_longitude, locator_str);
-					set_field_buffer(locator, 0, locator_str);
+					update_locator_field_from_latlon(longitude, latitude, locator);
 				}
 
 				break;
