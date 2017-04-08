@@ -4,6 +4,7 @@
 #include "defines.h"
 #include "string_array.h"
 #include "tle_db.h"
+#include "transponder_db.h"
 
 /**
  * Entry in filter-enabled menu.
@@ -35,8 +36,10 @@ struct filtered_menu {
 	int *inverse_entry_mapping;
 	///name of currently/last marked item (used for keeping cursor position)
 	char curr_item[MAX_NUM_CHARS];
-	///Subwindow used for MENU
+	///subwindow used for MENU
 	WINDOW *sub_window;
+	///whether only entries with nonzero number of transponders should be displayed
+	bool display_only_entries_with_transponders;
 };
 
 /**
@@ -90,12 +93,31 @@ void filtered_menu_select_index(struct filtered_menu *list, int index);
 void filtered_menu_free(struct filtered_menu *list);
 
 /**
- * Filter displayed menu entries based on input pattern.
+ * Filter displayed menu entries based on their associated names within
+ * the menu struct and the input pattern.
  *
  * \param list Menu struct
  * \param pattern Pattern string
  **/
-void filtered_menu_pattern_match(struct filtered_menu *list, const char *pattern);
+void filtered_menu_simple_pattern_match(struct filtered_menu *list, const char *pattern);
+
+/**
+ * Filter displayed menu entries according to satellite name, TLE filename or satellite number. If display_only_entries_with_transponders is enabled, the transponder database will be used to filter down to entries with nonzero number of transponders in addition to the input pattern.
+ *
+ * \param list Filtered menu
+ * \param tle_db TLE database
+ * \param transponder_db Transponder database
+ * \param pattern Search pattern
+ **/
+void filtered_menu_pattern_match(struct filtered_menu *list, const struct tle_db *tle_db, const struct transponder_db *transponder_db, const char *pattern);
+
+/**
+ * Enable/disable transponder entry filtering: When filtered_menu_pattern_match() is used to filter satellites, show only satellites with transponders enabled.
+ *
+ * \param list Filtered menu
+ * \param on Set to true to enable, false for disabling
+ **/
+void filtered_menu_only_comsats(struct filtered_menu *list, bool on);
 
 /**
  * Filter displayed menu entries according to whitelist field in TLE db.

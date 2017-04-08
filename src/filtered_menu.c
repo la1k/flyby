@@ -4,6 +4,7 @@
 #include <libgen.h>
 #include "defines.h"
 #include "tle_db.h"
+#include <ctype.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -22,6 +23,23 @@ void free_menu_items(ITEM ***items)
 	}
 
 	free(*items);
+}
+
+/**
+ * Change case of string to uppercase.
+ *
+ * \param input Input string
+ * \return String with all characters set to uppercase. Has to be freed manually.
+ **/
+char *str_to_uppercase(const char *input)
+{
+	char *ret_str = strdup(input);
+	for (int i=0; i < strlen(ret_str); i++) {
+		if (isalpha(ret_str[i])) {
+			ret_str[i] = toupper(ret_str[i]);
+		}
+	}
+	return ret_str;
 }
 
 bool pattern_match(const char *string, const char *pattern)
@@ -112,7 +130,7 @@ void filtered_menu_update(struct filtered_menu *list, bool *items_to_display)
 	}
 }
 
-void filtered_menu_pattern_match(struct filtered_menu *list, const char *pattern)
+void filtered_menu_simple_pattern_match(struct filtered_menu *list, const char *pattern)
 {
 	//get boolean array over entries to display or not
 	bool *display_items = (bool*)malloc(sizeof(bool)*list->num_entries);
@@ -127,6 +145,48 @@ void filtered_menu_pattern_match(struct filtered_menu *list, const char *pattern
 	filtered_menu_update(list, display_items);
 
 	free(display_items);
+}
+
+void filtered_menu_pattern_match(struct filtered_menu *list, const struct tle_db *tle_db, const struct transponder_db *transponder_db, const char *pattern)
+{
+	//get boolean array over entries to display or not
+	bool *display_items = (bool*)malloc(sizeof(bool)*list->num_entries);
+	for (int i = 0; i < list->num_entries; ++i) {
+		display_items[i] = false;
+
+		if (list->display_only_entries_with_transponders && (transponder_db->sats[i].num_transponders == 0)) {
+			continue;
+		}
+
+		//check against display name
+		if (pattern_match(list->entries[i].displayed_name, pattern)) {
+			display_items[i] = true;
+		}
+
+		//check against TLE filename
+		char *fname_uppercase = str_to_uppercase(tle_db->tles[i].filename);
+		if (pattern_match(fname_uppercase, pattern)) {
+			display_items[i] = true;
+		}
+		free(fname_uppercase);
+
+		//check against satellite number
+		char satnum_str[MAX_NUM_CHARS];
+		snprintf(satnum_str, MAX_NUM_CHARS, "%ld", tle_db->tles[i].satellite_number);
+		if (pattern_match(satnum_str, pattern)) {
+			display_items[i] = true;
+		}
+	}
+
+	//update menu
+	filtered_menu_update(list, display_items);
+
+	free(display_items);
+}
+
+void filtered_menu_only_comsats(struct filtered_menu *list, bool on)
+{
+	list->display_only_entries_with_transponders = on;
 }
 
 void filtered_menu_from_stringarray(struct filtered_menu *list, string_array_t *names, WINDOW *my_menu_win)
@@ -165,7 +225,9 @@ void filtered_menu_from_stringarray(struct filtered_menu *list, string_array_t *
 	post_menu(my_menu);
 
 	//display all items, ensure the rest of the variables are correctly set
-	filtered_menu_pattern_match(list, "");
+	filtered_menu_simple_pattern_match(list, "");
+
+	list->display_only_entries_with_transponders = false;
 }
 
 void filtered_menu_from_tle_db(struct filtered_menu *list, const struct tle_db *db, WINDOW *my_menu_win)
@@ -180,7 +242,7 @@ void filtered_menu_from_tle_db(struct filtered_menu *list, const struct tle_db *
 	for (int i=0; i < db->num_tles; i++) {
 		list->entries[i].enabled = tle_db_entry_enabled(db, i);
 	}
-	filtered_menu_pattern_match(list, "");
+	filtered_menu_simple_pattern_match(list, "");
 
 	string_array_free(&string_list);
 }
