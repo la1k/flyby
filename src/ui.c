@@ -1407,7 +1407,7 @@ void SingleTrack(int orbit_ind, predict_observer_t *qth, struct transponder_db *
 
 					if (downlink!=0.0) {
 						dopp=1.0e-08*(doppler100*downlink);
-						mvprintw(12,32,"%11.5f MHz",downlink+dopp);
+						mvprintw(12,32,"%11.5f MHz",downlink+predict_doppler_shift(qth, &orbit, downlink));
 						loss=32.4+(20.0*log10(downlink))+(20.0*log10(obs.range));
 						mvprintw(12,67,"%7.3f dB",loss);
 						mvprintw(13,13,"%7.3f   ms",delay);
@@ -1423,7 +1423,7 @@ void SingleTrack(int orbit_ind, predict_observer_t *qth, struct transponder_db *
 					}
 					if (uplink!=0.0) {
 						dopp=1.0e-08*(doppler100*uplink);
-						mvprintw(11,32,"%11.5f MHz",uplink-dopp);
+						mvprintw(11,32,"%11.5f MHz",uplink-predict_doppler_shift(qth, &orbit, uplink));
 						loss=32.4+(20.0*log10(uplink))+(20.0*log10(obs.range));
 						mvprintw(11,67,"%7.3f dB",loss);
 						if (uplink_info->connected && uplink_update)
