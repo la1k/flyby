@@ -484,9 +484,9 @@ void multitrack_update_entry(predict_observer_t *qth, multitrack_entry_t *entry,
 			gmtime_r(&epoch, &timeval);
 			if ((entry->next_los - time) > 1.0) {
 				int num_days = (entry->next_los - time);
-				snprintf(aos_los, MAX_NUM_CHARS, "%d days", num_days);
+				snprintf(aos_los, MAX_NUM_CHARS, ">%2.dd", num_days);
 			} else if (timeval.tm_hour > 0) {
-				strftime(aos_los, MAX_NUM_CHARS, "%H:%M:%S", &timeval);
+				strftime(aos_los, MAX_NUM_CHARS, ">%kh", &timeval);
 			} else {
 				strftime(aos_los, MAX_NUM_CHARS, "%M:%S", &timeval);
 			}
@@ -506,13 +506,13 @@ void multitrack_update_entry(predict_observer_t *qth, multitrack_entry_t *entry,
 			struct tm aostime, currtime;
 			gmtime_r(&aoslos_epoch, &aostime);
 			gmtime_r(&curr_epoch, &currtime);
-			aostime.tm_yday = aostime.tm_yday - currtime.tm_yday;
 			char temp[MAX_NUM_CHARS];
 			strftime(temp, MAX_NUM_CHARS, "%H:%MZ", &aostime);
-			if (aostime.tm_yday == 0) {
+			int num_days = entry->next_aos - time;
+			if (num_days == 0) {
 				strncpy(aos_los, temp, MAX_NUM_CHARS);
 			} else {
-				snprintf(aos_los, MAX_NUM_CHARS, "+%dd %s", aostime.tm_yday, temp);
+				snprintf(aos_los, MAX_NUM_CHARS, ">%2.dd", num_days);
 			}
 		}
 	} else if (!can_predict) {
