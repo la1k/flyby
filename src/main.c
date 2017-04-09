@@ -306,6 +306,9 @@ void show_help(const char *name, struct option long_options[], const char *short
 
 		//display usage information
 		switch (long_options[index].val) {
+			case FLYBY_OPT_ADD_TLE:
+				printf("=FILE\t\t\tadd TLE file to flyby's TLE database.");
+				break;
 			case 'u':
 				printf("=FILE\t\tupdate TLE database with TLE file FILE. Multiple files can be specified using the same option multiple times (e.g. -u file1 -u file2 ...). %s will exit afterwards", name);
 				break;
