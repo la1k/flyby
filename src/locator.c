@@ -59,35 +59,15 @@ void maidenhead_to_latlon(const char *locator, double *ret_longitude, double *re
 
 	double mLng = 0, mLtd = 0;
 	int pos = 0;
-	if (strlen(locator) > pos) {
-		i = (int)(toupper(locator[pos]) - 'A');
-		mLng = i*20.0;
-	}
-	pos++;
-	if (strlen(locator) > pos) {
-		j = (int)(toupper(locator[pos]) - 'A');
-		mLtd = j*10.0;
-	}
-	pos++;
-	if (strlen(locator) > pos) {
-		k = (int)(locator[pos] - '0');
-		mLng += k*2.0;
-	}
-	pos++;
-	if (strlen(locator) > pos) {
-		l = (int)(locator[pos] - '0');
-		mLtd += l*1.0;
-	}
-	pos++;
-	if (strlen(locator) > pos) {
-		m = (int)(toupper(locator[pos]) - 'A');
-		mLng += (m+0.5)/12.0;
-	}
-	pos++;
-	if (strlen(locator) > pos) {
-		n = (int)(toupper(locator[pos]) - 'A');
-		mLtd += (n+0.5)/24.0;
-	}
+	if (strlen(locator) > pos) i = (int)(toupper(locator[pos]) - 'A');
+	if (strlen(locator) > ++pos) j = (int)(toupper(locator[pos]) - 'A');
+	if (strlen(locator) > ++pos) k = (int)(locator[pos] - '0');
+	if (strlen(locator) > ++pos) l = (int)(locator[pos] - '0');
+	if (strlen(locator) > ++pos) m = (int)(toupper(locator[pos]) - 'A');
+	if (strlen(locator) > ++pos) n = (int)(toupper(locator[pos]) - 'A');
+
+	mLng = i*20.0 + k*2.0 + (m+0.5)/12.0;
+	mLtd = j*10.0 + l*1.0 + (n+0.5)/24.0;
 	*ret_longitude = mLng - 180.0;
 	*ret_latitude = mLtd - 90.0;
 }
