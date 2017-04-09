@@ -48,5 +48,5 @@ add_test(NAME transponder-db COMMAND transponder-db-t)
 
 #locator test
 add_executable(locator-conversion-t locator-conversion-t.c ${CMAKE_SOURCE_DIR}/src/locator.c)
-target_link_libraries(locator-conversion-t ${CMOCKA_LIBRARY})
+target_link_libraries(locator-conversion-t ${CMOCKA_LIBRARY} m)
 add_test(NAME locator-conversion COMMAND locator-conversion-t)
