@@ -80,9 +80,10 @@ double reduce(double value, double rangeMin, double rangeMax)
 	return(retval);
 }
 
-void getMaidenHead(double mLtd, double mLng, char* mStr)
+void latlon_to_maidenhead(double mLtd, double mLng, char* mStr)
 {
 	int i, j, k, l, m, n;
+	mLng = -mLng; //convert to N/W
 
 	mLng = reduce(180.0 - mLng, 0.0, 360.0);
 	mLtd = reduce(90.0 + mLtd, 0.0, 360.0);
@@ -109,6 +110,46 @@ void getMaidenHead(double mLtd, double mLng, char* mStr)
 		k, l,
 		tolower('A' + (char) m),
 		tolower('A' + (char) n));
+}
+
+void maidenhead_to_latlon(const char *locator, double *ret_longitude, double *ret_latitude)
+{
+	//using the same setup as in getMaidenhead defined above, and applying the algorithm in reverse
+	int i, j, k, l, m, n;
+
+	double mLng = 0, mLtd = 0;
+	int pos = 0;
+	if (strlen(locator) > pos+1) {
+		i = (int)(toupper(locator[pos]) - 'A');
+		mLng = i*20.0;
+	}
+	pos++;
+	if (strlen(locator) > pos+1) {
+		j = (int)(toupper(locator[pos]) - 'A');
+		mLtd = j*10.0;
+	}
+	pos++;
+	if (strlen(locator) > pos+1) {
+		k = (int)(locator[pos] - '0');
+		mLng += k*2.0;
+	}
+	pos++;
+	if (strlen(locator) > pos+1) {
+		l = (int)(locator[pos] - '0');
+		mLtd += l*1.0;
+	}
+	pos++;
+	if (strlen(locator) > pos+1) {
+		m = (int)(toupper(locator[pos]) - 'A');
+		mLng += m/12.0;
+	}
+	pos++;
+	if (strlen(locator) > pos+1) {
+		n = (int)(toupper(locator[pos]) - 'A');
+		mLtd += n/24.0;
+	}
+	*ret_longitude = -1*(180 + mLng);
+	*ret_latitude = 90 - mLtd;
 }
 
 void bailout(const char *string)
@@ -877,58 +918,10 @@ void ShowOrbitData(const char *name, predict_orbital_elements_t *orbital_element
 	}
 }
 
-/**
- * Convert maidenhead grid locator to WGS84 coordinates.
- *
- * \param locator Locator string
- * \param ret_longitude Returned longitude
- * \param ret_latitude Returned latitude
- **/
-void maidenhead_to_coordinates(const char *locator, double *ret_longitude, double *ret_latitude)
-{
-	//using the same setup as in getMaidenhead defined above, and applying the algorithm in reverse
-	int i, j, k, l, m, n;
-
-	double mLng = 0, mLtd = 0;
-	int pos = 0;
-	if (strlen(locator) > pos+1) {
-		i = (int)(toupper(locator[pos]) - 'A');
-		mLng = i*20.0;
-	}
-	pos++;
-	if (strlen(locator) > pos+1) {
-		j = (int)(toupper(locator[pos]) - 'A');
-		mLtd = j*10.0;
-	}
-	pos++;
-	if (strlen(locator) > pos+1) {
-		k = (int)(locator[pos] - 'A');
-		mLng += k*2.0;
-	}
-	pos++;
-	if (strlen(locator) > pos+1) {
-		l = (int)(locator[pos] - 'A');
-		mLtd += l*1.0;
-	}
-	pos++;
-	if (strlen(locator) > pos+1) {
-		m = (int)(toupper(locator[pos]) - 'A');
-		mLng += m/12.0;
-	}
-	pos++;
-	if (strlen(locator) > pos+1) {
-		n = (int)(toupper(locator[pos]) - 'A');
-		mLtd += n/24.0;
-	}
-	*ret_longitude = -1*(180 + mLng);
-	*ret_latitude = 90 - mLtd;
-
-}
-
 void update_latlon_fields_from_locator(FIELD *locator, FIELD *longitude, FIELD *latitude)
 {
 	double longitude_new = 0, latitude_new = 0;
-	maidenhead_to_coordinates(field_buffer(locator, 0), &longitude_new, &latitude_new);
+	maidenhead_to_latlon(field_buffer(locator, 0), &longitude_new, &latitude_new);
 	char temp[MAX_NUM_CHARS];
 	snprintf(temp, MAX_NUM_CHARS, "%f", longitude_new);
 	set_field_buffer(longitude, 0, temp);
@@ -941,7 +934,7 @@ void update_locator_field_from_latlon(FIELD *longitude, FIELD *latitude, FIELD *
 	double curr_longitude = strtod(field_buffer(longitude, 0), NULL);
 	double curr_latitude = strtod(field_buffer(latitude, 0), NULL);
 	char locator_str[MAX_NUM_CHARS];
-	getMaidenHead(curr_latitude, -curr_longitude, locator_str);
+	latlon_to_maidenhead(curr_latitude, curr_longitude, locator_str);
 	set_field_buffer(locator, 0, locator_str);
 }
 
@@ -2473,7 +2466,7 @@ void PrintQth(int row, int col, predict_observer_t *qth)
 	attrset(COLOR_PAIR(2));
 	mvprintw(row++,col,"%9s",qth->name);
 	char maidenstr[9];
-	getMaidenHead(qth->latitude*180.0/M_PI, -qth->longitude*180.0/M_PI, maidenstr);
+	latlon_to_maidenhead(qth->latitude*180.0/M_PI, qth->longitude*180.0/M_PI, maidenstr);
 	mvprintw(row++,col,"%9s",maidenstr);
 }
 
