@@ -29,7 +29,6 @@ void latlon_to_maidenhead(double mLtd, double mLng, char* mStr)
 	mLng = reduce(180.0 - mLng, 0.0, 360.0);
 	mLtd = reduce(90.0 + mLtd, 0.0, 360.0);
 
-
 	i = (int) (mLng / 20.0);
 	j = (int) (mLtd / 10.0);
 
@@ -60,36 +59,36 @@ void maidenhead_to_latlon(const char *locator, double *ret_longitude, double *re
 
 	double mLng = 0, mLtd = 0;
 	int pos = 0;
-	if (strlen(locator) > pos+1) {
+	if (strlen(locator) > pos) {
 		i = (int)(toupper(locator[pos]) - 'A');
 		mLng = i*20.0;
 	}
 	pos++;
-	if (strlen(locator) > pos+1) {
+	if (strlen(locator) > pos) {
 		j = (int)(toupper(locator[pos]) - 'A');
 		mLtd = j*10.0;
 	}
 	pos++;
-	if (strlen(locator) > pos+1) {
+	if (strlen(locator) > pos) {
 		k = (int)(locator[pos] - '0');
 		mLng += k*2.0;
 	}
 	pos++;
-	if (strlen(locator) > pos+1) {
+	if (strlen(locator) > pos) {
 		l = (int)(locator[pos] - '0');
 		mLtd += l*1.0;
 	}
 	pos++;
-	if (strlen(locator) > pos+1) {
+	if (strlen(locator) > pos) {
 		m = (int)(toupper(locator[pos]) - 'A');
 		mLng += m/12.0;
 	}
 	pos++;
-	if (strlen(locator) > pos+1) {
+	if (strlen(locator) > pos) {
 		n = (int)(toupper(locator[pos]) - 'A');
 		mLtd += n/24.0;
 	}
-	*ret_longitude = -1*(180 + mLng);
-	*ret_latitude = 90 - mLtd;
+	*ret_longitude = mLng - 180.0;
+	*ret_latitude = mLtd - 90.0;
 }
 
