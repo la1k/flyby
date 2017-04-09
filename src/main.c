@@ -11,7 +11,9 @@
 #include "string_array.h"
 #include "qth_config.h"
 #include "tle_db.h"
+#include "xdg_basedirs.h"
 #include "transponder_db.h"
+#include <libgen.h>
 
 //longopt value identificators for command line options without shorthand
 #define FLYBY_OPT_ROTCTLD_PORT 201
@@ -20,6 +22,7 @@
 #define FLYBY_OPT_DOWNLINK_PORT 204
 #define FLYBY_OPT_DOWNLINK_VFO 205
 #define FLYBY_OPT_ROTCTLD_UPDATE_INTERVAL 206
+#define FLYBY_OPT_ADD_TLE 207
 
 /**
  * Print flyby program usage to stdout.
@@ -52,6 +55,7 @@ int main(int argc, char **argv)
 	char rigctld_downlink_vfo[MAX_NUM_CHARS] = {0};
 
 	//config files
+	string_array_t tle_add_filenames = {0}; //TLE files to be added to TLE database
 	string_array_t tle_update_filenames = {0}; //TLE files to be used to update the TLE databases
 	string_array_t tle_cmd_filenames = {0}; //TLE files supplied on the command line
 
@@ -60,6 +64,7 @@ int main(int argc, char **argv)
 
 	//command line options
 	struct option long_options[] = {
+		{"add-tle-file",		required_argument,	0,	FLYBY_OPT_ADD_TLE},
 		{"update-tle-db",		required_argument,	0,	'u'},
 		{"tle-file",			required_argument,	0,	't'},
 		{"qth-file",			required_argument,	0,	'q'},
@@ -87,6 +92,9 @@ int main(int argc, char **argv)
 		switch (c) {
 			case 'u': //updatefile
 				string_array_add(&tle_update_filenames, optarg);
+				break;
+			case FLYBY_OPT_ADD_TLE: //add TLE file
+				string_array_add(&tle_add_filenames, optarg);
 				break;
 			case 't': //tlefile
 				string_array_add(&tle_cmd_filenames, optarg);
@@ -133,6 +141,31 @@ int main(int argc, char **argv)
 				return 0;
 				break;
 		}
+	}
+
+	//add TLE files to XDG data home and exit
+	int num_tle_add_files = string_array_size(&tle_add_filenames);
+	if (num_tle_add_files > 0) {
+		create_xdg_dirs();
+		char *xdg_home = xdg_data_home();
+		for (int i=0; i < num_tle_add_files; i++) {
+			struct tle_db *temp_db = tle_db_create();
+			char *orig_filename = strdup(string_array_get(&tle_add_filenames, i));
+			int retval = tle_db_from_file(orig_filename, temp_db);
+			if (retval != -1) {
+				char *base_filename = basename(orig_filename);
+				char out_filename[MAX_NUM_CHARS];
+				snprintf(out_filename, MAX_NUM_CHARS, "%s%s%s", xdg_home, TLE_RELATIVE_DIR_PATH, base_filename);
+				tle_db_to_file(out_filename, temp_db);
+				fprintf(stderr, "Copy `%s` to `%s` (%d TLEs)\n", orig_filename, out_filename, temp_db->num_tles);
+			} else {
+				fprintf(stderr, "TLE file `%s` could not be loaded.\n", orig_filename);
+			}
+			tle_db_destroy(&temp_db);
+			free(orig_filename);
+		}
+		free(xdg_home);
+		return 0;
 	}
 
 	//read TLE database
@@ -273,6 +306,9 @@ void show_help(const char *name, struct option long_options[], const char *short
 
 		//display usage information
 		switch (long_options[index].val) {
+			case FLYBY_OPT_ADD_TLE:
+				printf("=FILE\t\t\tadd TLE file to flyby's TLE database.");
+				break;
 			case 'u':
 				printf("=FILE\t\tupdate TLE database with TLE file FILE. Multiple files can be specified using the same option multiple times (e.g. -u file1 -u file2 ...). %s will exit afterwards", name);
 				break;
