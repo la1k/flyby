@@ -1002,6 +1002,7 @@ void QthEdit(const char *qthfile, predict_observer_t *qth)
 	free_field(latitude);
 	free_field(longitude);
 	free_field(altitude);
+	free_field(locator);
 	free_form(form);
 	delwin(form_win);
 }
