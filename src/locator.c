@@ -81,12 +81,12 @@ void maidenhead_to_latlon(const char *locator, double *ret_longitude, double *re
 	pos++;
 	if (strlen(locator) > pos) {
 		m = (int)(toupper(locator[pos]) - 'A');
-		mLng += m/12.0;
+		mLng += (m+0.5)/12.0;
 	}
 	pos++;
 	if (strlen(locator) > pos) {
 		n = (int)(toupper(locator[pos]) - 'A');
-		mLtd += n/24.0;
+		mLtd += (n+0.5)/24.0;
 	}
 	*ret_longitude = mLng - 180.0;
 	*ret_latitude = mLtd - 90.0;
