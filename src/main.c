@@ -307,10 +307,10 @@ void show_help(const char *name, struct option long_options[], const char *short
 		//display usage information
 		switch (long_options[index].val) {
 			case FLYBY_OPT_ADD_TLE:
-				printf("=FILE\t\t\tadd TLE file to flyby's TLE database.");
+				printf("=FILE\t\t\tadd TLE file to flyby's TLE database. The base filename of the input file will be used for the internal file, so any existing file with this filename will be overwritten.");
 				break;
 			case 'u':
-				printf("=FILE\t\tupdate TLE database with TLE file FILE. Multiple files can be specified using the same option multiple times (e.g. -u file1 -u file2 ...). %s will exit afterwards", name);
+				printf("=FILE\t\tupdate TLE database with TLE file FILE. Multiple files can be specified using the same option multiple times (e.g. -u file1 -u file2 ...). %s will exit afterwards. Any new TLEs in the file will be ignored.", name);
 				break;
 			case 't':
 				printf("=FILE\t\t\tuse FILE as TLE database file. Overrides user and system TLE database files. Multiple files can be specified using this option multiple times (e.g. -t file1 -t file2 ...).");
