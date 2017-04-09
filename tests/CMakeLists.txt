@@ -45,3 +45,8 @@ configure_file(test_data/flyby.db.in test_data/flyby/flyby.db)
 add_executable(transponder-db-t transponder-db-t.c ${CMAKE_SOURCE_DIR}/src/transponder_db.c ${CMAKE_SOURCE_DIR}/src/string_array.c ${CMAKE_SOURCE_DIR}/src/tle_db.c)
 target_link_libraries(transponder-db-t ${CMOCKA_LIBRARY} predict)
 add_test(NAME transponder-db COMMAND transponder-db-t)
+
+#locator test
+add_executable(locator-conversion-t locator-conversion-t.c ${CMAKE_SOURCE_DIR}/src/locator.c)
+target_link_libraries(locator-conversion-t ${CMOCKA_LIBRARY})
+add_test(NAME locator-conversion COMMAND locator-conversion-t)
