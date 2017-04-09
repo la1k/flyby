@@ -471,6 +471,7 @@ void multitrack_update_entry(predict_observer_t *qth, multitrack_entry_t *entry,
 	//set text formatting attributes according to satellite state, set AOS/LOS string
 	bool can_predict = !predict_is_geostationary(entry->orbital_elements) && predict_aos_happens(entry->orbital_elements, qth->latitude) && !(orbit.decayed);
 	char aos_los[MAX_NUM_CHARS] = {0};
+
 	if (obs.elevation >= 0) {
 		//different colours according to range and elevation
 		entry->display_attributes = multitrack_colors(obs.range, obs.elevation*180/M_PI);
@@ -541,13 +542,18 @@ void multitrack_update_entry(predict_observer_t *qth, multitrack_entry_t *entry,
 		entry->max_elevation = observation.elevation;
 	}
 
+	char max_ele_str[MAX_NUM_CHARS] = {0};
+	if (can_predict) {
+		snprintf(max_ele_str, MAX_NUM_CHARS, "%d", (int)(entry->max_elevation*180.0/M_PI));
+	}
+
 	//altitude and range in km/miles
 	double disp_altitude = orbit.altitude;
 	double disp_range = obs.range;
 
 	//set string to display
 	char disp_string[MAX_NUM_CHARS];
-	sprintf(disp_string, " %-10.8s%5.1f  %5.1f %8s%6.0f %6.0f %c %c %12s ", entry->name, obs.azimuth*180.0/M_PI, obs.elevation*180.0/M_PI, abs_pos_string, disp_altitude, disp_range, sunstat, rangestat, aos_los);
+	sprintf(disp_string, " %-10.8s%5.1f  %5.1f %8s%6.0f %6.0f %c %c %3s%9s ", entry->name, obs.azimuth*180.0/M_PI, obs.elevation*180.0/M_PI, abs_pos_string, disp_altitude, disp_range, sunstat, rangestat, max_ele_str, aos_los);
 
 	//overwrite everything if orbit was decayed
 	if (orbit.decayed) {
