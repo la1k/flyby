@@ -58,57 +58,11 @@
 #include "qth_config.h"
 #include "transponder_editor.h"
 #include "multitrack.h"
+#include "locator.h"
 
 #define EARTH_RADIUS_KM		6.378137E3		/* WGS 84 Earth radius km */
 #define HALF_DELAY_TIME	5
 #define	KM_TO_MI		0.621371		/* km to miles */
-
-double reduce(double value, double rangeMin, double rangeMax)
-{
-	double range, rangeFrac, fullRanges, retval;
-
-	range     = rangeMax - rangeMin;
-	rangeFrac = (rangeMax - value) / range;
-
-	modf(rangeFrac,&fullRanges);
-
-	retval = value + fullRanges * range;
-
-	if (retval > rangeMax)
-		retval -= range;
-
-	return(retval);
-}
-
-void getMaidenHead(double mLtd, double mLng, char* mStr)
-{
-	int i, j, k, l, m, n;
-
-	mLng = reduce(180.0 - mLng, 0.0, 360.0);
-	mLtd = reduce(90.0 + mLtd, 0.0, 360.0);
-
-	i = (int) (mLng / 20.0);
-	j = (int) (mLtd / 10.0);
-
-	mLng -= (double) i * 20.0;
-	mLtd -= (double) j * 10.0;
-
-	k = (int) (mLng / 2.0);
-	l = (int) (mLtd / 1.0);
-
-	mLng -= (double) k * 2.0;
-	mLtd -= (double) l * 1.0;
-
-	m = (int) (mLng * 12.0);
-	n = (int) (mLtd * 24.0);
-
-	sprintf(mStr,"%c%c%d%d%c%c",
-		'A' + (char) i,
-		'A' + (char) j,
-		k, l,
-		tolower('A' + (char) m),
-		tolower('A' + (char) n));
-}
 
 void bailout(const char *string)
 {
@@ -876,8 +830,28 @@ void ShowOrbitData(const char *name, predict_orbital_elements_t *orbital_element
 	}
 }
 
+void update_latlon_fields_from_locator(FIELD *locator, FIELD *longitude, FIELD *latitude)
+{
+	double longitude_new = 0, latitude_new = 0;
+	maidenhead_to_latlon(field_buffer(locator, 0), &longitude_new, &latitude_new);
+	char temp[MAX_NUM_CHARS];
+	snprintf(temp, MAX_NUM_CHARS, "%f", longitude_new);
+	set_field_buffer(longitude, 0, temp);
+	snprintf(temp, MAX_NUM_CHARS, "%f", latitude_new);
+	set_field_buffer(latitude, 0, temp);
+}
+
+void update_locator_field_from_latlon(FIELD *longitude, FIELD *latitude, FIELD *locator)
+{
+	double curr_longitude = strtod(field_buffer(longitude, 0), NULL);
+	double curr_latitude = strtod(field_buffer(latitude, 0), NULL);
+	char locator_str[MAX_NUM_CHARS];
+	latlon_to_maidenhead(curr_latitude, curr_longitude, locator_str);
+	set_field_buffer(locator, 0, locator_str);
+}
+
 #define QTH_FIELD_LENGTH 10
-#define NUM_QTH_FIELDS 4
+#define NUM_QTH_FIELDS 5
 #define INPUT_NUM_CHARS 128
 void QthEdit(const char *qthfile, predict_observer_t *qth)
 {
@@ -898,11 +872,13 @@ void QthEdit(const char *qthfile, predict_observer_t *qth)
 		new_field(1, QTH_FIELD_LENGTH, 1, 0, 0, 0),
 		new_field(1, QTH_FIELD_LENGTH, 2, 0, 0, 0),
 		new_field(1, QTH_FIELD_LENGTH, 3, 0, 0, 0),
+		new_field(1, QTH_FIELD_LENGTH, 4, 0, 0, 0),
 		NULL};
 	FIELD *name = fields[0];
-	FIELD *latitude = fields[1];
-	FIELD *longitude = fields[2];
-	FIELD *altitude = fields[3];
+	FIELD *locator = fields[1];
+	FIELD *latitude = fields[2];
+	FIELD *longitude = fields[3];
+	FIELD *altitude = fields[4];
 	FORM *form = new_form(fields);
 	for (int i=0; i < NUM_QTH_FIELDS; i++) {
 		set_field_fore(fields[i], COLOR_PAIR(2)|A_BOLD);
@@ -911,7 +887,7 @@ void QthEdit(const char *qthfile, predict_observer_t *qth)
 	}
 
 	//set up windows
-	int win_height = 5;
+	int win_height = NUM_QTH_FIELDS+1;
 	int win_width = QTH_FIELD_LENGTH;
 	int win_row = 11;
 	int win_col = 40;
@@ -927,17 +903,20 @@ void QthEdit(const char *qthfile, predict_observer_t *qth)
 	attrset(COLOR_PAIR(4)|A_BOLD);
 	int info_col = 20;
 	mvprintw(win_row,info_col,"Station Callsign  : ");
-	mvprintw(win_row+1,info_col,"Station Latitude  : ");
-	mvprintw(win_row+2,info_col,"Station Longitude : ");
-	mvprintw(win_row+3,info_col,"Station Altitude  : ");
+	mvprintw(win_row+1,info_col,"Station Locator   : ");
+	mvprintw(win_row+2,info_col,"Station Latitude  : ");
+	mvprintw(win_row+3,info_col,"Station Longitude : ");
+	mvprintw(win_row+4,info_col,"Station Altitude  : ");
 	mvprintw(win_row+6,info_col-5," Only decimal notation (e.g. 74.2467) allowed");
 	mvprintw(win_row+7,info_col-5," for longitude and latitude.");
+	mvprintw(win_row+9,info_col-5," Navigate using keypad or ENTER. Press ENTER");
+	mvprintw(win_row+10,info_col-5," on last field or ESC to save and exit.");
 
 	//print units
 	attrset(COLOR_PAIR(2)|A_BOLD);
-	mvprintw(win_row+1,win_col+win_width+1,"[DegN]",qth->latitude*180.0/M_PI);
-	mvprintw(win_row+2,win_col+win_width+1,"[DegE]",qth->longitude*180.0/M_PI);
-	mvprintw(win_row+3,win_col+win_width+1,"[m]",qth->altitude);
+	mvprintw(win_row+2,win_col+win_width+1,"[DegN]",qth->latitude*180.0/M_PI);
+	mvprintw(win_row+3,win_col+win_width+1,"[DegE]",qth->longitude*180.0/M_PI);
+	mvprintw(win_row+4,win_col+win_width+1,"[m]",qth->altitude);
 
 	//fill form with QTH contents
 	set_field_buffer(name, 0, qth->name);
@@ -948,6 +927,7 @@ void QthEdit(const char *qthfile, predict_observer_t *qth)
 	set_field_buffer(longitude, 0, temp);
 	snprintf(temp, MAX_NUM_CHARS, "%f", qth->altitude);
 	set_field_buffer(altitude, 0, temp);
+	update_locator_field_from_latlon(longitude, latitude, locator);
 
 	refresh();
 	wrefresh(form_win);
@@ -980,6 +960,11 @@ void QthEdit(const char *qthfile, predict_observer_t *qth)
 			case KEY_BACKSPACE:
 				form_driver(form, REQ_DEL_PREV);
 				form_driver(form, REQ_VALIDATION);
+				if (current_field(form) == locator) {
+					update_latlon_fields_from_locator(locator, longitude, latitude);
+				} else {
+					update_locator_field_from_latlon(longitude, latitude, locator);
+				}
 				break;
 			case KEY_DC:
 				form_driver(form, REQ_DEL_CHAR);
@@ -990,6 +975,12 @@ void QthEdit(const char *qthfile, predict_observer_t *qth)
 			default:
 				form_driver(form, key);
 				form_driver(form, REQ_VALIDATION); //update buffer with field contents
+				if (current_field(form) == locator) {
+					update_latlon_fields_from_locator(locator, longitude, latitude);
+				} else {
+					update_locator_field_from_latlon(longitude, latitude, locator);
+				}
+
 				break;
 		}
 	}
@@ -1011,6 +1002,7 @@ void QthEdit(const char *qthfile, predict_observer_t *qth)
 	free_field(latitude);
 	free_field(longitude);
 	free_field(altitude);
+	free_field(locator);
 	free_form(form);
 	delwin(form_win);
 }
@@ -2389,7 +2381,7 @@ void PrintQth(int row, int col, predict_observer_t *qth)
 	attrset(COLOR_PAIR(2));
 	mvprintw(row++,col,"%9s",qth->name);
 	char maidenstr[9];
-	getMaidenHead(qth->latitude*180.0/M_PI, -qth->longitude*180.0/M_PI, maidenstr);
+	latlon_to_maidenhead(qth->latitude*180.0/M_PI, qth->longitude*180.0/M_PI, maidenstr);
 	mvprintw(row++,col,"%9s",maidenstr);
 }
 
