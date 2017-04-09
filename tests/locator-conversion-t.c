@@ -31,10 +31,6 @@ void maidenhead_to_latlon_yields_same_maidenhead(void **params)
 	double newlat = 0, newlon = 0;
 	maidenhead_to_latlon(expected_locator, &newlon, &newlat);
 
-	//check that coordinates roughly correspond
-	assert_int_equal(floor(latitude), floor(newlat));
-	assert_int_equal(floor(longitude), floor(newlon));
-
 	//check that we get the same locator string from these coordinates
 	char newloc[MAX_NUM_CHARS] = {0};
 	latlon_to_maidenhead(newlat, newlon, newloc);
