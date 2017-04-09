@@ -875,10 +875,10 @@ void QthEdit(const char *qthfile, predict_observer_t *qth)
 		new_field(1, QTH_FIELD_LENGTH, 4, 0, 0, 0),
 		NULL};
 	FIELD *name = fields[0];
-	FIELD *latitude = fields[1];
-	FIELD *longitude = fields[2];
-	FIELD *altitude = fields[3];
-	FIELD *locator = fields[4];
+	FIELD *locator = fields[1];
+	FIELD *latitude = fields[2];
+	FIELD *longitude = fields[3];
+	FIELD *altitude = fields[4];
 	FORM *form = new_form(fields);
 	for (int i=0; i < NUM_QTH_FIELDS; i++) {
 		set_field_fore(fields[i], COLOR_PAIR(2)|A_BOLD);
@@ -903,18 +903,20 @@ void QthEdit(const char *qthfile, predict_observer_t *qth)
 	attrset(COLOR_PAIR(4)|A_BOLD);
 	int info_col = 20;
 	mvprintw(win_row,info_col,"Station Callsign  : ");
-	mvprintw(win_row+1,info_col,"Station Latitude  : ");
-	mvprintw(win_row+2,info_col,"Station Longitude : ");
-	mvprintw(win_row+3,info_col,"Station Altitude  : ");
-	mvprintw(win_row+4,info_col,"Locator           : ");
+	mvprintw(win_row+1,info_col,"Station Locator   : ");
+	mvprintw(win_row+2,info_col,"Station Latitude  : ");
+	mvprintw(win_row+3,info_col,"Station Longitude : ");
+	mvprintw(win_row+4,info_col,"Station Altitude  : ");
 	mvprintw(win_row+6,info_col-5," Only decimal notation (e.g. 74.2467) allowed");
 	mvprintw(win_row+7,info_col-5," for longitude and latitude.");
+	mvprintw(win_row+9,info_col-5," Navigate using keypad or ENTER. Press ENTER");
+	mvprintw(win_row+10,info_col-5," on last field or ESC to save and exit.");
 
 	//print units
 	attrset(COLOR_PAIR(2)|A_BOLD);
-	mvprintw(win_row+1,win_col+win_width+1,"[DegN]",qth->latitude*180.0/M_PI);
-	mvprintw(win_row+2,win_col+win_width+1,"[DegE]",qth->longitude*180.0/M_PI);
-	mvprintw(win_row+3,win_col+win_width+1,"[m]",qth->altitude);
+	mvprintw(win_row+2,win_col+win_width+1,"[DegN]",qth->latitude*180.0/M_PI);
+	mvprintw(win_row+3,win_col+win_width+1,"[DegE]",qth->longitude*180.0/M_PI);
+	mvprintw(win_row+4,win_col+win_width+1,"[m]",qth->altitude);
 
 	//fill form with QTH contents
 	set_field_buffer(name, 0, qth->name);
