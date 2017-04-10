@@ -14,16 +14,26 @@ struct transponder_db *transponder_db_create()
 
 void transponder_db_destroy(struct transponder_db **transponder_db)
 {
+	if ((*transponder_db)->sats != NULL) {
+		free((*transponder_db)->sats);
+		(*transponder_db)->sats = NULL;
+	}
 	free(*transponder_db);
 	*transponder_db = NULL;
 }
 
 int transponder_db_from_file(const char *dbfile, const struct tle_db *tle_db, struct transponder_db *ret_db, enum sat_db_location location_info)
 {
-	ret_db->num_sats = tle_db->num_tles;
+	if (ret_db->num_sats == 0) {
+		ret_db->sats = (struct sat_db_entry *)malloc(sizeof(struct sat_db_entry)*tle_db->num_tles);
+		ret_db->num_sats = tle_db->num_tles;
+	}
+	if (ret_db->num_sats != tle_db->num_tles) {
+		return TRANSPONDER_TLE_DATABASE_MISMATCH;
+	}
 	FILE *fd = fopen(dbfile,"r");
 	if (fd == NULL) {
-		return -1;
+		return TRANSPONDER_FILE_READING_ERROR;
 	}
 
 	char templine[MAX_NUM_CHARS];
@@ -103,7 +113,7 @@ int transponder_db_from_file(const char *dbfile, const struct tle_db *tle_db, st
 	}
 
 	fclose(fd);
-	return 0;
+	return TRANSPONDER_SUCCESS;
 }
 
 bool transponder_db_entry_empty(const struct sat_db_entry *entry)
