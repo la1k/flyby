@@ -17,9 +17,10 @@ void test_tle_db_find_entry(void **param)
 	struct tle_db *tle_db = tle_db_create();
 
 	int expected_num_sats = 100;
+	int satnum_offset = 6;
 	for (int i=0; i < expected_num_sats; i++) {
 		struct tle_db_entry dummy_entry = {0};
-		dummy_entry.satellite_number = i+6;
+		dummy_entry.satellite_number = i+satnum_offset;
 		tle_db_add_entry(tle_db, &dummy_entry);
 	}
 	assert_int_equal(tle_db->num_tles, expected_num_sats);
@@ -30,7 +31,9 @@ void test_tle_db_find_entry(void **param)
 	tle_db->tles[index].satellite_number = new_satellite_number;
 
 	assert_int_equal(tle_db_find_entry(tle_db, new_satellite_number), index);
-	assert_int_equal(tle_db_find_entry(tle_db, 40+6), 40);
+
+	index = 40;
+	assert_int_equal(tle_db_find_entry(tle_db, index + satnum_offset), index);
 	assert_int_equal(tle_db_find_entry(tle_db, 200), -1);
 }
 
