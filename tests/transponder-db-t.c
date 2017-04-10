@@ -26,9 +26,6 @@ void test_transponder_db_from_file(void **param)
 	//check loading from existing file when no TLE entries are defined
 	assert_int_equal(transponder_db_from_file(TEST_DATA_DIR "flyby/flyby.db", tle_db, transponder_db, LOCATION_DATA_HOME), 0);
 	assert_int_equal(transponder_db->num_sats, 0);
-	for (int i=0; i < MAX_NUM_SATS; i++) {
-		assert_true(transponder_db_entry_empty(&(transponder_db->sats[i])));
-	}
 
 	//check loading of transponder file
 	tle_db_from_file(TEST_DATA_DIR "old_tles/part1.tle", tle_db);
