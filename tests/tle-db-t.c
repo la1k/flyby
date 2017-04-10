@@ -15,10 +15,22 @@
 void test_tle_db_find_entry(void **param)
 {
 	struct tle_db *tle_db = tle_db_create();
-	tle_db->num_tles = 100;
-	tle_db->tles[50].satellite_number = 100;
 
-	assert_int_equal(tle_db_find_entry(tle_db, 100), 50);
+	int expected_num_sats = 100;
+	for (int i=0; i < expected_num_sats; i++) {
+		struct tle_db_entry dummy_entry = {0};
+		dummy_entry.satellite_number = i+6;
+		tle_db_add_entry(tle_db, &dummy_entry);
+	}
+	assert_int_equal(tle_db->num_tles, expected_num_sats);
+
+	long new_satellite_number = 83;
+	int index = 63;
+
+	tle_db->tles[index].satellite_number = new_satellite_number;
+
+	assert_int_equal(tle_db_find_entry(tle_db, new_satellite_number), index);
+	assert_int_equal(tle_db_find_entry(tle_db, 40+6), 40);
 	assert_int_equal(tle_db_find_entry(tle_db, 200), -1);
 }
 
@@ -72,15 +84,23 @@ void test_tle_db_overwrite_entry(void **param)
 	strcpy(entry_1.line2, line2);
 
 	struct tle_db *tle_db = tle_db_create();
-	int index = 10;
-	tle_db->num_tles = index+1;
-	tle_db_overwrite_entry(index, tle_db, &entry_1);
 
+	//add 13 entries to database
+	int index = 10;
+	int expected_num_sats = index+3;
+	for (int i=0; i < expected_num_sats; i++) {
+		struct tle_db_entry dummy_entry = {0};
+		dummy_entry.satellite_number = i;
+		tle_db_add_entry(tle_db, &dummy_entry);
+	}
+
+	//overwrite entry at index 10
+	tle_db_overwrite_entry(index, tle_db, &entry_1);
 	assert_true(entry_1.satellite_number == tle_db->tles[index].satellite_number);
 	assert_string_equal(tle_db->tles[index].name, name);
 	assert_string_equal(tle_db->tles[index].line1, line1);
 	assert_string_equal(tle_db->tles[index].line2, line2);
-	assert_int_equal(tle_db->num_tles, index+1);
+	assert_int_equal(tle_db->num_tles, expected_num_sats);
 }
 
 void test_tle_db_entry_is_newer_than(void **param)
