@@ -157,7 +157,7 @@ int main(int argc, char **argv)
 				char out_filename[MAX_NUM_CHARS];
 				snprintf(out_filename, MAX_NUM_CHARS, "%s%s%s", xdg_home, TLE_RELATIVE_DIR_PATH, base_filename);
 				tle_db_to_file(out_filename, temp_db);
-				fprintf(stderr, "Copy `%s` to `%s` (%d TLEs)\n", orig_filename, out_filename, temp_db->num_tles);
+				fprintf(stderr, "Copy `%s` to `%s` (%ld TLEs)\n", orig_filename, out_filename, temp_db->num_tles);
 			} else {
 				fprintf(stderr, "TLE file `%s` could not be loaded.\n", orig_filename);
 			}

@@ -43,7 +43,7 @@ struct sat_db_entry {
  **/
 struct transponder_db {
 	///number of contained satellites. Corresponds to the number of TLEs in the TLE database
-	int num_sats;
+	size_t num_sats;
 	///transponder database entries
 	struct sat_db_entry *sats;
 	///whether the transponder database is loaded, or empty

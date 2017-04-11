@@ -29,11 +29,11 @@ struct tle_db_entry {
  **/
 struct tle_db {
 	///Number of contained TLEs
-	int num_tles;
+	size_t num_tles;
 	///TLE entries
 	struct tle_db_entry *tles;
 	///Allocated size of the TLE array
-	int available_size;
+	size_t available_size;
 	///Whether TLE database was read from XDG standard paths or supplied on command line
 	bool read_from_xdg;
 };
