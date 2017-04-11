@@ -31,7 +31,9 @@ struct tle_db {
 	///Number of contained TLEs
 	int num_tles;
 	///TLE entries
-	struct tle_db_entry tles[MAX_NUM_SATS];
+	struct tle_db_entry *tles;
+	///Allocated size of the TLE array
+	int available_size;
 	///Whether TLE database was read from XDG standard paths or supplied on command line
 	bool read_from_xdg;
 };
