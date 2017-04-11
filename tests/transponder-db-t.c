@@ -91,7 +91,7 @@ void test_transponder_db_to_file(void **param)
 	write_db->sats[0].uplink_end[0] = 1;
 
 	//set two first entries to be written to file
-	bool should_write[MAX_NUM_SATS] = {0};
+	bool *should_write = (bool*)calloc(tle_db->num_tles, sizeof(bool));
 	should_write[0] = true; //non-empty entry
 	should_write[1] = true; //empty entry
 
@@ -114,6 +114,7 @@ void test_transponder_db_to_file(void **param)
 	}
 	assert_true(transponder_db_entry_empty(&(read_db->sats[1])));
 	unlink(filename);
+	free(should_write);
 }
 
 void test_transponder_db_write_to_default(void **param)

@@ -483,7 +483,7 @@ void test_tle_db_update(void **param)
 	int num_tles = tle_db->num_tles;
 
 	//test with no new TLEs in file
-	int update_status[MAX_NUM_SATS] = {0};
+	int *update_status = (int*)calloc(tle_db->num_tles, sizeof(int));
 	tle_db_update(TEST_TLE_DIR "old_tles/part1.txt", tle_db, update_status);
 	for (int i=0; i < tle_db->num_tles; i++) {
 		assert_false(update_status[i] & TLE_IN_NEW_FILE);
@@ -597,6 +597,7 @@ void test_tle_db_update(void **param)
 	snprintf(tle_path, MAX_NUM_CHARS, "%s/flyby", temp_dir);
 	rmdir(tle_path);
 	rmdir(temp_dir);
+	free(update_status);
 }
 
 int main()
