@@ -210,28 +210,28 @@ char KepCheck(const char *line1, const char *line2)
 	return (x ? 0 : 1);
 }
 
+#define NUM_CHARS_IN_TLE 80
+
 int tle_db_from_file(const char *tle_file, struct tle_db *ret_db)
 {
 	//copied from ReadDataFiles().
 
 	ret_db->num_tles = 0;
 	int y = 0;
-	char name[80], line1[80], line2[80];
 
 	FILE *fd=fopen(tle_file,"r");
 	if (fd!=NULL) {
 		while (feof(fd)==0) {
 			/* Initialize variables */
-
-			name[0]=0;
-			line1[0]=0;
-			line2[0]=0;
+			char name[NUM_CHARS_IN_TLE] = {0};
+			char line1[NUM_CHARS_IN_TLE] = {0};
+			char line2[NUM_CHARS_IN_TLE] = {0};
 
 			/* Read element set */
 
-			fgets(name,75,fd);
-			fgets(line1,75,fd);
-			fgets(line2,75,fd);
+			if (fgets(name, NUM_CHARS_IN_TLE, fd) == NULL) break;
+			if (fgets(line1, NUM_CHARS_IN_TLE, fd) == NULL) break;
+			if (fgets(line2, NUM_CHARS_IN_TLE, fd) == NULL) break;
 
 			if (KepCheck(line1,line2) && (feof(fd)==0)) {
 				/* We found a valid TLE! */
