@@ -33,6 +33,7 @@ void test_transponder_db_from_file(void **param)
 	transponder_db = transponder_db_create(tle_db);
 	assert_int_equal(transponder_db_from_file(TEST_DATA_DIR "flyby/flyby.db", tle_db, transponder_db, LOCATION_DATA_HOME), 0);
 	assert_int_equal(transponder_db->num_sats, tle_db->num_tles);
+	assert_true(transponder_db->num_sats > 0);
 
 	//get database indices for satellites pre-defined in file
 	//1: empty entry, 2: 1 transponder defined, 3: squint angle defined.
@@ -58,7 +59,7 @@ void test_transponder_db_from_file(void **param)
 	for (int i=0; i < transponder_db->num_sats; i++) {
 		if ((i != sat_ind[0]) && (i != sat_ind[1]) && (i != sat_ind[2])) {
 			assert_true(transponder_db_entry_empty(&(transponder_db->sats[i])));
-			assert_int_equal(transponder_db->sats[i].location, 0);
+			assert_int_equal(transponder_db->sats[i].location, LOCATION_NONE);
 		}
 	}
 
@@ -174,21 +175,22 @@ void test_transponder_db_write_to_default(void **param)
 	char filename[MAX_NUM_CHARS];
 	snprintf(filename, MAX_NUM_CHARS, "%sflyby.db", flyby_path);
 	assert_int_equal(transponder_db_from_file(filename, tle_db, read_db, LOCATION_DATA_HOME), 0);
+	assert_int_equal(read_db->num_sats, tle_db->num_tles);
 
 	sat_ind = 0;
 	//non-empty entries
-	assert_int_equal(read_db->sats[sat_ind++].location, 0);
+	assert_int_equal(read_db->sats[sat_ind++].location, LOCATION_NONE);
 	assert_int_equal(read_db->sats[sat_ind++].location, LOCATION_DATA_HOME);
 	assert_int_equal(read_db->sats[sat_ind++].location, LOCATION_DATA_HOME);
-	assert_int_equal(read_db->sats[sat_ind++].location, 0);
+	assert_int_equal(read_db->sats[sat_ind++].location, LOCATION_NONE);
 	assert_int_equal(read_db->sats[sat_ind++].location, LOCATION_DATA_HOME);
 	assert_int_equal(read_db->sats[sat_ind++].location, LOCATION_DATA_HOME);
 
 	//empty entries
-	assert_int_equal(read_db->sats[sat_ind++].location, 0);
+	assert_int_equal(read_db->sats[sat_ind++].location, LOCATION_NONE);
 	assert_int_equal(read_db->sats[sat_ind++].location, LOCATION_DATA_HOME);
-	assert_int_equal(read_db->sats[sat_ind++].location, 0);
-	assert_int_equal(read_db->sats[sat_ind++].location, 0);
+	assert_int_equal(read_db->sats[sat_ind++].location, LOCATION_NONE);
+	assert_int_equal(read_db->sats[sat_ind++].location, LOCATION_NONE);
 	assert_int_equal(read_db->sats[sat_ind++].location, LOCATION_DATA_HOME);
 	assert_int_equal(read_db->sats[sat_ind++].location, LOCATION_DATA_HOME);
 

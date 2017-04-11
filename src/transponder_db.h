@@ -8,7 +8,7 @@
  * Location from where satellite database entry was loaded, used in deciding which entries to write to XDG_DATA_HOME.
  **/
 enum sat_db_location {
-	LOCATION_NONE = (1u << 0), //not loaded from anywhere
+	LOCATION_NONE = 0, //not loaded from anywhere
 	LOCATION_DATA_HOME = (1u << 1), //loaded from XDG_DATA_HOME
 	LOCATION_DATA_DIRS = (1u << 2), //loaded from XDG_DATA_DIRS
 	LOCATION_TRANSIENT = (1u << 3) //to be newly written to XDG_DATA_HOME
