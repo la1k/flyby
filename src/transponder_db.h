@@ -83,7 +83,7 @@ enum transponder_err {
 	TRANSPONDER_SUCCESS = 0,
 	///File reading error
 	TRANSPONDER_FILE_READING_ERROR = -1,
-	///Transponder database has earlier been matched with a specific TLE database, but sizes no longer match
+	///Size of transponder db and TLE db do not correspond
 	TRANSPONDER_TLE_DATABASE_MISMATCH = -2
 };
 
