@@ -69,10 +69,26 @@ void tle_db_overwrite_entry(int entry_index, struct tle_db *tle_db, const struct
 
 void tle_db_add_entry(struct tle_db *tle_db, const struct tle_db_entry *entry)
 {
-	if (tle_db->num_tles+1 < MAX_NUM_SATS) {
-		tle_db->num_tles++;
-		tle_db_overwrite_entry(tle_db->num_tles-1, tle_db, entry);
+	//initialize
+	if (tle_db->available_size == 0) {
+		tle_db->tles = (struct tle_db_entry*)malloc(sizeof(struct tle_db_entry));
+		tle_db->available_size = 1;
+		tle_db->num_tles = 0;
 	}
+
+	//extend size std::vector style
+	if (tle_db->num_tles+1 > tle_db->available_size) {
+		size_t new_size = tle_db->available_size*2;
+		struct tle_db_entry* temp = realloc(tle_db->tles, sizeof(struct tle_db_entry)*new_size);
+		if (temp == NULL) {
+			return;
+		}
+		tle_db->available_size = new_size;
+		tle_db->tles = temp;
+	}
+
+	tle_db->num_tles++;
+	tle_db_overwrite_entry(tle_db->num_tles-1, tle_db, entry);
 }
 
 void tle_db_merge(struct tle_db *new_db, struct tle_db *main_db, enum tle_merge_behavior merge_opt)
