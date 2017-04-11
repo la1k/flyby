@@ -392,10 +392,10 @@ void transponder_editor_sysdefault(struct transponder_editor *transponder_editor
 {
 	//create dummy TLE database with a single entry corresponding to the satellite number
 	struct tle_db *dummy_tle_db = tle_db_create();
-	struct transponder_db *dummy_transponder_db = transponder_db_create();
 	struct tle_db_entry dummy_entry;
 	dummy_entry.satellite_number = transponder_editor->satellite_number;
 	tle_db_add_entry(dummy_tle_db, &dummy_entry);
+	struct transponder_db *dummy_transponder_db = transponder_db_create(dummy_tle_db);
 
 	//read from XDG_DATA_DIRS
 	string_array_t data_dirs = {0};

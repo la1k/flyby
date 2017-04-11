@@ -53,9 +53,10 @@ struct transponder_db {
 /**
  * Create transponder database struct.
  *
+ * \param tle_db TLE database, used for allocating corresponding number of entries
  * \return Allocated transponder database
  **/
-struct transponder_db *transponder_db_create();
+struct transponder_db *transponder_db_create(struct tle_db *tle_db);
 
 /**
  * Free memory associated with allocated transponder database struct.

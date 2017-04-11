@@ -249,7 +249,7 @@ int main(int argc, char **argv)
 		free(temp);
 	}
 
-	struct transponder_db *transponder_db = transponder_db_create();
+	struct transponder_db *transponder_db = transponder_db_create(tle_db);
 	transponder_db_from_search_paths(tle_db, transponder_db);
 
 	RunFlybyUI(is_new_user, qth_filename, observer, tle_db, transponder_db, &rotctld, &downlink, &uplink);
