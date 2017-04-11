@@ -21,6 +21,9 @@ struct tle_db *tle_db_create()
 
 void tle_db_destroy(struct tle_db **tle_db)
 {
+	if ((*tle_db)->tles != NULL) {
+		free((*tle_db)->tles);
+	}
 	free(*tle_db);
 	*tle_db = NULL;
 }
@@ -66,10 +69,26 @@ void tle_db_overwrite_entry(int entry_index, struct tle_db *tle_db, const struct
 
 void tle_db_add_entry(struct tle_db *tle_db, const struct tle_db_entry *entry)
 {
-	if (tle_db->num_tles+1 < MAX_NUM_SATS) {
-		tle_db->num_tles++;
-		tle_db_overwrite_entry(tle_db->num_tles-1, tle_db, entry);
+	//initialize
+	if (tle_db->available_size == 0) {
+		tle_db->tles = (struct tle_db_entry*)malloc(sizeof(struct tle_db_entry));
+		tle_db->available_size = 1;
+		tle_db->num_tles = 0;
 	}
+
+	//extend size std::vector style
+	if (tle_db->num_tles+1 > tle_db->available_size) {
+		size_t new_size = tle_db->available_size*2;
+		struct tle_db_entry* temp = realloc(tle_db->tles, sizeof(struct tle_db_entry)*new_size);
+		if (temp == NULL) {
+			return;
+		}
+		tle_db->available_size = new_size;
+		tle_db->tles = temp;
+	}
+
+	tle_db->num_tles++;
+	tle_db_overwrite_entry(tle_db->num_tles-1, tle_db, entry);
 }
 
 void tle_db_merge(struct tle_db *new_db, struct tle_db *main_db, enum tle_merge_behavior merge_opt)
@@ -191,28 +210,28 @@ char KepCheck(const char *line1, const char *line2)
 	return (x ? 0 : 1);
 }
 
+#define NUM_CHARS_IN_TLE 80
+
 int tle_db_from_file(const char *tle_file, struct tle_db *ret_db)
 {
 	//copied from ReadDataFiles().
 
 	ret_db->num_tles = 0;
 	int y = 0;
-	char name[80], line1[80], line2[80];
 
 	FILE *fd=fopen(tle_file,"r");
 	if (fd!=NULL) {
 		while (feof(fd)==0) {
 			/* Initialize variables */
-
-			name[0]=0;
-			line1[0]=0;
-			line2[0]=0;
+			char name[NUM_CHARS_IN_TLE] = {0};
+			char line1[NUM_CHARS_IN_TLE] = {0};
+			char line2[NUM_CHARS_IN_TLE] = {0};
 
 			/* Read element set */
 
-			fgets(name,75,fd);
-			fgets(line1,75,fd);
-			fgets(line2,75,fd);
+			if (fgets(name, NUM_CHARS_IN_TLE, fd) == NULL) break;
+			if (fgets(line1, NUM_CHARS_IN_TLE, fd) == NULL) break;
+			if (fgets(line2, NUM_CHARS_IN_TLE, fd) == NULL) break;
 
 			if (KepCheck(line1,line2) && (feof(fd)==0)) {
 				/* We found a valid TLE! */
@@ -318,20 +337,22 @@ char *tle_db_updatefile_writepath()
  **/
 void tle_db_update_file(const char *tle_filename, struct tle_db *tle_db)
 {
-	struct tle_db subset_db = {0};
+	struct tle_db *subset_db = tle_db_create();
 	for (int i=0; i < tle_db->num_tles; i++) {
 		if (strcmp(tle_db->tles[i].filename, tle_filename) == 0) {
-			tle_db_add_entry(&subset_db, &(tle_db->tles[i]));
+			tle_db_add_entry(subset_db, &(tle_db->tles[i]));
 		}
 	}
-	tle_db_to_file(tle_filename, &subset_db);
+	tle_db_to_file(tle_filename, subset_db);
+	tle_db_destroy(&subset_db);
 }
 
 void tle_db_update(const char *filename, struct tle_db *tle_db, int *update_status)
 {
-	struct tle_db new_db = {0};
-	int retval = tle_db_from_file(filename, &new_db);
+	struct tle_db *new_db = tle_db_create();
+	int retval = tle_db_from_file(filename, new_db);
 	if (retval != 0) {
+		tle_db_destroy(&new_db);
 		return;
 	}
 
@@ -342,14 +363,14 @@ void tle_db_update(const char *filename, struct tle_db *tle_db, int *update_stat
 	}
 
 	int num_tles_to_update = 0;
-	int *newer_tle_indices = (int*)malloc(sizeof(int)*new_db.num_tles); //indices in new TLE db that should be used to update internal db
-	int *tle_indices_to_update = (int*)malloc(sizeof(int)*new_db.num_tles); //indices in internal db that should be updated
+	int *newer_tle_indices = (int*)malloc(sizeof(int)*new_db->num_tles); //indices in new TLE db that should be used to update internal db
+	int *tle_indices_to_update = (int*)malloc(sizeof(int)*new_db->num_tles); //indices in internal db that should be updated
 
 	//find more recent entries
-	for (int i=0; i < new_db.num_tles; i++) {
-		int index = tle_db_find_entry(tle_db, new_db.tles[i].satellite_number);
+	for (int i=0; i < new_db->num_tles; i++) {
+		int index = tle_db_find_entry(tle_db, new_db->tles[i].satellite_number);
 		if (index != -1) {
-			if (tle_db_entry_is_newer_than(new_db.tles[i], tle_db->tles[index])) {
+			if (tle_db_entry_is_newer_than(new_db->tles[i], tle_db->tles[index])) {
 				newer_tle_indices[num_tles_to_update] = i;
 				tle_indices_to_update[num_tles_to_update] = index;
 				num_tles_to_update++;
@@ -358,6 +379,7 @@ void tle_db_update(const char *filename, struct tle_db *tle_db, int *update_stat
 	}
 
 	if (num_tles_to_update <= 0) {
+		tle_db_destroy(&new_db);
 		return;
 	}
 
@@ -374,7 +396,7 @@ void tle_db_update(const char *filename, struct tle_db *tle_db, int *update_stat
 			for (int j=i; j < num_tles_to_update; j++) {
 				if (newer_tle_indices[j] != -1) {
 					int tle_index = tle_indices_to_update[j];
-					struct tle_db_entry *tle_update_entry = &(new_db.tles[newer_tle_indices[j]]);
+					struct tle_db_entry *tle_update_entry = &(new_db->tles[newer_tle_indices[j]]);
 					struct tle_db_entry *tle_entry = &(tle_db->tles[tle_index]);
 					if (strcmp(tle_filename, tle_entry->filename) == 0) {
 						//update tle db entry with new entry
@@ -438,6 +460,7 @@ void tle_db_update(const char *filename, struct tle_db *tle_db, int *update_stat
 	free(newer_tle_indices);
 	free(tle_indices_to_update);
 	free(unwritable_tles);
+	tle_db_destroy(&new_db);
 }
 
 void tle_db_from_search_paths(struct tle_db *ret_tle_db)
@@ -458,9 +481,10 @@ void tle_db_from_search_paths(struct tle_db *ret_tle_db)
 		char dir[MAX_NUM_CHARS] = {0};
 		snprintf(dir, MAX_NUM_CHARS, "%s%s", string_array_get(&data_dirs, i), TLE_RELATIVE_DIR_PATH);
 
-		struct tle_db temp_db = {0};
-		tle_db_from_directory(dir, &temp_db);
-		tle_db_merge(&temp_db, ret_tle_db, TLE_OVERWRITE_NONE); //multiply defined TLEs in directories of less precedence are ignored
+		struct tle_db *temp_db = tle_db_create();
+		tle_db_from_directory(dir, temp_db);
+		tle_db_merge(temp_db, ret_tle_db, TLE_OVERWRITE_NONE); //multiply defined TLEs in directories of less precedence are ignored
+		tle_db_destroy(&temp_db);
 	}
 	string_array_free(&data_dirs);
 	free(data_dirs_str);

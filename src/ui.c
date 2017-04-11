@@ -129,7 +129,7 @@ void AutoUpdate(const char *string, struct tle_db *tle_db)
 	}
 
 	//update TLE database with file
-	int update_status[MAX_NUM_SATS] = {0};
+	int *update_status = (int*)calloc(tle_db->num_tles, sizeof(int));
 	tle_db_update(filename, tle_db, update_status);
 
 	if (interactive_mode) {
@@ -176,6 +176,7 @@ void AutoUpdate(const char *string, struct tle_db *tle_db)
 			num_updated++;
 		}
 	}
+	free(update_status);
 
 	//print file information
 	if (interactive_mode) {
@@ -1776,10 +1777,7 @@ void EditWhitelist(struct tle_db *tle_db, const struct transponder_db *transpond
 
 	if (tle_db->num_tles > 0) {
 		attrset(COLOR_PAIR(3)|A_BOLD);
-		if (tle_db->num_tles >= MAX_NUM_SATS)
-			mvprintw(LINES-3,46,"Truncated to %d satellites",MAX_NUM_SATS);
-		else
-			mvprintw(LINES-3,46,"%d satellites",tle_db->num_tles);
+		mvprintw(LINES-3,46,"%d satellites",tle_db->num_tles);
 	}
 
 	/* Create form for query input */

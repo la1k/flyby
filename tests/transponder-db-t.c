@@ -17,7 +17,7 @@
 void test_transponder_db_from_file(void **param)
 {
 	struct tle_db *tle_db = tle_db_create();
-	struct transponder_db *transponder_db = transponder_db_create();
+	struct transponder_db *transponder_db = transponder_db_create(tle_db);
 
 	//check loading from non-existing file
 	assert_int_equal(transponder_db_from_file("/dev/NULL", tle_db, transponder_db, LOCATION_DATA_HOME), -1);
@@ -26,14 +26,14 @@ void test_transponder_db_from_file(void **param)
 	//check loading from existing file when no TLE entries are defined
 	assert_int_equal(transponder_db_from_file(TEST_DATA_DIR "flyby/flyby.db", tle_db, transponder_db, LOCATION_DATA_HOME), 0);
 	assert_int_equal(transponder_db->num_sats, 0);
-	for (int i=0; i < MAX_NUM_SATS; i++) {
-		assert_true(transponder_db_entry_empty(&(transponder_db->sats[i])));
-	}
+	transponder_db_destroy(&transponder_db);
 
 	//check loading of transponder file
 	tle_db_from_file(TEST_DATA_DIR "old_tles/part1.tle", tle_db);
+	transponder_db = transponder_db_create(tle_db);
 	assert_int_equal(transponder_db_from_file(TEST_DATA_DIR "flyby/flyby.db", tle_db, transponder_db, LOCATION_DATA_HOME), 0);
 	assert_int_equal(transponder_db->num_sats, tle_db->num_tles);
+	assert_true(transponder_db->num_sats > 0);
 
 	//get database indices for satellites pre-defined in file
 	//1: empty entry, 2: 1 transponder defined, 3: squint angle defined.
@@ -59,7 +59,7 @@ void test_transponder_db_from_file(void **param)
 	for (int i=0; i < transponder_db->num_sats; i++) {
 		if ((i != sat_ind[0]) && (i != sat_ind[1]) && (i != sat_ind[2])) {
 			assert_true(transponder_db_entry_empty(&(transponder_db->sats[i])));
-			assert_int_equal(transponder_db->sats[i].location, 0);
+			assert_int_equal(transponder_db->sats[i].location, LOCATION_NONE);
 		}
 	}
 
@@ -79,7 +79,7 @@ void test_transponder_db_to_file(void **param)
 	struct tle_db *tle_db = tle_db_create();
 	tle_db_from_file(TEST_DATA_DIR "old_tles/part1.tle", tle_db);
 	assert_true(tle_db->num_tles > 0);
-	struct transponder_db *write_db = transponder_db_create();
+	struct transponder_db *write_db = transponder_db_create(tle_db);
 	transponder_db_from_file("/dev/NULL", tle_db, write_db, LOCATION_DATA_HOME);
 	
 	//create transponder entry
@@ -91,7 +91,7 @@ void test_transponder_db_to_file(void **param)
 	write_db->sats[0].uplink_end[0] = 1;
 
 	//set two first entries to be written to file
-	bool should_write[MAX_NUM_SATS] = {0};
+	bool *should_write = (bool*)calloc(tle_db->num_tles, sizeof(bool));
 	should_write[0] = true; //non-empty entry
 	should_write[1] = true; //empty entry
 
@@ -105,7 +105,7 @@ void test_transponder_db_to_file(void **param)
 	transponder_db_destroy(&write_db);
 
 	//check contents in file
-	struct transponder_db *read_db = transponder_db_create();
+	struct transponder_db *read_db = transponder_db_create(tle_db);
 	assert_int_equal(transponder_db_from_file(filename, tle_db, read_db, LOCATION_DATA_HOME), 0);
 	assert_int_equal(read_db->sats[0].location, LOCATION_DATA_HOME);
 	assert_int_equal(read_db->sats[1].location, LOCATION_DATA_HOME);
@@ -114,6 +114,7 @@ void test_transponder_db_to_file(void **param)
 	}
 	assert_true(transponder_db_entry_empty(&(read_db->sats[1])));
 	unlink(filename);
+	free(should_write);
 }
 
 void test_transponder_db_write_to_default(void **param)
@@ -121,7 +122,7 @@ void test_transponder_db_write_to_default(void **param)
 	struct tle_db *tle_db = tle_db_create();
 	tle_db_from_file(TEST_DATA_DIR "newer_tles/amateur.txt", tle_db);
 	assert_true(tle_db->num_tles > 0);
-	struct transponder_db *write_db = transponder_db_create();
+	struct transponder_db *write_db = transponder_db_create(tle_db);
 	transponder_db_from_file("/dev/NULL", tle_db, write_db, LOCATION_DATA_HOME);
 
 	//create non-empty entries with the various location flags
@@ -171,25 +172,26 @@ void test_transponder_db_write_to_default(void **param)
 	transponder_db_destroy(&write_db);
 
 	//read back written database
-	struct transponder_db *read_db = transponder_db_create();
+	struct transponder_db *read_db = transponder_db_create(tle_db);
 	char filename[MAX_NUM_CHARS];
 	snprintf(filename, MAX_NUM_CHARS, "%sflyby.db", flyby_path);
 	assert_int_equal(transponder_db_from_file(filename, tle_db, read_db, LOCATION_DATA_HOME), 0);
+	assert_int_equal(read_db->num_sats, tle_db->num_tles);
 
 	sat_ind = 0;
 	//non-empty entries
-	assert_int_equal(read_db->sats[sat_ind++].location, 0);
+	assert_int_equal(read_db->sats[sat_ind++].location, LOCATION_NONE);
 	assert_int_equal(read_db->sats[sat_ind++].location, LOCATION_DATA_HOME);
 	assert_int_equal(read_db->sats[sat_ind++].location, LOCATION_DATA_HOME);
-	assert_int_equal(read_db->sats[sat_ind++].location, 0);
+	assert_int_equal(read_db->sats[sat_ind++].location, LOCATION_NONE);
 	assert_int_equal(read_db->sats[sat_ind++].location, LOCATION_DATA_HOME);
 	assert_int_equal(read_db->sats[sat_ind++].location, LOCATION_DATA_HOME);
 
 	//empty entries
-	assert_int_equal(read_db->sats[sat_ind++].location, 0);
+	assert_int_equal(read_db->sats[sat_ind++].location, LOCATION_NONE);
 	assert_int_equal(read_db->sats[sat_ind++].location, LOCATION_DATA_HOME);
-	assert_int_equal(read_db->sats[sat_ind++].location, 0);
-	assert_int_equal(read_db->sats[sat_ind++].location, 0);
+	assert_int_equal(read_db->sats[sat_ind++].location, LOCATION_NONE);
+	assert_int_equal(read_db->sats[sat_ind++].location, LOCATION_NONE);
 	assert_int_equal(read_db->sats[sat_ind++].location, LOCATION_DATA_HOME);
 	assert_int_equal(read_db->sats[sat_ind++].location, LOCATION_DATA_HOME);
 
@@ -204,8 +206,8 @@ void test_transponder_db_write_to_default(void **param)
 void test_transponder_db_from_search_paths(void **param)
 {
 	struct tle_db *tle_db = tle_db_create();
-	struct transponder_db *transponder_db = transponder_db_create();
 	tle_db_from_file(TEST_DATA_DIR "old_tles/part1.tle", tle_db);
+	struct transponder_db *transponder_db = transponder_db_create(tle_db);
 	
 	//prepare database indices for satellites pre-defined in file
 	long defined_sats[3] = {32785, 33493, 33499};

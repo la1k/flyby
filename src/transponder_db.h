@@ -8,7 +8,7 @@
  * Location from where satellite database entry was loaded, used in deciding which entries to write to XDG_DATA_HOME.
  **/
 enum sat_db_location {
-	LOCATION_NONE = (1u << 0), //not loaded from anywhere
+	LOCATION_NONE = 0, //not loaded from anywhere
 	LOCATION_DATA_HOME = (1u << 1), //loaded from XDG_DATA_HOME
 	LOCATION_DATA_DIRS = (1u << 2), //loaded from XDG_DATA_DIRS
 	LOCATION_TRANSIENT = (1u << 3) //to be newly written to XDG_DATA_HOME
@@ -43,9 +43,9 @@ struct sat_db_entry {
  **/
 struct transponder_db {
 	///number of contained satellites. Corresponds to the number of TLEs in the TLE database
-	int num_sats;
+	size_t num_sats;
 	///transponder database entries
-	struct sat_db_entry sats[MAX_NUM_SATS];
+	struct sat_db_entry *sats;
 	///whether the transponder database is loaded, or empty
 	bool loaded;
 };
@@ -53,9 +53,10 @@ struct transponder_db {
 /**
  * Create transponder database struct.
  *
+ * \param tle_db TLE database, used for allocating corresponding number of entries
  * \return Allocated transponder database
  **/
-struct transponder_db *transponder_db_create();
+struct transponder_db *transponder_db_create(struct tle_db *tle_db);
 
 /**
  * Free memory associated with allocated transponder database struct.
@@ -77,15 +78,24 @@ void transponder_db_destroy(struct transponder_db **transponder_db);
  **/
 void transponder_db_from_search_paths(const struct tle_db *tle_db, struct transponder_db *transponder_db);
 
+enum transponder_err {
+	///Success
+	TRANSPONDER_SUCCESS = 0,
+	///File reading error
+	TRANSPONDER_FILE_READING_ERROR = -1,
+	///Size of transponder db and TLE db do not correspond
+	TRANSPONDER_TLE_DATABASE_MISMATCH = -2
+};
+
 /**
  * Read transponder database from file. Only fields matching the TLE database fields are modified.
  * Transponders where neither uplink nor downlink are defined are ignored.
  *
  * \param db_file .db file
- * \param tle_db Previously read TLE database, for which fields from transponder database are matched
+ * \param tle_db Previously read TLE database, for which fields from transponder database are matched. Has to be the main TLE database for which we can match each entry in the transponder database index for index
  * \param ret_db Returned transponder database
  * \param location_info Whether entry is being loaded from XDG_DATA_DIRS or XDG_DATA_HOME. The location flag in the loaded entries are bitwise OR-ed with the input flag
- * \return 0 on success, -1 otherwise
+ * \return TRANSPONDER_SUCCESS on success, one of the other values defined in enum transponder_err otherwise
  **/
 int transponder_db_from_file(const char *db_file, const struct tle_db *tle_db, struct transponder_db *ret_db, enum sat_db_location location_info);
 
