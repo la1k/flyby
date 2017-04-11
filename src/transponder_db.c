@@ -5,10 +5,27 @@
 #include "xdg_basedirs.h"
 #include "string_array.h"
 
-struct transponder_db *transponder_db_create()
+void transponder_db_initialize(struct transponder_db *transponder_db)
+{
+	for (int i=0; i < transponder_db->num_sats; i++) {
+		transponder_db->sats[i].squintflag = false;
+		transponder_db->sats[i].num_transponders = 0;
+		transponder_db->sats[i].location = LOCATION_NONE;
+	}
+}
+
+struct transponder_db *transponder_db_create(struct tle_db *tle_db)
 {
 	struct transponder_db *transponder_db = (struct transponder_db*) malloc(sizeof(struct transponder_db));
 	memset((void*)transponder_db, 0, sizeof(struct transponder_db));
+
+	int num_satellites = tle_db->num_tles;
+	if (num_satellites > 0) {
+		transponder_db->sats = (struct sat_db_entry *)calloc(num_satellites, sizeof(struct sat_db_entry));
+		transponder_db->num_sats = num_satellites;
+
+		transponder_db_initialize(transponder_db);
+	}
 	return transponder_db;
 }
 
@@ -24,10 +41,6 @@ void transponder_db_destroy(struct transponder_db **transponder_db)
 
 int transponder_db_from_file(const char *dbfile, const struct tle_db *tle_db, struct transponder_db *ret_db, enum sat_db_location location_info)
 {
-	if (ret_db->num_sats == 0) {
-		ret_db->sats = (struct sat_db_entry *)malloc(sizeof(struct sat_db_entry)*tle_db->num_tles);
-		ret_db->num_sats = tle_db->num_tles;
-	}
 	if (ret_db->num_sats != tle_db->num_tles) {
 		return TRANSPONDER_TLE_DATABASE_MISMATCH;
 	}
@@ -138,11 +151,7 @@ void transponder_db_from_search_paths(const struct tle_db *tle_db, struct transp
 	free(data_dirs_str);
 
 	//initialize database
-	for (int i=0; i < MAX_NUM_SATS; i++) {
-		transponder_db->sats[i].squintflag = false;
-		transponder_db->sats[i].num_transponders = 0;
-		transponder_db->sats[i].location = LOCATION_NONE;
-	}
+	transponder_db_initialize(transponder_db);
 
 	//read transponder databases from system-wide data directories in opposide order of precedence
 	for (int i=string_array_size(&data_dirs)-1; i >= 0; i--) {
