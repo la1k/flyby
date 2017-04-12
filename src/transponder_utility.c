@@ -49,14 +49,18 @@ void print_transponder_entry_differences(const struct sat_db_entry *old_db_entry
 int main(int argc, char **argv)
 {
 	string_array_t transponder_db_filenames = {0}; //TLE files to be used to update the TLE databases
+	bool force_changes = false;
+	bool ignore_changes = false;
 
 	//command line options
 	struct option long_options[] = {
 		{"transponder-file",		required_argument,	0,	't'},
+		{"force-changes",		no_argument,		0,	'f'},
+		{"ignore-changes",		no_argument,		0,	'i'},
 		{"help",			no_argument,		0,	'h'},
 		{0, 0, 0, 0}
 	};
-	char short_options[] = "t:h";
+	char short_options[] = "t:fih";
 	while (1) {
 		int option_index = 0;
 		int c = getopt_long(argc, argv, short_options, long_options, &option_index);
@@ -67,6 +71,12 @@ int main(int argc, char **argv)
 		switch (c) {
 			case 't': //transponder file
 				string_array_add(&transponder_db_filenames, optarg);
+				break;
+			case 'f': //force changes
+				force_changes = true;
+				break;
+			case 'i': //ignore changes
+				ignore_changes = true;
 				break;
 			case 'h': //help
 				fprintf(stderr, "Flyby transponder utility\n");
@@ -100,19 +110,23 @@ int main(int argc, char **argv)
 				if (transponder_db_entry_empty(old_db_entry)) {
 					fprintf(stderr, "Adding new transponder entries to %s\n", tle_db->tles[j].name);
 					transponder_db_entry_copy(old_db_entry, new_db_entry);
-				} else {
+				} else if (!ignore_changes) {
 					fprintf(stderr, "Updating transponder entries for %s:\n", tle_db->tles[j].name);
 					print_transponder_entry_differences(old_db_entry, new_db_entry);
-					fprintf(stderr, "Accept change? (y/n) ");
 					bool do_update = false;
-					while (true) {
-						int c = getchar();
-						if (c == 'y') {
-							do_update = true;
-							break;
-						} else if (c == 'n') {
-							break;
+					if (!force_changes) {
+						fprintf(stderr, "Accept change? (y/n) ");
+						while (true) {
+							int c = getchar();
+							if (c == 'y') {
+								do_update = true;
+								break;
+							} else if (c == 'n') {
+								break;
+							}
 						}
+					} else {
+						do_update = true;
 					}
 					if (do_update) {
 						transponder_db_entry_copy(old_db_entry, new_db_entry);
