@@ -173,21 +173,22 @@ void transponder_editor_fill(struct transponder_editor *transponder_editor, stru
 	}
 
 	for (int i=0; i < db_entry->num_transponders; i++) {
-		set_field_buffer(transponder_editor->transponders[i]->name, 0, db_entry->transponder_name[i]);
+		struct transponder *transponder = &(db_entry->transponders[i]);
+		set_field_buffer(transponder_editor->transponders[i]->name, 0, transponder->name);
 
-		if (db_entry->uplink_start[i] != 0.0) {
-			snprintf(temp, MAX_NUM_CHARS, "%f", db_entry->uplink_start[i]);
+		if (transponder->uplink_start != 0.0) {
+			snprintf(temp, MAX_NUM_CHARS, "%f", transponder->uplink_start);
 			set_field_buffer(transponder_editor->transponders[i]->uplink[0], 0, temp);
 
-			snprintf(temp, MAX_NUM_CHARS, "%f", db_entry->uplink_end[i]);
+			snprintf(temp, MAX_NUM_CHARS, "%f", transponder->uplink_end);
 			set_field_buffer(transponder_editor->transponders[i]->uplink[1], 0, temp);
 		}
 
-		if (db_entry->downlink_start[i] != 0.0) {
-			snprintf(temp, MAX_NUM_CHARS, "%f", db_entry->downlink_start[i]);
+		if (transponder->downlink_start != 0.0) {
+			snprintf(temp, MAX_NUM_CHARS, "%f", transponder->downlink_start);
 			set_field_buffer(transponder_editor->transponders[i]->downlink[0], 0, temp);
 
-			snprintf(temp, MAX_NUM_CHARS, "%f", db_entry->downlink_end[i]);
+			snprintf(temp, MAX_NUM_CHARS, "%f", transponder->downlink_end);
 			set_field_buffer(transponder_editor->transponders[i]->downlink[1], 0, temp);
 		}
 	}
@@ -543,7 +544,7 @@ void transponder_editor_to_db_entry(struct transponder_editor *transponder_edito
 
 		//add to returned database entry if transponder name is defined
 		if (strlen(temp) > 0) {
-			strncpy(db_entry->transponder_name[entry_index], temp, MAX_NUM_CHARS);
+			strncpy(db_entry->transponders[entry_index].name, temp, MAX_NUM_CHARS);
 
 			if (uplink_end == 0.0) {
 				uplink_end = uplink_start;
@@ -559,10 +560,10 @@ void transponder_editor_to_db_entry(struct transponder_editor *transponder_edito
 				downlink_end = 0.0;
 			}
 
-			db_entry->uplink_start[entry_index] = uplink_start;
-			db_entry->uplink_end[entry_index] = uplink_end;
-			db_entry->downlink_start[entry_index] = downlink_start;
-			db_entry->downlink_end[entry_index] = downlink_end;
+			db_entry->transponders[entry_index].uplink_start = uplink_start;
+			db_entry->transponders[entry_index].uplink_end = uplink_end;
+			db_entry->transponders[entry_index].downlink_start = downlink_start;
+			db_entry->transponders[entry_index].downlink_end = downlink_end;
 
 			entry_index++;
 		}
