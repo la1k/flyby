@@ -94,6 +94,7 @@ int main(int argc, char **argv)
 			if (!transponder_db_entry_empty(new_db_entry) && !transponder_db_entry_equal(old_db_entry, new_db_entry)) {
 				if (transponder_db_entry_empty(old_db_entry)) {
 					fprintf(stderr, "New entry\n\n");
+					transponder_db_entry_copy(old_db_entry, new_db_entry);
 				} else {
 					fprintf(stderr, "Entries differ for %s:\n", tle_db->tles[j].name);
 					print_transponder_entry_differences(old_db_entry, new_db_entry);
@@ -101,10 +102,9 @@ int main(int argc, char **argv)
 					while (true) {
 						int c = getchar();
 						if (c == 'y') {
-							//accept change
+							transponder_db_entry_copy(old_db_entry, new_db_entry);
 							break;
 						} else if (c == 'n') {
-							//decline change
 							break;
 						}
 					}
@@ -115,6 +115,8 @@ int main(int argc, char **argv)
 
 		transponder_db_destroy(&file_db);
 	}
+
+	transponder_db_write_to_default(tle_db, transponder_db);
 
 	//free memory
 	tle_db_destroy(&tle_db);
