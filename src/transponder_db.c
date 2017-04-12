@@ -129,12 +129,17 @@ int transponder_db_from_file(const char *dbfile, const struct tle_db *tle_db, st
 	return TRANSPONDER_SUCCESS;
 }
 
+bool transponder_empty(struct transponder transponder)
+{
+	return (transponder.downlink_start == 0.0) && (transponder.uplink_start == 0.0);
+}
+
 bool transponder_db_entry_empty(const struct sat_db_entry *entry)
 {
 	//check if downlink/uplinks are well-defined
 	int num_defined_entries = 0;
 	for (int i=0; i < entry->num_transponders; i++) {
-		if ((entry->transponders[i].downlink_start != 0.0) || (entry->transponders[i].uplink_start != 0.0)) {
+		if (!transponder_empty(entry->transponders[i])) {
 			num_defined_entries++;
 		}
 	}

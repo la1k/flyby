@@ -169,4 +169,12 @@ void transponder_db_entry_copy(struct sat_db_entry *destination, struct sat_db_e
  **/
 bool transponder_db_entry_empty(const struct sat_db_entry *entry);
 
+/**
+ * Check whether transponder is empty (neither downlink nor uplink defined).
+ *
+ * \param transponder Transponder to check
+ **/
+bool transponder_empty(struct transponder transponder);
+
+
 #endif

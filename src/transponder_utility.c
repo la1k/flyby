@@ -19,6 +19,11 @@ void print_transponder_entry_differences(const struct sat_db_entry *old_db_entry
 		struct transponder transponder_new = new_db_entry->transponders[i];
 		struct transponder transponder_old = old_db_entry->transponders[i];
 
+		if (transponder_empty(old_db_entry->transponders[i])) {
+			fprintf(stderr, "New entry: %s, %f->%f, %f->%f\n", transponder_new.name, transponder_new.uplink_start, transponder_new.uplink_end, transponder_new.downlink_start, transponder_new.downlink_end);
+			continue;
+		}
+
 		if (strncmp(transponder_old.name, transponder_new.name, MAX_NUM_CHARS) != 0) {
 			fprintf(stderr, "Names differ: `%s` -> `%s`\n", transponder_old.name, transponder_new.name);
 		}
@@ -93,22 +98,25 @@ int main(int argc, char **argv)
 			struct sat_db_entry *old_db_entry = &(transponder_db->sats[j]);
 			if (!transponder_db_entry_empty(new_db_entry) && !transponder_db_entry_equal(old_db_entry, new_db_entry)) {
 				if (transponder_db_entry_empty(old_db_entry)) {
-					fprintf(stderr, "New entry\n\n");
+					fprintf(stderr, "Adding new transponder entries to %s\n", tle_db->tles[j].name);
 					transponder_db_entry_copy(old_db_entry, new_db_entry);
 				} else {
-					fprintf(stderr, "Entries differ for %s:\n", tle_db->tles[j].name);
+					fprintf(stderr, "Updating transponder entries for %s:\n", tle_db->tles[j].name);
 					print_transponder_entry_differences(old_db_entry, new_db_entry);
 					fprintf(stderr, "Accept change? (y/n) ");
+					bool do_update = false;
 					while (true) {
 						int c = getchar();
 						if (c == 'y') {
-							transponder_db_entry_copy(old_db_entry, new_db_entry);
+							do_update = true;
 							break;
 						} else if (c == 'n') {
 							break;
 						}
 					}
-					fprintf(stderr, "\n");
+					if (do_update) {
+						transponder_db_entry_copy(old_db_entry, new_db_entry);
+					}
 				}
 			}
 		}
