@@ -51,6 +51,7 @@ int main(int argc, char **argv)
 	string_array_t transponder_db_filenames = {0}; //TLE files to be used to update the TLE databases
 	bool force_changes = false;
 	bool ignore_changes = false;
+	bool silent_mode = false;
 
 	//command line options
 	struct option long_options[] = {
@@ -58,9 +59,10 @@ int main(int argc, char **argv)
 		{"force-changes",		no_argument,		0,	'f'},
 		{"ignore-changes",		no_argument,		0,	'i'},
 		{"help",			no_argument,		0,	'h'},
+		{"silent",			no_argument,		0,	's'},
 		{0, 0, 0, 0}
 	};
-	char short_options[] = "t:fih";
+	char short_options[] = "t:fish";
 	while (1) {
 		int option_index = 0;
 		int c = getopt_long(argc, argv, short_options, long_options, &option_index);
@@ -77,6 +79,9 @@ int main(int argc, char **argv)
 				break;
 			case 'i': //ignore changes
 				ignore_changes = true;
+				break;
+			case 's': //silent mode
+				silent_mode = true;
 				break;
 			case 'h': //help
 				fprintf(stderr, "Flyby transponder utility\n");
@@ -99,7 +104,7 @@ int main(int argc, char **argv)
 		const char *filename = string_array_get(&transponder_db_filenames, i);
 		struct transponder_db *file_db = transponder_db_create(tle_db);
 		if (transponder_db_from_file(filename, tle_db, file_db, LOCATION_TRANSIENT) != TRANSPONDER_SUCCESS) {
-			fprintf(stderr, "Could not read file: %s\n", filename);
+			if (!silent_mode) fprintf(stderr, "Could not read file: %s\n", filename);
 			continue;
 		}
 
@@ -108,14 +113,14 @@ int main(int argc, char **argv)
 			struct sat_db_entry *old_db_entry = &(transponder_db->sats[j]);
 			if (!transponder_db_entry_empty(new_db_entry) && !transponder_db_entry_equal(old_db_entry, new_db_entry)) {
 				if (transponder_db_entry_empty(old_db_entry)) {
-					fprintf(stderr, "Adding new transponder entries to %s\n", tle_db->tles[j].name);
+					if (!silent_mode) fprintf(stderr, "Adding new transponder entries to %s\n", tle_db->tles[j].name);
 					transponder_db_entry_copy(old_db_entry, new_db_entry);
 				} else if (!ignore_changes) {
-					fprintf(stderr, "Updating transponder entries for %s:\n", tle_db->tles[j].name);
-					print_transponder_entry_differences(old_db_entry, new_db_entry);
+					if (!silent_mode) fprintf(stderr, "Updating transponder entries for %s:\n", tle_db->tles[j].name);
 					bool do_update = false;
 					if (!force_changes) {
-						fprintf(stderr, "Accept change? (y/n) ");
+						print_transponder_entry_differences(old_db_entry, new_db_entry);
+						fprintf(stderr, "Accept change for %s? (y/n) ", tle_db->tles[i].name);
 						while (true) {
 							int c = getchar();
 							if (c == 'y') {
