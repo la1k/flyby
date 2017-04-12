@@ -35,7 +35,7 @@ target_link_libraries(flyby m ncurses menu form predict)
 
 #transponder database utility
 add_executable(flyby-transponder-db src/transponder_utility.c src/tle_db.c src/transponder_db.c src/string_array.c src/xdg_basedirs.c)
-target_link_libraries(flyby-transponder-db predict)
+target_link_libraries(flyby-transponder-db predict m)
 
 if (WITH_TESTING)
 	enable_testing()

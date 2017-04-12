@@ -11,6 +11,35 @@
 #include "xdg_basedirs.h"
 #include "transponder_db.h"
 #include <libgen.h>
+#include <math.h>
+
+void print_transponder_entry_differences(const struct sat_db_entry *old_db_entry, const struct sat_db_entry *new_db_entry)
+{
+	for (int i=0; i < fmax(old_db_entry->num_transponders, new_db_entry->num_transponders); i++) {
+		const char *old_name = old_db_entry->transponder_name[i];
+		const char *new_name = new_db_entry->transponder_name[i];
+
+		if (strncmp(old_name, new_name, MAX_NUM_CHARS) != 0) {
+			fprintf(stderr, "Names differ: `%s` -> `%s`\n", old_name, new_name);
+		}
+
+		double old_value = old_db_entry->uplink_start[i];
+		double new_value = new_db_entry->uplink_start[i];
+		if (old_value != new_value) fprintf(stderr, "Uplink start differs: %f -> %f\n", old_value, new_value);
+
+		old_value = old_db_entry->uplink_end[i];
+		new_value = new_db_entry->uplink_end[i];
+		if (old_value != new_value) fprintf(stderr, "Uplink end differs: %f -> %f\n", old_value, new_value);
+
+		old_value = old_db_entry->downlink_start[i];
+		new_value = new_db_entry->downlink_start[i];
+		if (old_value != new_value) fprintf(stderr, "Downlink start differs: %f -> %f\n", old_value, new_value);
+
+		old_value = old_db_entry->downlink_end[i];
+		new_value = new_db_entry->downlink_end[i];
+		if (old_value != new_value) fprintf(stderr, "Downlink end differs: %f -> %f\n", old_value, new_value);
+	}
+}
 
 int main(int argc, char **argv)
 {
@@ -62,12 +91,24 @@ int main(int argc, char **argv)
 		for (int j=0; j < file_db->num_sats; j++) {
 			struct sat_db_entry *new_db_entry = &(file_db->sats[j]);
 			struct sat_db_entry *old_db_entry = &(transponder_db->sats[j]);
-			fprintf(stderr, "%s\n", tle_db->tles[j].name);
 			if (!transponder_db_entry_empty(new_db_entry) && !transponder_db_entry_equal(old_db_entry, new_db_entry)) {
 				if (transponder_db_entry_empty(old_db_entry)) {
-					fprintf(stderr, "New entry\n");
+					fprintf(stderr, "New entry\n\n");
 				} else {
-					fprintf(stderr, "Entries differ\n");
+					fprintf(stderr, "Entries differ for %s:\n", tle_db->tles[j].name);
+					print_transponder_entry_differences(old_db_entry, new_db_entry);
+					fprintf(stderr, "Accept change? (y/n) ");
+					while (true) {
+						int c = getchar();
+						if (c == 'y') {
+							//accept change
+							break;
+						} else if (c == 'n') {
+							//decline change
+							break;
+						}
+					}
+					fprintf(stderr, "\n");
 				}
 			}
 		}
