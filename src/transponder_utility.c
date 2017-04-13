@@ -13,38 +13,13 @@
 #include <libgen.h>
 #include <math.h>
 
-void print_transponder_entry_differences(const struct sat_db_entry *old_db_entry, const struct sat_db_entry *new_db_entry)
-{
-	for (int i=0; i < fmax(old_db_entry->num_transponders, new_db_entry->num_transponders); i++) {
-		struct transponder transponder_new = new_db_entry->transponders[i];
-		struct transponder transponder_old = old_db_entry->transponders[i];
-
-		if (transponder_empty(old_db_entry->transponders[i])) {
-			fprintf(stderr, "New entry: %s, %f->%f, %f->%f\n", transponder_new.name, transponder_new.uplink_start, transponder_new.uplink_end, transponder_new.downlink_start, transponder_new.downlink_end);
-			continue;
-		}
-
-		if (strncmp(transponder_old.name, transponder_new.name, MAX_NUM_CHARS) != 0) {
-			fprintf(stderr, "Names differ: `%s` -> `%s`\n", transponder_old.name, transponder_new.name);
-		}
-
-		double old_value = transponder_old.uplink_start;
-		double new_value = transponder_new.uplink_start;
-		if (old_value != new_value) fprintf(stderr, "Uplink start differs: %f -> %f\n", old_value, new_value);
-
-		old_value = transponder_old.uplink_end;
-		new_value = transponder_new.uplink_end;
-		if (old_value != new_value) fprintf(stderr, "Uplink end differs: %f -> %f\n", old_value, new_value);
-
-		old_value = transponder_old.downlink_start;
-		new_value = transponder_new.downlink_start;
-		if (old_value != new_value) fprintf(stderr, "Downlink start differs: %f -> %f\n", old_value, new_value);
-
-		old_value = transponder_old.downlink_end;
-		new_value = transponder_new.downlink_end;
-		if (old_value != new_value) fprintf(stderr, "Downlink end differs: %f -> %f\n", old_value, new_value);
-	}
-}
+/**
+ * Print differences between transponder database entries to terminal.
+ *
+ * \param old_db_entry Old database entry
+ * \param new_db_entry New database entry
+ **/
+void print_transponder_entry_differences(const struct sat_db_entry *old_db_entry, const struct sat_db_entry *new_db_entry);
 
 int main(int argc, char **argv)
 {
@@ -148,4 +123,37 @@ int main(int argc, char **argv)
 	//free memory
 	tle_db_destroy(&tle_db);
 	transponder_db_destroy(&transponder_db);
+}
+
+void print_transponder_entry_differences(const struct sat_db_entry *old_db_entry, const struct sat_db_entry *new_db_entry)
+{
+	for (int i=0; i < fmax(old_db_entry->num_transponders, new_db_entry->num_transponders); i++) {
+		struct transponder transponder_new = new_db_entry->transponders[i];
+		struct transponder transponder_old = old_db_entry->transponders[i];
+
+		if (transponder_empty(old_db_entry->transponders[i])) {
+			fprintf(stderr, "New entry: %s, %f->%f, %f->%f\n", transponder_new.name, transponder_new.uplink_start, transponder_new.uplink_end, transponder_new.downlink_start, transponder_new.downlink_end);
+			continue;
+		}
+
+		if (strncmp(transponder_old.name, transponder_new.name, MAX_NUM_CHARS) != 0) {
+			fprintf(stderr, "Names differ: `%s` -> `%s`\n", transponder_old.name, transponder_new.name);
+		}
+
+		double old_value = transponder_old.uplink_start;
+		double new_value = transponder_new.uplink_start;
+		if (old_value != new_value) fprintf(stderr, "Uplink start differs: %f -> %f\n", old_value, new_value);
+
+		old_value = transponder_old.uplink_end;
+		new_value = transponder_new.uplink_end;
+		if (old_value != new_value) fprintf(stderr, "Uplink end differs: %f -> %f\n", old_value, new_value);
+
+		old_value = transponder_old.downlink_start;
+		new_value = transponder_new.downlink_start;
+		if (old_value != new_value) fprintf(stderr, "Downlink start differs: %f -> %f\n", old_value, new_value);
+
+		old_value = transponder_old.downlink_end;
+		new_value = transponder_new.downlink_end;
+		if (old_value != new_value) fprintf(stderr, "Downlink end differs: %f -> %f\n", old_value, new_value);
+	}
 }
