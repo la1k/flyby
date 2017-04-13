@@ -55,11 +55,13 @@ As a user, you can put your transponder database in `$HOME/.local/share/flyby/fl
 
 Alternatively, `flyby-satnogs-fetcher` can be used to fetch the SatNOGS transponder database and merge it with flyby's transponder database.
 
-The database can also be fetched to a named file using `flyby-satnogs-fetcher [FILENAME]`, and can then be added to flyby using `flyby-transponder-dbutil -a [FILENAME]`. `flyby-transponder-dbutil` also has support for silent mode and overriding user prompting for whether differing entries should be overwritten, which can be reviewed using `flyby-transponder-dbutil --help`. This can be used to write cronjobs for updating the transponder database, e.g.:
+The database can also be fetched to a named file using `flyby-satnogs-fetcher [FILENAME]`, and can then be added to flyby using `flyby-transponder-dbutil -a [FILENAME]`. 
+
+The database util `flyby-transponder-dbutil` also has support for various options like silent mode and overriding user prompting for whether differing entries should be overwritten. These options can be reviewed using `flyby-transponder-dbutil --help`. These utils can be used to write cronjobs for updating the transponder database, like the following:
 
 ```
 tempfile=$(mktemp)
 flyby-satnogs-fetcher $tempfile
-flyby-transponder-dbutil --force --add-transponder-file $tempfile
+flyby-transponder-dbutil --silent --force --add-transponder-file $tempfile
 rm $tempfile
 ```
