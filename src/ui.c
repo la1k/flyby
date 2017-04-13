@@ -2510,6 +2510,11 @@ void RunFlybyUI(bool new_user, const char *qthfile, predict_observer_t *observer
 							AutoUpdate("", tle_db);
 							break;
 
+						case 'M':
+						case 'm':
+							multitrack_options(listing);
+							break;
+
 						case 'G':
 						case 'g':
 							QthEdit(qthfile, observer);

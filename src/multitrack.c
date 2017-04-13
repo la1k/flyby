@@ -687,6 +687,36 @@ void multitrack_display_entry(WINDOW *window, int row, int col, multitrack_entry
 	mvwprintw(window, row, col, "%s", entry->display_string);
 }
 
+void multitrack_options(multitrack_listing_t *listing)
+{
+	WINDOW *option_window = newwin(30, 70, 4, 3);
+
+	int row = 1;
+	mvwprintw(option_window, row++, 1, "Keybindings:");
+	mvwprintw(option_window, row++, 1, "F3/`/`:  Search for satellite");
+	row++;
+	mvwprintw(option_window, row++, 1, "Colorscheme:");
+
+	wattrset(option_window, multitrack_colors(3000, 1));
+	mvwprintw(option_window, row++, 1, "Satellite above horizon");
+	wattrset(option_window, SATELLITE_CLOSE_COLOR);
+	mvwprintw(option_window, row++, 1, "Satellite about to pass over horizon");
+	wattrset(option_window, SATELLITE_FAR_COLOR);
+	mvwprintw(option_window, row++, 1, "Satellite scheduled to pass over horizon");
+	wattrset(option_window, SATELLITE_IGNORED_COLOR);
+	mvwprintw(option_window, row++, 1, "Ignored satellite");
+
+
+	wattrset(option_window, COLOR_PAIR(4));
+	box(option_window, 0, 0);
+	wrefresh(option_window);
+
+	cbreak(); //turn off halfdelay mode so that getch blocks
+	getch();
+
+	delwin(option_window);
+}
+
 void multitrack_print_scrollbar(multitrack_listing_t *listing)
 {
 	int scrollarea_offset = 0;
