@@ -44,11 +44,22 @@ All files are
 merged in a single database. User-defined TLEs take precedence over system-wide TLEs. For details,
 see documentation for `tle_db_from_search_path()` in `$SOURCE_DIR/src/transponder_db.h`.
 
+The TLE database can automatically be updated using the TLEs available from celestrak.com using `flyby-update-tles`, but note that this only will update existing TLEs, not add new.
+
 Transponder database
 --------------------
 
 Transponder database is read from `$BASEDIR/flyby/flyby.db`. `$BASEDIR` is assumed to be the same as above.
 
-As a user, you can put your transponder database in `$HOME/.local/share/flyby/flyby.db`.
+As a user, you can put your transponder database in `$HOME/.local/share/flyby/flyby.db`. Flyby provides a transponder editor as a part of its NCurses interface, bypassing the need for editing this file directly.
 
-Alternatively, `utils/fetch_satnogs_db.py` can be used to fetch the SatNOGS transponder database, which will be placed in the correct path.
+Alternatively, `flyby-satnogs-fetcher` can be used to fetch the SatNOGS transponder database and merge it with flyby's transponder database.
+
+The database can also be fetched to a named file using `flyby-satnogs-fetcher [FILENAME]`, and can then be added to flyby using `flyby-transponder-dbutil -a [FILENAME]`. `flyby-transponder-dbutil` also has support for silent mode and overriding user prompting for whether differing entries should be overwritten, which can be reviewed using `flyby-transponder-dbutil --help`. This can be used to write cronjobs for updating the transponder database, e.g.:
+
+```
+tempfile=$(mktemp)
+flyby-satnogs-fetcher $tempfile
+flyby-transponder-dbutil --force --add-transponder-file $tempfile
+rm $tempfile
+```
