@@ -441,6 +441,10 @@ NCURSES_ATTR_T multitrack_colors(double range, double elevation)
 		return (COLOR_PAIR(2)|A_REVERSE); /* reverse */
 }
 
+#define SATELLITE_CLOSE_COLOR COLOR_PAIR(2)
+#define SATELLITE_FAR_COLOR COLOR_PAIR(4)
+#define SATELLITE_IGNORED_COLOR COLOR_PAIR(3)
+
 void multitrack_update_entry(double max_elevation_threshold, predict_observer_t *qth, multitrack_entry_t *entry, predict_julian_date_t time)
 {
 	entry->geostationary = false;
@@ -501,12 +505,12 @@ void multitrack_update_entry(double max_elevation_threshold, predict_observer_t 
 	} else if ((obs.elevation < 0) && can_predict) {
 		if ((entry->next_aos-time) < 0.00694) {
 			//satellite is close, set bold
-			entry->display_attributes = COLOR_PAIR(2);
+			entry->display_attributes = SATELLITE_CLOSE_COLOR;
 			time_t epoch = predict_from_julian(entry->next_aos - time);
 			strftime(aos_los, MAX_NUM_CHARS, "%M:%S", gmtime(&epoch)); //minutes and seconds left until AOS
 		} else {
 			//satellite is far, set normal coloring
-			entry->display_attributes = COLOR_PAIR(4);
+			entry->display_attributes = SATELLITE_FAR_COLOR;
 			time_t aoslos_epoch = predict_from_julian(entry->next_aos);
 			time_t curr_epoch = predict_from_julian(time);
 			struct tm aostime, currtime;
@@ -522,13 +526,13 @@ void multitrack_update_entry(double max_elevation_threshold, predict_observer_t 
 			}
 		}
 	} else if (!can_predict) {
-		entry->display_attributes = COLOR_PAIR(3);
+		entry->display_attributes = SATELLITE_IGNORED_COLOR;
 		sprintf(aos_los, "*GeoS-NoAOS*");
 	}
 
 	entry->above_max_elevation_threshold = entry->max_elevation > max_elevation_threshold;
 	if (!entry->above_max_elevation_threshold) {
-		entry->display_attributes = COLOR_PAIR(3);
+		entry->display_attributes = SATELLITE_IGNORED_COLOR;
 	}
 
 	char abs_pos_string[MAX_NUM_CHARS] = {0};
