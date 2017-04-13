@@ -57,7 +57,7 @@ Alternatively, `flyby-satnogs-fetcher` can be used to fetch the SatNOGS transpon
 
 The database can also be fetched to a named file using `flyby-satnogs-fetcher [FILENAME]`, and can then be added to flyby using `flyby-transponder-dbutil -a [FILENAME]`. 
 
-The database util `flyby-transponder-dbutil` also has support for various options like silent mode and overriding user prompting for whether differing entries should be overwritten. These options can be reviewed using `flyby-transponder-dbutil --help`. These utils can be used to write cronjobs for updating the transponder database, like the following:
+The transponder database utility `flyby-transponder-dbutil` also has support for various options like silent mode and overriding user prompting for whether differing entries should be overwritten. These options can be reviewed using `flyby-transponder-dbutil --help`. This can be used to write cronjobs for updating the transponder database, like the following:
 
 ```
 tempfile=$(mktemp)
