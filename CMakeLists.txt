@@ -34,7 +34,7 @@ install(TARGETS flyby RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 target_link_libraries(flyby m ncurses menu form predict)
 
 #transponder database utility
-set(TRANSPONDER_UTILITY_NAME "flyby-dbutil") #name of transponder utility executable
+set(TRANSPONDER_UTILITY_NAME "flyby-transponder-dbutil") #name of transponder utility executable
 add_executable(transponder_utility src/transponder_utility.c src/tle_db.c src/transponder_db.c src/string_array.c src/xdg_basedirs.c src/option_help.c)
 target_link_libraries(transponder_utility predict m)
 install(TARGETS transponder_utility RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
