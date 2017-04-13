@@ -47,6 +47,8 @@ int main(int argc, char **argv)
 	char short_options[] = "t:fish";
 	char usage_instructions[MAX_NUM_CHARS];
 	snprintf(usage_instructions, MAX_NUM_CHARS, "Flyby transponder database utility\n\nUsage: %s [OPTIONS]", argv[0]);
+
+	//parse options
 	while (1) {
 		int option_index = 0;
 		int c = getopt_long(argc, argv, short_options, long_options, &option_index);
@@ -85,6 +87,7 @@ int main(int argc, char **argv)
 	struct transponder_db *transponder_db = transponder_db_create(tle_db);
 	transponder_db_from_search_paths(tle_db, transponder_db);
 
+	//get transponders from input database file
 	for (int i=0; i < string_array_size(&transponder_db_filenames); i++) {
 		const char *filename = string_array_get(&transponder_db_filenames, i);
 		struct transponder_db *file_db = transponder_db_create(tle_db);
@@ -93,17 +96,21 @@ int main(int argc, char **argv)
 			continue;
 		}
 
+		//compare entries
 		for (int j=0; j < file_db->num_sats; j++) {
 			struct sat_db_entry *new_db_entry = &(file_db->sats[j]);
 			struct sat_db_entry *old_db_entry = &(transponder_db->sats[j]);
 			if (!transponder_db_entry_empty(new_db_entry) && !transponder_db_entry_equal(old_db_entry, new_db_entry)) {
 				if (transponder_db_entry_empty(old_db_entry)) {
+					//add new entry
 					if (!silent_mode) fprintf(stderr, "Adding new transponder entries to %s\n", tle_db->tles[j].name);
 					transponder_db_entry_copy(old_db_entry, new_db_entry);
 				} else if (!ignore_changes) {
+					//update existing entry
 					if (!silent_mode) fprintf(stderr, "Updating transponder entries for %s:\n", tle_db->tles[j].name);
 					bool do_update = false;
 					if (!force_changes) {
+						//prompt user for acceptance
 						print_transponder_entry_differences(old_db_entry, new_db_entry);
 						fprintf(stderr, "Accept change for %s? (y/n) ", tle_db->tles[i].name);
 						while (true) {
@@ -128,6 +135,7 @@ int main(int argc, char **argv)
 		transponder_db_destroy(&file_db);
 	}
 
+	//update user file
 	transponder_db_write_to_default(tle_db, transponder_db);
 
 	//free memory
