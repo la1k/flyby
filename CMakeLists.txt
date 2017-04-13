@@ -34,9 +34,15 @@ install(TARGETS flyby RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 target_link_libraries(flyby m ncurses menu form predict)
 
 #transponder database utility
-add_executable(flyby-transponder-db src/transponder_utility.c src/tle_db.c src/transponder_db.c src/string_array.c src/xdg_basedirs.c src/option_help.c)
-target_link_libraries(flyby-transponder-db predict m)
-install(TARGETS flyby-transponder-db RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+set(TRANSPONDER_UTILITY_NAME "flyby-transponder-db")
+add_executable(transponder_utility src/transponder_utility.c src/tle_db.c src/transponder_db.c src/string_array.c src/xdg_basedirs.c src/option_help.c)
+target_link_libraries(transponder_utility predict m)
+install(TARGETS transponder_utility RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+set_target_properties(transponder_utility PROPERTIES OUTPUT_NAME "${TRANSPONDER_UTILITY_NAME}")
+
+#scripts
+configure_file(utils/fetch_satnogs_db.py.in flyby-fetch-satnogs-database @ONLY)
+configure_file(utils/update-tle.sh.in flyby-update-tles @ONLY)
 
 if (WITH_TESTING)
 	enable_testing()

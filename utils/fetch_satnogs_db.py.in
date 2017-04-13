@@ -11,7 +11,7 @@ from operator import itemgetter
 from os.path import expanduser
 
 #Step 0: Check if the flyby transponder utility is in the PATH
-flyby_transponder_executable="flyby-transponder-db"
+flyby_transponder_executable="@TRANSPONDER_UTILITY_NAME@"
 if not spawn.find_executable(flyby_transponder_executable):
     print("Flyby transponder utility not found in $PATH")
     sys.exit();
