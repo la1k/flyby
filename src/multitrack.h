@@ -40,6 +40,8 @@ typedef struct {
 	bool geostationary;
 	///Whether satellite is never visible
 	bool never_visible;
+	///Whether satellite is above maximum elevation threshold
+	bool above_max_elevation_threshold;
 	///Whether satellite has decayed
 	bool decayed;
 	///String used for information displaying in the satellite listing
@@ -154,6 +156,8 @@ typedef struct {
 	int terminal_width;
 	///Sorting options
 	int sort_option;
+	///Thresholding options
+	double max_elevation_threshold;
 } multitrack_listing_t;
 
 /**
