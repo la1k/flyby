@@ -36,6 +36,7 @@ target_link_libraries(flyby m ncurses menu form predict)
 #transponder database utility
 add_executable(flyby-transponder-db src/transponder_utility.c src/tle_db.c src/transponder_db.c src/string_array.c src/xdg_basedirs.c src/option_help.c)
 target_link_libraries(flyby-transponder-db predict m)
+install(TARGETS flyby-transponder-db RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 
 if (WITH_TESTING)
 	enable_testing()

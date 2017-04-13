@@ -31,7 +31,7 @@ int main(int argc, char **argv)
 
 	//command line options
 	struct option_extended options[] = {
-		{{"transponder-file",		required_argument,	0,	't'},
+		{{"add-transponder-file",	required_argument,	0,	'a'},
 			"FILE", "Add transponder entries from specified transponder database FILE to flyby's transponder database. Ignores entries for which no corresponding TLE exists in the TLE database."},
 		{{"force-changes",		no_argument,		0,	'f'},
 			NULL, "Accept all database changes. The program will otherwise ask the user whether changes should be accepted or not."},
@@ -44,7 +44,7 @@ int main(int argc, char **argv)
 		{{0, 0, 0, 0}, NULL, NULL}
 	};
 	struct option *long_options = extended_to_longopts(options);
-	char short_options[] = "t:fish";
+	char short_options[] = "a:fish";
 	char usage_instructions[MAX_NUM_CHARS];
 	snprintf(usage_instructions, MAX_NUM_CHARS, "Flyby transponder database utility\n\nUsage: %s [OPTIONS]", argv[0]);
 
@@ -57,7 +57,7 @@ int main(int argc, char **argv)
 			break;
 
 		switch (c) {
-			case 't': //transponder file
+			case 'a': //transponder file
 				string_array_add(&transponder_db_filenames, optarg);
 				break;
 			case 'f': //force changes
@@ -112,7 +112,7 @@ int main(int argc, char **argv)
 					if (!force_changes) {
 						//prompt user for acceptance
 						print_transponder_entry_differences(old_db_entry, new_db_entry);
-						fprintf(stderr, "Accept change for %s? (y/n) ", tle_db->tles[i].name);
+						fprintf(stderr, "Accept change for %s? (y/n) ", tle_db->tles[j].name);
 						while (true) {
 							int c = getchar();
 							if (c == 'y') {
