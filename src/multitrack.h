@@ -14,6 +14,8 @@
 //Start row for multitrack window printing
 #define MULTITRACK_WINDOW_ROW (MULTITRACK_HEADER_HEIGHT+1)
 
+enum sort_options{SORT_BY_AOS, SORT_BY_MAX_ELEVATION};
+
 /**
  * Structs and functions used for showing a navigateable real-time satellite listing.
  **/
@@ -150,6 +152,8 @@ typedef struct {
 	int terminal_height;
 	///Current terminal width
 	int terminal_width;
+	///Sorting options
+	int sort_option;
 } multitrack_listing_t;
 
 /**
