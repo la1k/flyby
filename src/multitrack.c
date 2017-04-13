@@ -633,9 +633,20 @@ void multitrack_sort_listing(multitrack_listing_t *listing)
 	listing->num_nevervisible = nevervisible_counter;
 	listing->num_decayed = decayed_counter;
 
+	//sort those with nonzero elevation according to max elevation
+	for (int i=0; i < above_horizon_counter-1; i++) {
+		for (int j=0; j < above_horizon_counter-1; j++){
+			if (listing->entries[listing->sorted_index[j]]->max_elevation < listing->entries[listing->sorted_index[j+1]]->max_elevation) {
+				int x = listing->sorted_index[j];
+				listing->sorted_index[j] = listing->sorted_index[j+1];
+				listing->sorted_index[j+1] = x;
+			}
+		}
+	}
+
 	//sort internally according to AOS/LOS
-	for (int i=0; i < above_horizon_counter + below_horizon_counter; i++) {
-		for (int j=0; j < above_horizon_counter + below_horizon_counter - 1; j++){
+	for (int i=above_horizon_counter; i < above_horizon_counter + below_horizon_counter; i++) {
+		for (int j=above_horizon_counter; j < above_horizon_counter + below_horizon_counter - 1; j++){
 			if (listing->entries[listing->sorted_index[j]]->next_aos > listing->entries[listing->sorted_index[j+1]]->next_aos) {
 				int x = listing->sorted_index[j];
 				listing->sorted_index[j] = listing->sorted_index[j+1];
