@@ -43,13 +43,13 @@ struct option *extended_to_longopts(struct option_extended *options)
 	return ret_options;
 }
 
-void getopt_long_show_help(const char *usage_instructions, struct option long_options[], const char *short_options, const char **option_descriptions)
+void getopt_long_show_help(const char *usage_instructions, struct option_extended long_options[], const char *short_options)
 {
 	//find maximum length of long options
 	int max_length = 0;
 	int index = 0;
 	while (true) {
-		const char *name = long_options[index].name;
+		const char *name = long_options[index].option.name;
 		if (name == 0) {
 			break;
 		}
@@ -65,43 +65,41 @@ void getopt_long_show_help(const char *usage_instructions, struct option long_op
 
 	//display initial description
 	index = 0;
-	int description_index = 0;
-	printf("%s\n", usage_instructions);
+	printf("\n%s\n\n\n", usage_instructions);
 	while (true) {
 		char option_print_full[MAX_NUM_CHARS] = {0};
 		fill_spaces(option_print_full, MAX_NUM_CHARS, MAX_NUM_CHARS);
 		char *option_print = option_print_full;
 
-		if (long_options[index].name == 0) {
+		if (long_options[index].option.name == 0) {
 			break;
 		}
 
 		//display short option
-		if (has_short_option(short_options, long_options[index])) {
-			option_print += snprintf(option_print, MAX_NUM_CHARS, " -%c,", long_options[index].val);
+		if (has_short_option(short_options, long_options[index].option)) {
+			option_print += snprintf(option_print, MAX_NUM_CHARS, " -%c,", long_options[index].option.val);
 		} else {
 			option_print += snprintf(option_print, MAX_NUM_CHARS, "    ");
 		}
 
 		//display long option
-		option_print += snprintf(option_print, MAX_NUM_CHARS, "--%s", long_options[index].name);
+		option_print += snprintf(option_print, MAX_NUM_CHARS, "--%s", long_options[index].option.name);
 
 		//display argument
-		switch (long_options[index].has_arg) {
+		switch (long_options[index].option.has_arg) {
 			case required_argument:
-				option_print += snprintf(option_print, MAX_NUM_CHARS, "=ARG");
+				option_print += snprintf(option_print, MAX_NUM_CHARS, "=%s", long_options[index].argument);
 			break;
 
 			case optional_argument:
-				option_print += snprintf(option_print, MAX_NUM_CHARS, "=OPT_ARG");
+				option_print += snprintf(option_print, MAX_NUM_CHARS, "=%s (optional)", long_options[index].argument);
 			break;
 		}
 		*option_print = ' ';
 
 		option_print = option_print_full + max_length;
-		if (option_descriptions[description_index] != NULL) {
-			snprintf(option_print, MAX_NUM_CHARS, " %s.", option_descriptions[description_index]);
-			description_index++;
+		if (long_options[index].description != NULL) {
+			snprintf(option_print, MAX_NUM_CHARS, " %s", long_options[index].description);
 		} else {
 			snprintf(option_print, MAX_NUM_CHARS, " Documentation missing.");
 		}

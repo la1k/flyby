@@ -68,7 +68,7 @@ int main(int argc, char **argv)
 		{{"add-tle-file",		required_argument,	0,	FLYBY_OPT_ADD_TLE},
 			"FILE", "add TLE file to flyby's TLE database. The base filename of the input file will be used for the internal file, so any existing file with this filename will be overwritten."},
 		{{"update-tle-db",		required_argument,	0,	'u'},
-			"FILE", "update TLE database with TLE file FILE. Multiple files can be specified using the same option multiple times (e.g. -u file1 -u file2 ...). %s will exit afterwards. Any new TLEs in the file will be ignored."},
+			"FILE", "update TLE database with TLE file FILE. Multiple files can be specified using the same option multiple times (e.g. -u file1 -u file2 ...). Flyby will exit afterwards. Any new TLEs in the file will be ignored."},
 		{{"tle-file",			required_argument,	0,	't'},
 			"FILE", "use FILE as TLE database file. Overrides user and system TLE database files. Multiple files can be specified using this option multiple times (e.g. -t file1 -t file2 ...)."},
 		{{"qth-file",			required_argument,	0,	'q'},
@@ -78,7 +78,7 @@ int main(int argc, char **argv)
 		{{"rotctld-port",		required_argument,	0,	FLYBY_OPT_ROTCTLD_PORT},
 			"SERVER_PORT", "specify rotctld server port"},
 		{{"rotctld-horizon",		required_argument,	0,	'H'},
-			"HORIZON", "specify elevation threshold for when %s will start tracking an orbit"},
+			"HORIZON", "specify elevation threshold for when flyby will start tracking an orbit"},
 		{{"rotctld-update-interval",	required_argument,	0,	FLYBY_OPT_ROTCTLD_UPDATE_INTERVAL},
 			"SECS", "Send updates to rotctld other SECS seconds instead of when (azimuth,elevation) changes"},
 		{{"rigctld-uplink-host",		required_argument,	0,	'U'},
@@ -97,6 +97,8 @@ int main(int argc, char **argv)
 			NULL, "Show help"},
 		{{0, 0, 0, 0}, NULL, NULL}
 	};
+	char usage_instructions[MAX_NUM_CHARS];
+	snprintf(usage_instructions, MAX_NUM_CHARS, "Usage:\n%s [options]", argv[0]);
 
 	struct option *long_options = extended_to_longopts(options);
 	char short_options[] = "u:t:q:a:H:U:D:h";
@@ -155,7 +157,7 @@ int main(int argc, char **argv)
 				strncpy(rigctld_downlink_vfo, optarg, MAX_NUM_CHARS);
 				break;
 			case 'h': //help
-				show_help(argv[0], long_options, short_options);
+				getopt_long_show_help(usage_instructions, options, short_options);
 				return 0;
 				break;
 		}
@@ -281,83 +283,4 @@ int main(int argc, char **argv)
 	predict_destroy_observer(observer);
 	tle_db_destroy(&tle_db);
 	transponder_db_destroy(&transponder_db);
-}
-
-void show_help(const char *name, struct option long_options[], const char *short_options)
-{
-	//display initial description
-	printf("\nUsage:\n");
-	printf("%s [options]\n\n", name);
-	printf("Options:\n");
-
-	int index = 0;
-	while (true) {
-		if (long_options[index].name == 0) {
-			break;
-		}
-
-		//display short option
-		if (has_short_option(short_options, long_options[index])) {
-			printf(" -%c,", long_options[index].val);
-		} else {
-			printf("    ");
-		}
-
-		//display long option
-		printf("--%s", long_options[index].name);
-
-		//display usage information
-		switch (long_options[index].val) {
-			case FLYBY_OPT_ADD_TLE:
-				printf("=FILE\t\t\tadd TLE file to flyby's TLE database. The base filename of the input file will be used for the internal file, so any existing file with this filename will be overwritten.");
-				break;
-			case 'u':
-				printf("=FILE\t\tupdate TLE database with TLE file FILE. Multiple files can be specified using the same option multiple times (e.g. -u file1 -u file2 ...). %s will exit afterwards. Any new TLEs in the file will be ignored.", name);
-				break;
-			case 't':
-				printf("=FILE\t\t\tuse FILE as TLE database file. Overrides user and system TLE database files. Multiple files can be specified using this option multiple times (e.g. -t file1 -t file2 ...).");
-				break;
-			case 'q':
-				printf("=FILE\t\t\tuse FILE as QTH config file. Overrides existing QTH config file");
-				break;
-			case 'a':
-				printf("=SERVER_HOST\t\tconnect to a rotctld server with hostname SERVER_HOST and enable antenna tracking");
-				break;
-			case FLYBY_OPT_ROTCTLD_PORT:
-				printf("=SERVER_PORT\t\tspecify rotctld server port");
-				break;
-			case 'H':
-				printf("=HORIZON\t\tspecify elevation threshold for when %s will start tracking an orbit", name);
-				break;
-			case FLYBY_OPT_ROTCTLD_UPDATE_INTERVAL:
-				printf("=SECS\tSend updates to rotctld other SECS seconds instead of when (azimuth,elevation) changes");
-				break;
-			case 'U':
-				printf("=SERVER_HOST\tconnect to specified rigctld server for uplink frequency steering");
-				break;
-			case FLYBY_OPT_UPLINK_PORT:
-				printf("=SERVER_PORT\tspecify rigctld uplink port");
-				break;
-			case FLYBY_OPT_UPLINK_VFO:
-				printf("=VFO_NAME\tspecify rigctld uplink VFO");
-				break;
-			case 'D':
-				printf("=SERVER_HOST\tconnect to specified rigctld server for downlink frequency steering");
-				break;
-			case FLYBY_OPT_DOWNLINK_PORT:
-				printf("=SERVER_PORT\tspecify rigctld downlink port");
-				break;
-			case FLYBY_OPT_DOWNLINK_VFO:
-				printf("=VFO_NAME\tspecify rigctld downlink VFO");
-				break;
-			case 'h':
-				printf("\t\t\t\tShow help");
-				break;
-			default:
-				printf("DOCUMENTATION MISSING\n");
-				break;
-		}
-		index++;
-		printf("\n");
-	}
 }

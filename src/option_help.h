@@ -29,6 +29,6 @@ bool has_short_option(const char *short_options, struct option long_option);
  * \param short_options List of short options used in getopts_long
  * \param option_descriptions Description of each option
  **/
-void getopt_long_show_help(const char *usage_instructions, struct option long_options[], const char *short_options, const char **option_descriptions);
+void getopt_long_show_help(const char *usage_instructions, struct option_extended long_options[], const char *short_options);
 
 #endif
