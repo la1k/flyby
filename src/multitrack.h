@@ -8,8 +8,11 @@
 //Width of multitrack window
 #define MULTITRACK_WINDOW_WIDTH 67
 
+//Height of multitrack header window
+#define MULTITRACK_HEADER_HEIGHT 2
+
 //Start row for multitrack window printing
-#define MULTITRACK_WINDOW_ROW 2
+#define MULTITRACK_WINDOW_ROW (MULTITRACK_HEADER_HEIGHT+1)
 
 /**
  * Structs and functions used for showing a navigateable real-time satellite listing.

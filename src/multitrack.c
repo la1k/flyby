@@ -279,7 +279,7 @@ void multitrack_resize(multitrack_listing_t *listing)
 	}
 
 	//make header line behave correctly
-	wresize(listing->header_window, 1, COLS);
+	wresize(listing->header_window, MULTITRACK_HEADER_HEIGHT, COLS);
 	wrefresh(listing->header_window);
 }
 
@@ -673,6 +673,8 @@ void multitrack_print_scrollbar(multitrack_listing_t *listing)
 	}
 }
 
+#define PASSINFO_HEADER_COL 52
+
 void multitrack_display_listing(multitrack_listing_t *listing)
 {
 	if ((listing->terminal_height != LINES) || (listing->terminal_width != COLS)) {
@@ -695,6 +697,9 @@ void multitrack_display_listing(multitrack_listing_t *listing)
 	char time_string[MAX_NUM_CHARS] = {0};
 	strftime(time_string, MAX_NUM_CHARS, "%H:%M:%SZ", gmtime(&epoch));
 	mvwprintw(listing->header_window, 0, strlen(header_text), "%s", time_string);
+
+	//print extra header info over maxele/aos/los
+	mvwprintw(listing->header_window, 1, PASSINFO_HEADER_COL, "Maxele  Time");
 
 	//show entries
 	if (listing->num_entries > 0) {
