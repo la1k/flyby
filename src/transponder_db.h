@@ -15,6 +15,20 @@ enum sat_db_location {
 };
 
 /**
+ * Transponder definition.
+ **/
+struct transponder {
+	///transponder name
+	char name[MAX_NUM_CHARS];
+	///uplink frequencies
+	double uplink_start;
+	double uplink_end;
+	///downlink frequencies
+	double downlink_start;
+	double downlink_end;
+};
+
+/**
  * Entry in transponder database.
  **/
 struct sat_db_entry {
@@ -26,14 +40,8 @@ struct sat_db_entry {
 	double alon;
 	///number of transponders
 	int num_transponders;
-	///name of each transponder
-	char transponder_name[MAX_NUM_TRANSPONDERS][MAX_NUM_CHARS];
-	///uplink frequencies
-	double uplink_start[MAX_NUM_TRANSPONDERS];
-	double uplink_end[MAX_NUM_TRANSPONDERS];
-	///downlink frequencies
-	double downlink_start[MAX_NUM_TRANSPONDERS];
-	double downlink_end[MAX_NUM_TRANSPONDERS];
+	///transponders
+	struct transponder transponders[MAX_NUM_TRANSPONDERS];
 	//where this transponder db entry is defined (bitwise or on enum sat_db_location)
 	int location;
 };
@@ -160,5 +168,13 @@ void transponder_db_entry_copy(struct sat_db_entry *destination, struct sat_db_e
  * \return True if transponder database entry is empty, false otherwise
  **/
 bool transponder_db_entry_empty(const struct sat_db_entry *entry);
+
+/**
+ * Check whether transponder is empty (neither downlink nor uplink defined).
+ *
+ * \param transponder Transponder to check
+ **/
+bool transponder_empty(struct transponder transponder);
+
 
 #endif

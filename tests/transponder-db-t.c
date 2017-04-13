@@ -48,11 +48,11 @@ void test_transponder_db_from_file(void **param)
 	//check that fields were read correctly
 	assert_true(transponder_db_entry_empty(&(transponder_db->sats[sat_ind[0]])));
 	assert_int_equal(transponder_db->sats[sat_ind[1]].num_transponders, 1);
-	assert_string_equal(transponder_db->sats[sat_ind[1]].transponder_name[0], "test_1");
-	assert_true(transponder_db->sats[sat_ind[1]].uplink_start[0] == 1.0);
-	assert_true(transponder_db->sats[sat_ind[1]].uplink_end[0] == 3.0);
-	assert_true(transponder_db->sats[sat_ind[1]].downlink_start[0] == 0.0);
-	assert_true(transponder_db->sats[sat_ind[1]].downlink_end[0] == 0.0);
+	assert_string_equal(transponder_db->sats[sat_ind[1]].transponders[0].name, "test_1");
+	assert_true(transponder_db->sats[sat_ind[1]].transponders[0].uplink_start == 1.0);
+	assert_true(transponder_db->sats[sat_ind[1]].transponders[0].uplink_end == 3.0);
+	assert_true(transponder_db->sats[sat_ind[1]].transponders[0].downlink_start == 0.0);
+	assert_true(transponder_db->sats[sat_ind[1]].transponders[0].downlink_end == 0.0);
 	assert_int_equal(transponder_db->sats[sat_ind[2]].num_transponders, 0);
 	assert_true(transponder_db->sats[sat_ind[2]].squintflag);
 
@@ -84,11 +84,11 @@ void test_transponder_db_to_file(void **param)
 	
 	//create transponder entry
 	write_db->sats[0].num_transponders = 1;
-	strncpy(write_db->sats[0].transponder_name[0], "test", MAX_NUM_CHARS);
-	write_db->sats[0].downlink_start[0] = 1;
-	write_db->sats[0].downlink_end[0] = 1;
-	write_db->sats[0].uplink_start[0] = 1;
-	write_db->sats[0].uplink_end[0] = 1;
+	strncpy(write_db->sats[0].transponders[0].name, "test", MAX_NUM_CHARS);
+	write_db->sats[0].transponders[0].downlink_start = 1;
+	write_db->sats[0].transponders[0].downlink_end = 1;
+	write_db->sats[0].transponders[0].uplink_start = 1;
+	write_db->sats[0].transponders[0].uplink_end = 1;
 
 	//set two first entries to be written to file
 	bool *should_write = (bool*)calloc(tle_db->num_tles, sizeof(bool));
@@ -256,27 +256,27 @@ void test_transponder_db_entry_empty(void **param)
 	entry.num_transponders = 5;
 	assert_true(transponder_db_entry_empty(&entry));
 
-	strncpy(entry.transponder_name[0], "test", MAX_NUM_CHARS);
+	strncpy(entry.transponders[0].name, "test", MAX_NUM_CHARS);
 	assert_true(transponder_db_entry_empty(&entry));
 
 	//test downlink configurations
-	entry.downlink_start[0] = 1000;
+	entry.transponders[0].downlink_start = 1000;
 	assert_false(transponder_db_entry_empty(&entry));
 
-	entry.downlink_start[0] = 0.0;
+	entry.transponders[0].downlink_start = 0.0;
 	assert_true(transponder_db_entry_empty(&entry));
 
-	entry.downlink_end[0] = 1000;
+	entry.transponders[0].downlink_end = 1000;
 	assert_true(transponder_db_entry_empty(&entry));
 
 	//test uplink configurations
-	entry.uplink_start[0] = 1000;
+	entry.transponders[0].uplink_start = 1000;
 	assert_false(transponder_db_entry_empty(&entry));
 
-	entry.uplink_start[0] = 0.0;
+	entry.transponders[0].uplink_start = 0.0;
 	assert_true(transponder_db_entry_empty(&entry));
 
-	entry.uplink_end[0] = 1000;
+	entry.transponders[0].uplink_end = 1000;
 	assert_true(transponder_db_entry_empty(&entry));
 
 	entry.num_transponders = 0;
@@ -294,8 +294,8 @@ void test_transponder_db_entry_equal(void **param)
 
 	assert_true(transponder_db_entry_equal(&entry_1, &entry_2));
 
-	entry_1.downlink_start[0] = 1000;
-	assert_true(transponder_db_entry_equal(&entry_1, &entry_2));
+	entry_1.transponders[0].downlink_start = 1000;
+	assert_false(transponder_db_entry_equal(&entry_1, &entry_2));
 }
 
 void test_transponder_db_entry_copy(void **param)
@@ -304,8 +304,8 @@ void test_transponder_db_entry_copy(void **param)
 	struct sat_db_entry entry_2 = {0};
 
 	entry_1.num_transponders = 5;
-	strncpy(entry_1.transponder_name[3], "test", MAX_NUM_CHARS);
-	entry_1.uplink_start[3] = 1000;
+	strncpy(entry_1.transponders[3].name, "test", MAX_NUM_CHARS);
+	entry_1.transponders[3].uplink_start = 1000;
 
 	assert_false(transponder_db_entry_equal(&entry_1, &entry_2));
 	transponder_db_entry_copy(&entry_2, &entry_1);

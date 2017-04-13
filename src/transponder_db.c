@@ -91,15 +91,15 @@ int transponder_db_from_file(const char *dbfile, const struct tle_db *tle_db, st
 
 			//transponder name
 			templine[strlen(templine)-1] = '\0'; //remove newline
-			strncpy(new_entry.transponder_name[transponder_index], templine, MAX_NUM_CHARS);
+			strncpy(new_entry.transponders[transponder_index].name, templine, MAX_NUM_CHARS);
 
 			//uplink frequencies
 			fgets(templine, MAX_NUM_CHARS, fd);
-			sscanf(templine,"%lf, %lf", &(new_entry.uplink_start[transponder_index]), &(new_entry.uplink_end[transponder_index]));
+			sscanf(templine,"%lf, %lf", &(new_entry.transponders[transponder_index].uplink_start), &(new_entry.transponders[transponder_index].uplink_end));
 
 			//downlink frequencies
 			fgets(templine, MAX_NUM_CHARS, fd);
-			sscanf(templine,"%lf, %lf", &(new_entry.downlink_start[transponder_index]), &(new_entry.downlink_end[transponder_index]));
+			sscanf(templine,"%lf, %lf", &(new_entry.transponders[transponder_index].downlink_start), &(new_entry.transponders[transponder_index].downlink_end));
 
 			//unused information: weekly schedule for transponder. See issue #29.
 			fgets(templine, MAX_NUM_CHARS, fd);
@@ -108,7 +108,7 @@ int transponder_db_from_file(const char *dbfile, const struct tle_db *tle_db, st
 			fgets(templine, MAX_NUM_CHARS, fd);
 
 			//check whether transponder is well-defined
-			if ((new_entry.uplink_start[transponder_index]!=0.0 || new_entry.downlink_start[transponder_index]!=0.0) && (transponder_index < MAX_NUM_TRANSPONDERS)) {
+			if ((new_entry.transponders[transponder_index].uplink_start!=0.0 || new_entry.transponders[transponder_index].downlink_start!=0.0) && (transponder_index < MAX_NUM_TRANSPONDERS)) {
 				transponder_index++;
 			}
 		}
@@ -129,12 +129,17 @@ int transponder_db_from_file(const char *dbfile, const struct tle_db *tle_db, st
 	return TRANSPONDER_SUCCESS;
 }
 
+bool transponder_empty(struct transponder transponder)
+{
+	return (transponder.downlink_start == 0.0) && (transponder.uplink_start == 0.0);
+}
+
 bool transponder_db_entry_empty(const struct sat_db_entry *entry)
 {
 	//check if downlink/uplinks are well-defined
 	int num_defined_entries = 0;
 	for (int i=0; i < entry->num_transponders; i++) {
-		if ((entry->downlink_start[i] != 0.0) || (entry->uplink_start[i] != 0.0)) {
+		if (!transponder_empty(entry->transponders[i])) {
 			num_defined_entries++;
 		}
 	}
@@ -188,10 +193,11 @@ void transponder_db_to_file(const char *filename, struct tle_db *tle_db, struct 
 
 				//transponders
 				for (int j=0; j < entry->num_transponders; j++) {
-					if ((entry->uplink_start[j] != 0.0) || (entry->downlink_start[j] != 0.0)) {
-						fprintf(fd, "%s\n", entry->transponder_name[j]);
-						fprintf(fd, "%f, %f\n", entry->uplink_start[j], entry->uplink_end[j]);
-						fprintf(fd, "%f, %f\n", entry->downlink_start[j], entry->downlink_end[j]);
+					struct transponder transponder = entry->transponders[j];
+					if ((transponder.uplink_start != 0.0) || (transponder.downlink_start != 0.0)) {
+						fprintf(fd, "%s\n", transponder.name);
+						fprintf(fd, "%f, %f\n", transponder.uplink_start, transponder.uplink_end);
+						fprintf(fd, "%f, %f\n", transponder.downlink_start, transponder.downlink_end);
 						fprintf(fd, "No weekly schedule\n"); //FIXME: See issue #29.
 						fprintf(fd, "No orbital schedule\n");
 					}
@@ -240,12 +246,14 @@ bool transponder_db_entry_equal(struct sat_db_entry *entry_1, struct sat_db_entr
 		return false;
 	}
 
-	for (int i=0; i < entry_1->num_transponders; i++) {
-		if ((strncmp(entry_1->transponder_name[i], entry_2->transponder_name[i], MAX_NUM_CHARS) != 0) ||
-			(entry_1->uplink_start[i] != entry_2->uplink_start[i]) ||
-			(entry_1->uplink_end[i] != entry_2->uplink_end[i]) ||
-			(entry_1->downlink_start[i] != entry_2->downlink_start[i]) ||
-			(entry_1->downlink_end[i] != entry_2->downlink_end[i])) {
+	for (int i=0; i < MAX_NUM_TRANSPONDERS; i++) {
+		struct transponder transponder_1 = entry_1->transponders[i];
+		struct transponder transponder_2 = entry_2->transponders[i];
+		if ((strncmp(transponder_1.name, transponder_2.name, MAX_NUM_CHARS) != 0) ||
+			(transponder_1.uplink_start != transponder_2.uplink_start) ||
+			(transponder_1.uplink_end != transponder_2.uplink_end) ||
+			(transponder_1.downlink_start != transponder_2.downlink_start) ||
+			(transponder_1.downlink_end != transponder_2.downlink_end)) {
 			return false;
 		}
 	}
@@ -258,12 +266,14 @@ void transponder_db_entry_copy(struct sat_db_entry *destination, struct sat_db_e
 	destination->alat = source->alat;
 	destination->alon = source->alon;
 	destination->num_transponders = source->num_transponders;
-	for (int i=0; i < source->num_transponders; i++) {
-		strncpy(destination->transponder_name[i], source->transponder_name[i], MAX_NUM_CHARS);
+	for (int i=0; i < MAX_NUM_TRANSPONDERS; i++) {
+		struct transponder *destination_transponder = &(destination->transponders[i]);
+		struct transponder *source_transponder = &(source->transponders[i]);
+		strncpy(destination_transponder->name, source_transponder->name, MAX_NUM_CHARS);
+		destination_transponder->uplink_start = source_transponder->uplink_start;
+		destination_transponder->uplink_end = source_transponder->uplink_end;
+		destination_transponder->downlink_start = source_transponder->downlink_start;
+		destination_transponder->downlink_end = source_transponder->downlink_end;
 	}
-	memcpy(destination->uplink_start, source->uplink_start, MAX_NUM_TRANSPONDERS*sizeof(double));
-	memcpy(destination->uplink_end, source->uplink_end, MAX_NUM_TRANSPONDERS*sizeof(double));
-	memcpy(destination->downlink_start, source->downlink_start, MAX_NUM_TRANSPONDERS*sizeof(double));
-	memcpy(destination->downlink_end, source->downlink_end, MAX_NUM_TRANSPONDERS*sizeof(double));
 	destination->location = source->location;
 }

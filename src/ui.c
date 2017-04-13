@@ -1193,10 +1193,10 @@ void SingleTrack(int orbit_ind, predict_observer_t *qth, struct transponder_db *
 		bool comsat = sat_db.num_transponders > 0;
 
 		if (comsat) {
-			downlink_start=sat_db.downlink_start[xponder];
-			downlink_end=sat_db.downlink_end[xponder];
-			uplink_start=sat_db.uplink_start[xponder];
-			uplink_end=sat_db.uplink_end[xponder];
+			downlink_start=sat_db.transponders[xponder].downlink_start;
+			downlink_end=sat_db.transponders[xponder].downlink_end;
+			uplink_start=sat_db.transponders[xponder].uplink_start;
+			uplink_end=sat_db.transponders[xponder].uplink_end;
 
 			if (downlink_start>downlink_end)
 				polarity=-1;
@@ -1375,9 +1375,9 @@ void SingleTrack(int orbit_ind, predict_observer_t *qth, struct transponder_db *
 
 			//display downlink/uplink information
 			if (comsat) {
-				length=strlen(sat_db.transponder_name[xponder])/2;
+				length=strlen(sat_db.transponders[xponder].name)/2;
 	      mvprintw(10,0,"                                                                                ");
-				mvprintw(10,40-length,"%s",sat_db.transponder_name[xponder]);
+				mvprintw(10,40-length,"%s",sat_db.transponders[xponder].name);
 
 				if (downlink!=0.0)
 					mvprintw(12,11,"%11.5f MHz%c%c%c",downlink,
@@ -1513,10 +1513,10 @@ void SingleTrack(int orbit_ind, predict_observer_t *qth, struct transponder_db *
 					move(9,1);
 					clrtoeol();
 
-					downlink_start=sat_db.downlink_start[xponder];
-					downlink_end=sat_db.downlink_end[xponder];
-					uplink_start=sat_db.uplink_start[xponder];
-					uplink_end=sat_db.uplink_end[xponder];
+					downlink_start=sat_db.transponders[xponder].downlink_start;
+					downlink_end=sat_db.transponders[xponder].downlink_end;
+					uplink_start=sat_db.transponders[xponder].uplink_start;
+					uplink_end=sat_db.transponders[xponder].uplink_end;
 
 					if (downlink_start>downlink_end)
 						polarity=-1;
@@ -2170,6 +2170,7 @@ void DisplayTransponderEntry(const char *name, struct sat_db_entry *entry, WINDO
 	int prev_row_diff = 0;
 	for (int i=0; i < entry->num_transponders; i++) {
 		int display_row = row;
+		struct transponder transponder = entry->transponders[i];
 
 		if (display_row + rows_per_entry < LINES-8) {
 			int start_row = display_row;
@@ -2181,28 +2182,28 @@ void DisplayTransponderEntry(const char *name, struct sat_db_entry *entry, WINDO
 			}
 
 			wattrset(display_window, A_BOLD);
-			mvwprintw(display_window, ++display_row, info_col, "%.20s", entry->transponder_name[i]);
+			mvwprintw(display_window, ++display_row, info_col, "%.20s", transponder.name);
 
 			//uplink
-			if (entry->uplink_start[i] != 0.0) {
+			if (transponder.uplink_start != 0.0) {
 				wattrset(display_window, COLOR_PAIR(4)|A_BOLD);
 				mvwprintw(display_window, ++display_row, info_col, "U:");
 
 				wattrset(display_window, COLOR_PAIR(2)|A_BOLD);
-				mvwprintw(display_window, display_row, data_col, "%.2f-%.2f", entry->uplink_start[i], entry->uplink_end[i]);
+				mvwprintw(display_window, display_row, data_col, "%.2f-%.2f", transponder.uplink_start, transponder.uplink_end);
 			}
 
 			//downlink
-			if (entry->downlink_start[i] != 0.0) {
+			if (transponder.downlink_start != 0.0) {
 				wattrset(display_window, COLOR_PAIR(4)|A_BOLD);
 				mvwprintw(display_window, ++display_row, info_col, "D:");
 
 				wattrset(display_window, COLOR_PAIR(2)|A_BOLD);
-				mvwprintw(display_window, display_row, data_col, "%.2f-%.2f", entry->downlink_start[i], entry->downlink_end[i]);
+				mvwprintw(display_window, display_row, data_col, "%.2f-%.2f", transponder.downlink_start, transponder.downlink_end);
 			}
 
 			//no uplink/downlink defined
-			if ((entry->uplink_start[i] == 0.0) && (entry->downlink_start[i] == 0.0)) {
+			if ((transponder.uplink_start == 0.0) && (transponder.downlink_start == 0.0)) {
 				wattrset(display_window, COLOR_PAIR(2)|A_BOLD);
 				mvwprintw(display_window, ++display_row, info_col, "Neither downlink or");
 				mvwprintw(display_window, ++display_row, info_col, "uplink is defined.");
