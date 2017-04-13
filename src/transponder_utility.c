@@ -11,6 +11,7 @@
 #include "xdg_basedirs.h"
 #include "transponder_db.h"
 #include <libgen.h>
+#include "option_help.h"
 #include <math.h>
 
 /**
@@ -29,15 +30,23 @@ int main(int argc, char **argv)
 	bool silent_mode = false;
 
 	//command line options
-	struct option long_options[] = {
-		{"transponder-file",		required_argument,	0,	't'},
-		{"force-changes",		no_argument,		0,	'f'},
-		{"ignore-changes",		no_argument,		0,	'i'},
-		{"help",			no_argument,		0,	'h'},
-		{"silent",			no_argument,		0,	's'},
-		{0, 0, 0, 0}
+	struct option_extended options[] = {
+		{{"transponder-file",		required_argument,	0,	't'},
+			"FILE", "Add transponder entries from specified transponder database FILE to flyby's transponder database. Ignores entries for which no corresponding TLE exists in the TLE database."},
+		{{"force-changes",		no_argument,		0,	'f'},
+			NULL, "Accept all database changes. The program will otherwise ask the user whether changes should be accepted or not."},
+		{{"ignore-changes",		no_argument,		0,	'i'},
+			NULL, "Add all new database entries but ignore any changes to existing entries"},
+		{{"help",			no_argument,		0,	'h'},
+			NULL, "Display help"},
+		{{"silent",			no_argument,		0,	's'},
+			NULL, "Silent mode, print verbose output only when encountering a change to an existing entry and -f or -i are not enabled"},
+		{{0, 0, 0, 0}, NULL, NULL}
 	};
+	struct option *long_options = extended_to_longopts(options);
 	char short_options[] = "t:fish";
+	char usage_instructions[MAX_NUM_CHARS];
+	snprintf(usage_instructions, MAX_NUM_CHARS, "Flyby transponder database utility\n\nUsage: %s [OPTIONS]", argv[0]);
 	while (1) {
 		int option_index = 0;
 		int c = getopt_long(argc, argv, short_options, long_options, &option_index);
@@ -59,7 +68,8 @@ int main(int argc, char **argv)
 				silent_mode = true;
 				break;
 			case 'h': //help
-				fprintf(stderr, "Flyby transponder utility\n");
+				getopt_long_show_help(usage_instructions, options, short_options);
+				return 0;
 				break;
 		}
 	}
@@ -123,6 +133,7 @@ int main(int argc, char **argv)
 	//free memory
 	tle_db_destroy(&tle_db);
 	transponder_db_destroy(&transponder_db);
+	free(long_options);
 }
 
 void print_transponder_entry_differences(const struct sat_db_entry *old_db_entry, const struct sat_db_entry *new_db_entry)

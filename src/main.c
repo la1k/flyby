@@ -98,7 +98,7 @@ int main(int argc, char **argv)
 		{{0, 0, 0, 0}, NULL, NULL}
 	};
 	char usage_instructions[MAX_NUM_CHARS];
-	snprintf(usage_instructions, MAX_NUM_CHARS, "Usage:\n%s [options]", argv[0]);
+	snprintf(usage_instructions, MAX_NUM_CHARS, "Flyby satellite tracking program\nUsage:\n%s [options]", argv[0]);
 
 	struct option *long_options = extended_to_longopts(options);
 	char short_options[] = "u:t:q:a:H:U:D:h";
@@ -283,4 +283,5 @@ int main(int argc, char **argv)
 	predict_destroy_observer(observer);
 	tle_db_destroy(&tle_db);
 	transponder_db_destroy(&transponder_db);
+	free(long_options);
 }

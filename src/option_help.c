@@ -65,7 +65,7 @@ void getopt_long_show_help(const char *usage_instructions, struct option_extende
 
 	//display initial description
 	index = 0;
-	printf("\n%s\n\n\n", usage_instructions);
+	printf("%s\n\n", usage_instructions);
 	while (true) {
 		char option_print_full[MAX_NUM_CHARS] = {0};
 		fill_spaces(option_print_full, MAX_NUM_CHARS, MAX_NUM_CHARS);
