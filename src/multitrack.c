@@ -687,24 +687,40 @@ void multitrack_display_entry(WINDOW *window, int row, int col, multitrack_entry
 	mvwprintw(window, row, col, "%s", entry->display_string);
 }
 
+#define MULTITRACK_OPTION_WINDOW_WIDTH 70
+#define MULTITRACK_OPTION_WINDOW_ROW 7
+#define MULTITRACK_OPTION_WINDOW_COL 3
+
 void multitrack_options(multitrack_listing_t *listing)
 {
-	WINDOW *option_window = newwin(30, 70, 4, 3);
+	WINDOW *option_window = newwin(LINES, MULTITRACK_OPTION_WINDOW_WIDTH, MULTITRACK_OPTION_WINDOW_ROW, MULTITRACK_OPTION_WINDOW_COL);
 
 	int row = 1;
-	mvwprintw(option_window, row++, 1, "Keybindings:");
-	mvwprintw(option_window, row++, 1, "F3/`/`:  Search for satellite");
+	int col = 1;
+	mvwprintw(option_window, row++, col, "[*] Sort by AOS");
+	mvwprintw(option_window, row++, col, "[ ] Sort by max elevation");
+	mvwprintw(option_window, row++, col, "    Max elevation threshold");
+
+	col = 1;
 	row++;
-	mvwprintw(option_window, row++, 1, "Colorscheme:");
+	int help_row = row;
+	mvwprintw(option_window, row++, col, "Keybindings:");
+	mvwprintw(option_window, row++, col, "F3/`/`:  Search for satellite");
+	row = help_row;
+	col = 32;
+
+	mvwprintw(option_window, row++, col, "Colorscheme:");
 
 	wattrset(option_window, multitrack_colors(3000, 1));
-	mvwprintw(option_window, row++, 1, "Satellite above horizon");
+	mvwprintw(option_window, row++, col, "Satellite above horizon");
 	wattrset(option_window, SATELLITE_CLOSE_COLOR);
-	mvwprintw(option_window, row++, 1, "Satellite about to pass over horizon");
+	mvwprintw(option_window, row++, col, "Satellite about to pass over horizon");
 	wattrset(option_window, SATELLITE_FAR_COLOR);
-	mvwprintw(option_window, row++, 1, "Satellite scheduled to pass over horizon");
+	mvwprintw(option_window, row++, col, "Satellite scheduled for pass");
 	wattrset(option_window, SATELLITE_IGNORED_COLOR);
-	mvwprintw(option_window, row++, 1, "Ignored satellite");
+	mvwprintw(option_window, row++, col, "Ignored satellite");
+
+	wresize(option_window, row+1, MULTITRACK_OPTION_WINDOW_WIDTH);
 
 
 	wattrset(option_window, COLOR_PAIR(4));
