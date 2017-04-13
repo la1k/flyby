@@ -5,9 +5,16 @@ import urllib2
 import json
 import sys
 import tempfile
+from distutils import spawn
 from subprocess import call
 from operator import itemgetter
 from os.path import expanduser
+
+#Step 0: Check if the flyby transponder utility is in the PATH
+flyby_transponder_executable="flyby-transponder-db"
+if not spawn.find_executable(flyby_transponder_executable):
+    print("Flyby transponder utility not found in $PATH")
+    sys.exit();
 
 #Step 1: Fetch JSON transponder information from SatNOGS db.
 request = urllib2.urlopen("https://db.satnogs.org/api/transmitters")
@@ -69,4 +76,4 @@ with tempfile.NamedTemporaryFile() as db:
     db.write("end\n")
 
     # Step 3: Add to flyby
-    call(["flyby-transponder-db", "-a", db.name]);
+    call([flyby_transponder_executable, "-a", db.name]);
