@@ -4,16 +4,10 @@
 import urllib2
 import json
 import sys
+import tempfile
+from subprocess import call
 from operator import itemgetter
 from os.path import expanduser
-
-# The script will overwrite the old database, user must agree to this.
-while True:
-    prompt = raw_input("This will overwrite the existing database at $HOME/.local/share/flyby/flyby.db, do you want to proceed? (yes/no): ")
-    if prompt == "yes" or prompt == "y" or prompt == "Yes": 
-        break
-    elif prompt == "no" or prompt == "n" or prompt == "No":
-        sys.exit("Script terminated")
 
 #Step 1: Fetch JSON transponder information from SatNOGS db.
 request = urllib2.urlopen("https://db.satnogs.org/api/transmitters")
@@ -23,9 +17,7 @@ data = json.load(request)
 sorteddata = sorted(data, key=itemgetter('norad_cat_id'))
 
 #Step 2: Generate transponder database as expected by flyby.
-
-# Write to $HOME/.local/share/flyby/flyby.db
-with open(expanduser("~")+"/.local/share/flyby/flyby.db","w") as db:
+with tempfile.NamedTemporaryFile() as db:
     previous_norad_id = False
 
     # Iterate through SatNOGS database
@@ -75,3 +67,6 @@ with open(expanduser("~")+"/.local/share/flyby/flyby.db","w") as db:
         db.write("No orbital schedule\n")
     
     db.write("end\n")
+
+    # Step 3: Add to flyby
+    call(["flyby-transponder-db", "-a", db.name]);
