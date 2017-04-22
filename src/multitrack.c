@@ -315,7 +315,7 @@ multitrack_listing_t* multitrack_create_listing(predict_observer_t *observer, st
 	listing->terminal_width = LINES;
 
 	listing->sort_option = SORT_BY_AOS;
-	listing->max_elevation_threshold = -1;
+	listing->max_elevation_threshold = 0;
 	return listing;
 }
 
@@ -1457,7 +1457,9 @@ void multitrack_edit_settings(multitrack_listing_t *listing)
 	set_form_sub(form, derwin(option_window, form_rows, form_cols, form_row, 1));
 
 	post_form(form);
-	set_field_buffer(max_ele_field, 0, "0");
+	char curr_max_ele_thresh[MAX_NUM_CHARS];
+	snprintf(curr_max_ele_thresh, MAX_NUM_CHARS, "%f", listing->max_elevation_threshold);
+	set_field_buffer(max_ele_field, 0, curr_max_ele_thresh);
 	set_field_buffer(max_ele_field_desc, 0, "Max elevation threshold");
 	form_driver(form, REQ_VALIDATION);
 	wrefresh(option_window);
@@ -1488,7 +1490,9 @@ void multitrack_edit_settings(multitrack_listing_t *listing)
 				}
 				break;
 			case KEY_BACKSPACE:
-				form_driver(form, REQ_CLR_FIELD);
+				if (in_form) {
+					form_driver(form, REQ_CLR_FIELD);
+				}
 				break;
 			case ' ':
 				if (in_checklist) {
@@ -1506,16 +1510,27 @@ void multitrack_edit_settings(multitrack_listing_t *listing)
 				}
 				break;
 			default:
-				form_driver(form, c);
+				if (in_form) {
+					form_driver(form, c);
+				}
 			break;
 		}
                 wrefresh(option_window);
 	}
-		if (checklist_item_checked(checklist, sort_by_aos_ind)) {
-			listing->sort_option = SORT_BY_AOS;
-		} else {
-			listing->sort_option = SORT_BY_MAX_ELEVATION;
-		}
+
+	//get settings from UI elements
+	if (checklist_item_checked(checklist, sort_by_aos_ind)) {
+		listing->sort_option = SORT_BY_AOS;
+	} else {
+		listing->sort_option = SORT_BY_MAX_ELEVATION;
+	}
+
+
+	form_driver(form, REQ_VALIDATION);
+	char *max_ele_thresh = strdup(field_buffer(max_ele_field, 0));
+	trim_whitespaces_from_end(max_ele_thresh);
+	listing->max_elevation_threshold = strtod(max_ele_thresh, NULL);
+	free(max_ele_thresh);
 
 
 
