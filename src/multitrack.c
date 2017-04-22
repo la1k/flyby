@@ -1456,7 +1456,11 @@ void multitrack_edit_settings(multitrack_listing_t *listing)
 		}
                 wrefresh(option_window);
 	}
-
+		if (checklist_item_checked(checklist, sort_by_aos_ind)) {
+			listing->sort_option = SORT_BY_AOS;
+		} else {
+			listing->sort_option = SORT_BY_MAX_ELEVATION;
+		}
 
 
 
