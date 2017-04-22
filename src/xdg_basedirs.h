@@ -16,6 +16,9 @@
 //default relative whitelist filename
 #define WHITELIST_RELATIVE_FILE_PATH FLYBY_RELATIVE_ROOT_PATH "flyby.whitelist"
 
+//default relative multitrack settings filename
+#define MULTITRACK_SETTINGS_FILE FLYBY_RELATIVE_ROOT_PATH "multitrack_settings.conf"
+
 /**
  * \return XDG_DATA_DIRS variable, or the xdg basedir specification default if the environment variable is empty
  **/

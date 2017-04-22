@@ -21,6 +21,20 @@
 /** Private multitrack satellite listing prototypes. **/
 
 /**
+ * Read user-editable settings from default XDG config location.
+ *
+ * \param listing Multitrack listing
+ **/
+void multitrack_settings_from_file(multitrack_listing_t *listing);
+
+/**
+ * Write user-editable settings to default XDG config location.
+ *
+ * \param listing Multitrack listing
+ **/
+void multitrack_settings_to_file(multitrack_listing_t *listing);
+
+/**
  * Create entry in multitrack satellite listing.
  *
  * \param name Satellite name
@@ -1386,8 +1400,7 @@ struct checklist* checklist_create(WINDOW *window, int num_items, const char **i
 
 	//prepare menu window
         set_menu_win(checklist->menu, window);
-	int win_width, win_height;
-	getmaxyx(window, win_height, win_width);
+	int win_width = getmaxx(window);
 	checklist->window = derwin(window, num_items, win_width - 2, 1, 1);
         set_menu_sub(checklist->menu, checklist->window);
 	set_menu_format(checklist->menu, num_items, 1);
@@ -1558,9 +1571,8 @@ void multitrack_edit_settings(multitrack_listing_t *listing)
 
 	//place form window below sort settings window
 	int form_rows, form_cols;
-	int form_row, form_col;
 	scale_form(form, &form_rows, &form_cols);
-	getmaxyx(sort_settings->window, form_row, form_col);
+	int form_row = getmaxy(sort_settings->window);
 	form_row++;
 	set_form_win(form, option_window);
 	set_form_sub(form, derwin(option_window, form_rows, form_cols, form_row, 1));
@@ -1670,4 +1682,56 @@ void multitrack_edit_settings(multitrack_listing_t *listing)
 	free_field(max_ele_field);
 	free_field(max_ele_field_description);
 	free_form(form);
+
+	//write settings to file
+	multitrack_settings_to_file(listing);
+}
+
+#include "xdg_basedirs.h"
+
+/**
+ * Return XDG location for multitrack settings filepath. String has to be free'd after use.
+ **/
+char *multitrack_settings_filepath()
+{
+	create_xdg_dirs();
+
+	char *config_home = xdg_config_home();
+
+	int ret_size = strlen(config_home)*strlen(MULTITRACK_SETTINGS_FILE);
+	char *ret_str = (char*)malloc(sizeof(char)*ret_size);
+
+	snprintf(ret_str, ret_size, "%s%s", config_home, MULTITRACK_SETTINGS_FILE);
+
+	free(config_home);
+	return ret_str;
+}
+
+void multitrack_settings_from_file(multitrack_listing_t *listing)
+{
+	char *settings_filepath = multitrack_settings_filepath();
+
+	free(settings_filepath);
+}
+
+//config prefix for aos sort option
+#define FILESETTING_SORT_BY_AOS "sort by aos = "
+
+//config prefix for max ele sort option
+#define FILESETTING_SORT_BY_MAX_ELEVATION "sort by max elevation = "
+
+//config prefix for max elevation threshold
+#define FILESETTING_MAX_ELEVATION_THRESHOLD "max elevation threshold = "
+
+void multitrack_settings_to_file(multitrack_listing_t *listing)
+{
+	char *settings_filepath = multitrack_settings_filepath();
+
+	FILE *write_file = fopen(settings_filepath, "w");
+	fprintf(write_file, "%s%d\n", FILESETTING_SORT_BY_AOS, listing->sort_option == SORT_BY_AOS);
+	fprintf(write_file, "%s%d\n", FILESETTING_SORT_BY_MAX_ELEVATION, listing->sort_option == SORT_BY_MAX_ELEVATION);
+	fprintf(write_file, "%s%f\n", FILESETTING_MAX_ELEVATION_THRESHOLD, listing->max_elevation_threshold);
+	fclose(write_file);
+
+	free(settings_filepath);
 }
