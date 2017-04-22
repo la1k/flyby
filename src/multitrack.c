@@ -1294,6 +1294,9 @@ struct checklist {
 	WINDOW *window;
 };
 
+#define CHECKLIST_STYLE_ACTIVE COLOR_PAIR(5)
+#define CHECKLIST_STYLE_INACTIVE COLOR_PAIR(1)
+
 struct checklist* checklist_create(WINDOW *window, int num_items, const char **item_names)
 {
 	struct checklist *checklist = (struct checklist*)malloc(sizeof(struct checklist));
@@ -1311,6 +1314,7 @@ struct checklist* checklist_create(WINDOW *window, int num_items, const char **i
 	checklist->menu_items = (ITEM**)calloc(num_items+1, sizeof(ITEM*));
 	checklist->menu = new_menu(NULL);
 	checklist->num_items = num_items;
+	set_menu_fore(checklist->menu, CHECKLIST_STYLE_ACTIVE);
 
         set_menu_win(checklist->menu, window);
 	int win_width, win_height;
@@ -1380,6 +1384,9 @@ bool checklist_item_checked(struct checklist *checklist, int index)
 	return checklist->items[index].checked;
 }
 
+#define FIELDSTYLE_INACTIVE COLOR_PAIR(1)|A_UNDERLINE
+#define FIELDSTYLE_ACTIVE CHECKLIST_STYLE_ACTIVE
+
 void multitrack_edit_settings(multitrack_listing_t *listing)
 {
 	cbreak(); //turn off halfdelay mode so that getch blocks
@@ -1431,7 +1438,7 @@ void multitrack_edit_settings(multitrack_listing_t *listing)
 	//prepare form
 	int field_height = 1, field_width = 25, field_row = 0, field_col = 0;
 	FIELD *max_ele_field = new_field(field_height, CHECKOPT_STRLEN-1, field_row, field_col, 0, 0);
-	set_field_back(max_ele_field, COLOR_PAIR(1)|A_UNDERLINE);
+	set_field_back(max_ele_field, FIELDSTYLE_INACTIVE);
 	FIELD *max_ele_field_desc = new_field(field_height, field_width, field_row, CHECKOPT_STRLEN, 0, 0);
 	field_opts_off(max_ele_field, O_STATIC);
 	set_max_field(max_ele_field, MAX_NUM_CHARS);
@@ -1457,33 +1464,39 @@ void multitrack_edit_settings(multitrack_listing_t *listing)
 	while((c = wgetch(option_window)) != KEY_F(1))
 	{       switch(c)
 	        {	case KEY_DOWN:
-		//		if (in_checklist && (item_index(current_item(checklist->menu) == checklist->num_items-1))) {
-		//			in_checklist = false;
-		//			in_form = true;
-		//		} else if (in_checklist) {
+				if (in_checklist && (item_index(current_item(checklist->menu)) == checklist->num_items-1)) {
+					set_menu_fore(checklist->menu, CHECKLIST_STYLE_INACTIVE);
+					in_checklist = false;
+					in_form = true;
+					set_field_back(max_ele_field, FIELDSTYLE_ACTIVE);
+					form_driver(form, REQ_VALIDATION);
+				} else if (in_checklist) {
 					menu_driver(checklist->menu, REQ_DOWN_ITEM);
-		//		}
+				}
 
 				break;
 			case KEY_UP:
-				menu_driver(checklist->menu, REQ_UP_ITEM);
-				break;
-			case KEY_LEFT:
-				menu_driver(checklist->menu, REQ_LEFT_ITEM);
-				break;
-			case KEY_RIGHT:
-				menu_driver(checklist->menu, REQ_RIGHT_ITEM);
+				if (in_checklist) {
+					menu_driver(checklist->menu, REQ_UP_ITEM);
+				} else {
+					set_menu_fore(checklist->menu, CHECKLIST_STYLE_ACTIVE);
+					set_field_back(max_ele_field, FIELDSTYLE_INACTIVE);
+					form_driver(form, REQ_VALIDATION);
+					in_checklist = true;
+					in_form = false;
+				}
 				break;
 			case ' ':
-				pos_menu_cursor(checklist->menu);
-				selected_item = item_index(current_item(checklist->menu));
+				if (in_checklist) {
+					selected_item = item_index(current_item(checklist->menu));
 
-				//check item if not selected, deselect all other items
-				if (!checklist_item_checked(checklist, selected_item)) {
-					checklist_check_item(checklist, selected_item, true);
-					for (int i=0; i < checklist->num_items; i++) {
-						if (i != selected_item) {
-							checklist_check_item(checklist, i, false);
+					//check item if not selected, deselect all other items
+					if (!checklist_item_checked(checklist, selected_item)) {
+						checklist_check_item(checklist, selected_item, true);
+						for (int i=0; i < checklist->num_items; i++) {
+							if (i != selected_item) {
+								checklist_check_item(checklist, i, false);
+							}
 						}
 					}
 				}
