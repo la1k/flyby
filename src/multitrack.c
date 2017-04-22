@@ -254,6 +254,8 @@ multitrack_entry_t *multitrack_create_entry(const char *name, predict_orbital_el
 	entry->geostationary = 0;
 	entry->never_visible = 0;
 	entry->decayed = 0;
+	entry->max_elevation = 0;
+	entry->above_max_elevation_threshold = true;
 	return entry;
 }
 
