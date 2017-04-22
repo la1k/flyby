@@ -1272,93 +1272,156 @@ void multitrack_search_field_add_match(multitrack_search_field_t *search_field, 
 	search_field->matches[search_field->num_matches++] = index;
 }
 
-#define OPTION_WINDOW_WIDTH 70
-#define OPTION_WINDOW_ROW 7
-#define OPTION_WINDOW_COL 3
-#define NUM_SORTING_OPTIONS 2
-
+/**
+ * Item in checklist.
+ **/
 struct checklist_item {
+	///Current ITEM displayed in MENU
 	ITEM *item;
+	///Whether item is checked
 	bool checked;
+	///Title of item
 	char *title;
+	///Display string used in ITEM, displayed as "[ ]  title"
 	char *checked_title;
 };
 
-#define CHECKOPT_STRLEN 4
-
+/**
+ * Checklist menu used for having a list of items where items are checked/unchecked by displaying a [x] or [ ] in front of
+ * each item, as an alternative to the multi-selectable option for MENU which looks a bit too imposing.
+ *
+ * Used in multitrack_settings_window, but with an additional restriction that only one item can be selected at a time.
+ **/
 struct checklist {
+	///Menu struct
 	MENU *menu;
+	///ITEM array for MENU above, regenerated in checklist_update()
 	ITEM **menu_items;
+	///Number of items in menu
 	int num_items;
+	///Checkable items
 	struct checklist_item *items;
+	///Menu window
 	WINDOW *window;
 };
 
+/**
+ * Return whether item in menu is checked.
+ *
+ * \param checklist Checklist
+ * \param index Index in menu
+ * \return True if checked, false otherwise
+ **/
+bool checklist_item_checked(struct checklist *checklist, int index);
+
+/**
+ * Check item in menu.
+ *
+ * \param checklist Checklist
+ * \param index Index in menu
+ * \param check Whether item should be checked or not
+ **/
+void checklist_check_item(struct checklist *checklist, int index, bool check);
+
+/**
+ * Update display menu according to current checked/unchecked state of its items.
+ *
+ * \param checklist Checklist
+ **/
+void checklist_update(struct checklist *checklist);
+
+/**
+ * Create checklist menu.
+ *
+ * \param window Window into which the checklist should be created
+ * \param num_items Number of items
+ * \param item_names Array over item names
+ * \return Checklist, free using checklist_free()
+ **/
+struct checklist* checklist_create(WINDOW *window, int num_items, const char **item_names);
+
+/**
+ * Destroy checklist.
+ *
+ * \param checklist Checklist to free
+ **/
+void checklist_free(struct checklist **checklist);
+
+//length of "[ ] " placed in front of each checklist menu option
+#define CHECKMARK_STRING_LENGTH 4
+
+//active menu item style
 #define CHECKLIST_STYLE_ACTIVE COLOR_PAIR(5)
+
+//inactive menu item style
 #define CHECKLIST_STYLE_INACTIVE COLOR_PAIR(1)
+
+//position in menu string for where checkmark should be placed
+#define CHECKMARK_POSITION 1
 
 struct checklist* checklist_create(WINDOW *window, int num_items, const char **item_names)
 {
+	//prepare checklist items
 	struct checklist *checklist = (struct checklist*)malloc(sizeof(struct checklist));
 	checklist->items = (struct checklist_item*)calloc(num_items, sizeof(struct checklist_item));
 	for (int i=0; i < num_items; i++) {
 		checklist->items[i].checked = false;
 		checklist->items[i].title = strdup(item_names[i]);
 		checklist->items[i].item = NULL;
-		int item_length = strlen(item_names[i]) + CHECKOPT_STRLEN + 1;
+		int item_length = strlen(item_names[i]) + CHECKMARK_STRING_LENGTH + 1;
 		checklist->items[i].checked_title = (char*)calloc(item_length, sizeof(char));
 		strncpy(checklist->items[i].checked_title, "[ ] ", item_length);
-		strncpy(checklist->items[i].checked_title + CHECKOPT_STRLEN, checklist->items[i].title, item_length - CHECKOPT_STRLEN);
+		strncpy(checklist->items[i].checked_title + CHECKMARK_STRING_LENGTH, checklist->items[i].title, item_length - CHECKMARK_STRING_LENGTH);
 	}
 
+	//prepare ITEMS and MENU
 	checklist->menu_items = (ITEM**)calloc(num_items+1, sizeof(ITEM*));
 	checklist->menu = new_menu(NULL);
 	checklist->num_items = num_items;
 	set_menu_fore(checklist->menu, CHECKLIST_STYLE_ACTIVE);
-
-        set_menu_win(checklist->menu, window);
-	int win_width, win_height;
-	getmaxyx(window, win_height, win_width);
-
-	checklist->window = derwin(window, num_items, win_width - 2, 1, 1);
-        set_menu_sub(checklist->menu, checklist->window);
-	set_menu_format(checklist->menu, num_items, 1);
 	set_menu_mark(checklist->menu, "");
 	menu_opts_off(checklist->menu, O_SHOWDESC);
 
+	//prepare menu window
+        set_menu_win(checklist->menu, window);
+	int win_width, win_height;
+	getmaxyx(window, win_height, win_width);
+	checklist->window = derwin(window, num_items, win_width - 2, 1, 1);
+        set_menu_sub(checklist->menu, checklist->window);
+	set_menu_format(checklist->menu, num_items, 1);
 
 	keypad(window, TRUE);
-
 	post_menu(checklist->menu);
-
 	checklist_update(checklist);
 	return checklist;
 }
 
-#define CHECKMARK_POSITION 1
-
 void checklist_update(struct checklist *checklist)
 {
 	unpost_menu(checklist->menu);
-	char *curr_selected;
+	char *curr_selected = NULL;
 	bool menu_initialized = (checklist->menu_items[0] != NULL);
+
 	int selected_index=0;
 	if (menu_initialized) {
 		selected_index = item_index(current_item(checklist->menu));
 	}
 
 	for (int i=0; i < checklist->num_items; i++) {
+		//remove menu ITEM so that we can modify the displayed string
 		struct checklist_item *item = &(checklist->items[i]);
 		if (item->item != NULL) {
 			free_item(item->item);
 		}
 
+		//replace "[ ] " with "[x] " if item is checked
 		if (item->checked) {
 			item->checked_title[CHECKMARK_POSITION] = '*';
 		} else {
 			item->checked_title[CHECKMARK_POSITION] = ' ';
 		}
 
+		//create new menu ITEM
 		item->item = new_item(item->checked_title, "");
 		checklist->menu_items[i] = item->item;
 
@@ -1369,42 +1432,85 @@ void checklist_update(struct checklist *checklist)
 	set_menu_items(checklist->menu, checklist->menu_items);
 	post_menu(checklist->menu);
 
-	set_menu_pattern(checklist->menu, curr_selected);
-	free(curr_selected);
+	//retain selected position
+	if (curr_selected != NULL) {
+		set_menu_pattern(checklist->menu, curr_selected);
+		free(curr_selected);
+	}
 }
 
 void checklist_check_item(struct checklist *checklist, int index, bool check)
 {
-	checklist->items[index].checked = check;
-	checklist_update(checklist);
+	if ((index < checklist->num_items) && (index >= 0)) {
+		checklist->items[index].checked = check;
+		checklist_update(checklist);
+	}
 }
 
 bool checklist_item_checked(struct checklist *checklist, int index)
 {
-	return checklist->items[index].checked;
+	if ((index < checklist->num_items) && (index >= 0)) {
+		return checklist->items[index].checked;
+	}
+	return false;
 }
 
+void checklist_free(struct checklist **input_checklist)
+{
+	struct checklist *checklist = *input_checklist;
+
+	unpost_menu(checklist->menu);
+	for (int i=0; i < checklist->num_items; i++) {
+		free_item(checklist->items[i].item);
+		free(checklist->items[i].title);
+		free(checklist->items[i].checked_title);
+	}
+
+	free_menu(checklist->menu);
+	free(checklist->menu_items);
+	free(checklist->items);
+
+	free(checklist);
+}
+
+//inactive/deselected color style for settings field
 #define FIELDSTYLE_INACTIVE COLOR_PAIR(1)|A_UNDERLINE
+
+//active/selected color style for settings field
 #define FIELDSTYLE_ACTIVE CHECKLIST_STYLE_ACTIVE
+
+//number of sorting settings
+#define NUM_SORT_SETTINGS 2
+
+//index in sorting menu for AOS sort option
+#define SORT_AOS_IND 0
+
+//index in sorting menu for max elevation sort option
+#define SORT_MAXELE_IND 1
+
+//width of multitrack option window
+#define OPTION_WINDOW_WIDTH 70
+
+//start row for multitrack option window
+#define OPTION_WINDOW_ROW 7
+
+//start column for multitrack option window
+#define OPTION_WINDOW_COL 3
 
 void multitrack_edit_settings(multitrack_listing_t *listing)
 {
 	cbreak(); //turn off halfdelay mode so that getch blocks
 	WINDOW *option_window = newwin(LINES, OPTION_WINDOW_WIDTH, OPTION_WINDOW_ROW, OPTION_WINDOW_COL);
 
-	int row = 1;
+	//print keybindings/color scheme cheatsheet
+	int row = 5;
 	int col = 1;
-
-	col = 1;
-	row = 5;
 	int help_row = row;
 	mvwprintw(option_window, row++, col, "Keybindings:");
 	mvwprintw(option_window, row++, col, "F3/`/`:  Search for satellite");
 	row = help_row;
 	col = 32;
-
 	mvwprintw(option_window, row++, col, "Colorscheme:");
-
 	wattrset(option_window, multitrack_colors(3000, 1));
 	mvwprintw(option_window, row++, col, "Satellite above horizon");
 	wattrset(option_window, SATELLITE_CLOSE_COLOR);
@@ -1413,80 +1519,98 @@ void multitrack_edit_settings(multitrack_listing_t *listing)
 	mvwprintw(option_window, row++, col, "Satellite scheduled for pass");
 	wattrset(option_window, SATELLITE_IGNORED_COLOR);
 	mvwprintw(option_window, row++, col, "Ignored satellite");
-
-	wresize(option_window, row+1, OPTION_WINDOW_WIDTH);
-
-
 	wattrset(option_window, COLOR_PAIR(4));
+	col = 1;
+	row++;
+	mvwprintw(option_window, row++, col, "Press ESC or ENTER to return");
+
+	//resize window to contents
+	wresize(option_window, row+1, OPTION_WINDOW_WIDTH);
 	box(option_window, 0, 0);
 
-	//prepare menu
-	int sort_by_aos_ind = 0;
-	int sort_by_maxele_ind = 1;
-	const char *titles[] = {"Sort by AOS", "Sort by max elevation"};
-	struct checklist *checklist = checklist_create(option_window, 2, titles);
+	//window title
+	mvwprintw(option_window, 0, 3, "Multitrack settings/help");
 
-	checklist_check_item(checklist, sort_by_aos_ind, listing->sort_option == SORT_BY_AOS);
-	checklist_check_item(checklist, sort_by_maxele_ind, listing->sort_option == SORT_BY_MAX_ELEVATION);
+	//radio button menu for selecting sorting options
+	const char *sort_settings_names[NUM_SORT_SETTINGS] = {"Sort by AOS", "Sort by max elevation"};
+	struct checklist *sort_settings = checklist_create(option_window, NUM_SORT_SETTINGS, sort_settings_names);
 
-	int c;
-	int selected_item = 0;
+	//display current sorting settings
+	checklist_check_item(sort_settings, SORT_AOS_IND, listing->sort_option == SORT_BY_AOS);
+	checklist_check_item(sort_settings, SORT_MAXELE_IND, listing->sort_option == SORT_BY_MAX_ELEVATION);
 
-	bool in_checklist = true;
-	bool in_form = false;
-
-	//prepare form
+	//prepare form for max elevation input
 	int field_height = 1, field_width = 25, field_row = 0, field_col = 0;
-	FIELD *max_ele_field = new_field(field_height, CHECKOPT_STRLEN-1, field_row, field_col, 0, 0);
-	set_field_back(max_ele_field, FIELDSTYLE_INACTIVE);
-	FIELD *max_ele_field_desc = new_field(field_height, field_width, field_row, CHECKOPT_STRLEN, 0, 0);
-	field_opts_off(max_ele_field, O_STATIC);
-	set_max_field(max_ele_field, CHECKOPT_STRLEN-1);
-	set_max_field(max_ele_field_desc, MAX_NUM_CHARS);
-	field_opts_off(max_ele_field_desc, O_ACTIVE);
-	FIELD *fields[3] = {max_ele_field, max_ele_field_desc, NULL};
+	FIELD *max_ele_field = new_field(field_height, CHECKMARK_STRING_LENGTH-1, field_row, field_col, 0, 0);
+	FIELD *max_ele_field_description = new_field(field_height, field_width, field_row, CHECKMARK_STRING_LENGTH, 0, 0);
+	FIELD *fields[3] = {max_ele_field, max_ele_field_description, NULL};
 	FORM *form = new_form(fields);
 
-	
+	set_field_back(max_ele_field, FIELDSTYLE_INACTIVE);
+	field_opts_off(max_ele_field, O_STATIC);
+	field_opts_off(max_ele_field_description, O_ACTIVE);
+
+	set_max_field(max_ele_field, CHECKMARK_STRING_LENGTH-1);
+	set_max_field(max_ele_field_description, MAX_NUM_CHARS);
+	set_field_buffer(max_ele_field_description, 0, "Max elevation threshold");
+
+	//place form window below sort settings window
 	int form_rows, form_cols;
-	scale_form(form, &form_rows, &form_cols);
 	int form_row, form_col;
-	getmaxyx(checklist->window, form_row, form_col);
+	scale_form(form, &form_rows, &form_cols);
+	getmaxyx(sort_settings->window, form_row, form_col);
 	form_row++;
 	set_form_win(form, option_window);
 	set_form_sub(form, derwin(option_window, form_rows, form_cols, form_row, 1));
-
 	post_form(form);
+
+	//display current max elevation threshold settings
 	char curr_max_ele_thresh[MAX_NUM_CHARS];
-	snprintf(curr_max_ele_thresh, MAX_NUM_CHARS, "%f", listing->max_elevation_threshold);
+	snprintf(curr_max_ele_thresh, MAX_NUM_CHARS, "%d", (int)listing->max_elevation_threshold);
 	set_field_buffer(max_ele_field, 0, curr_max_ele_thresh);
-	set_field_buffer(max_ele_field_desc, 0, "Max elevation threshold");
 	form_driver(form, REQ_VALIDATION);
 	wrefresh(option_window);
 
-	while((c = wgetch(option_window)) != KEY_F(1))
-	{       switch(c)
-	        {	case KEY_DOWN:
-				if (in_checklist && (item_index(current_item(checklist->menu)) == checklist->num_items-1)) {
-					set_menu_fore(checklist->menu, CHECKLIST_STYLE_INACTIVE);
-					in_checklist = false;
+	//handle key input to sort settings menu and max elevation input field
+	int c;
+	int selected_item = 0;
+	bool in_sort_settings = true;
+	bool in_form = false;
+	bool run = true;
+	while (run) {
+		c = wgetch(option_window);
+		switch(c) {
+			case KEY_DOWN:
+				if (in_sort_settings && (item_index(current_item(sort_settings->menu)) == sort_settings->num_items-1)) {
+					//on bottom of menu, jump to form
+					in_sort_settings = false;
 					in_form = true;
+
+					//make menu look like it has no selected elements
+					set_menu_fore(sort_settings->menu, CHECKLIST_STYLE_INACTIVE);
+
+					//make field look like it is selected
 					set_field_back(max_ele_field, FIELDSTYLE_ACTIVE);
 					form_driver(form, REQ_VALIDATION);
-				} else if (in_checklist) {
-					menu_driver(checklist->menu, REQ_DOWN_ITEM);
+				} else if (in_sort_settings) {
+					menu_driver(sort_settings->menu, REQ_DOWN_ITEM);
 				}
 
 				break;
 			case KEY_UP:
-				if (in_checklist) {
-					menu_driver(checklist->menu, REQ_UP_ITEM);
+				if (in_sort_settings) {
+					menu_driver(sort_settings->menu, REQ_UP_ITEM);
 				} else {
-					set_menu_fore(checklist->menu, CHECKLIST_STYLE_ACTIVE);
+					//in form, jump back to menu
+					in_sort_settings = true;
+					in_form = false;
+
+					//reset menu coloring
+					set_menu_fore(sort_settings->menu, CHECKLIST_STYLE_ACTIVE);
+
+					//make field look like it is inactive
 					set_field_back(max_ele_field, FIELDSTYLE_INACTIVE);
 					form_driver(form, REQ_VALIDATION);
-					in_checklist = true;
-					in_form = false;
 				}
 				break;
 			case KEY_BACKSPACE:
@@ -1495,19 +1619,23 @@ void multitrack_edit_settings(multitrack_listing_t *listing)
 				}
 				break;
 			case ' ':
-				if (in_checklist) {
-					selected_item = item_index(current_item(checklist->menu));
+				if (in_sort_settings) {
+					selected_item = item_index(current_item(sort_settings->menu));
 
-					//check item if not selected, deselect all other items
-					if (!checklist_item_checked(checklist, selected_item)) {
-						checklist_check_item(checklist, selected_item, true);
-						for (int i=0; i < checklist->num_items; i++) {
+					//check item if not selected, deselect all other items (radio button behavior)
+					if (!checklist_item_checked(sort_settings, selected_item)) {
+						checklist_check_item(sort_settings, selected_item, true);
+						for (int i=0; i < sort_settings->num_items; i++) {
 							if (i != selected_item) {
-								checklist_check_item(checklist, i, false);
+								checklist_check_item(sort_settings, i, false);
 							}
 						}
 					}
 				}
+				break;
+			case 10:
+			case 23:
+				run = false;
 				break;
 			default:
 				if (in_form) {
@@ -1519,23 +1647,25 @@ void multitrack_edit_settings(multitrack_listing_t *listing)
 	}
 
 	//get settings from UI elements
-	if (checklist_item_checked(checklist, sort_by_aos_ind)) {
+	if (checklist_item_checked(sort_settings, SORT_AOS_IND)) {
 		listing->sort_option = SORT_BY_AOS;
 	} else {
 		listing->sort_option = SORT_BY_MAX_ELEVATION;
 	}
 
-
+	//get current max elevation setting
 	form_driver(form, REQ_VALIDATION);
 	char *max_ele_thresh = strdup(field_buffer(max_ele_field, 0));
 	trim_whitespaces_from_end(max_ele_thresh);
 	listing->max_elevation_threshold = strtod(max_ele_thresh, NULL);
 	free(max_ele_thresh);
 
-
-
-//        unpost_menu(menu);
-  //      free_menu(menu);
-
+	//cleanup
+	checklist_free(&sort_settings);
 	delwin(option_window);
+
+	unpost_form(form);
+	free_field(max_ele_field);
+	free_field(max_ele_field_description);
+	free_form(form);
 }
