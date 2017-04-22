@@ -1276,8 +1276,6 @@ void multitrack_search_field_add_match(multitrack_search_field_t *search_field, 
 #define OPTION_WINDOW_ROW 7
 #define OPTION_WINDOW_COL 3
 #define NUM_SORTING_OPTIONS 2
-#define SORTING_MENU_HEIGHT 6
-#define SORTING_MENU_WIDTH 60
 
 struct checklist_item {
 	ITEM *item;
@@ -1293,6 +1291,7 @@ struct checklist {
 	ITEM **menu_items;
 	int num_items;
 	struct checklist_item *items;
+	WINDOW *window;
 };
 
 struct checklist* checklist_create(WINDOW *window, int num_items, const char **item_names)
@@ -1314,8 +1313,12 @@ struct checklist* checklist_create(WINDOW *window, int num_items, const char **i
 	checklist->num_items = num_items;
 
         set_menu_win(checklist->menu, window);
-        set_menu_sub(checklist->menu, derwin(window, SORTING_MENU_HEIGHT, SORTING_MENU_WIDTH, 1, 1));
-	set_menu_format(checklist->menu, 2, 2);
+	int win_width, win_height;
+	getmaxyx(window, win_height, win_width);
+
+	checklist->window = derwin(window, num_items, win_width - 2, 1, 1);
+        set_menu_sub(checklist->menu, checklist->window);
+	set_menu_format(checklist->menu, num_items, 1);
 	set_menu_mark(checklist->menu, "");
 	menu_opts_off(checklist->menu, O_SHOWDESC);
 
@@ -1384,9 +1387,6 @@ void multitrack_edit_settings(multitrack_listing_t *listing)
 
 	int row = 1;
 	int col = 1;
-//	mvwprintw(option_window, row++, col, "[*] Sort by AOS");
-///	mvwprintw(option_window, row++, col, "[ ] Sort by max elevation");
-//	mvwprintw(option_window, row++, col, "    Max elevation threshold");
 
 	col = 1;
 	row = 5;
@@ -1424,10 +1424,46 @@ void multitrack_edit_settings(multitrack_listing_t *listing)
 
 	int c;
 	int selected_item = 0;
+
+	bool in_checklist = true;
+	bool in_form = false;
+
+	//prepare form
+	int field_height = 1, field_width = 25, field_row = 0, field_col = 0;
+	FIELD *max_ele_field = new_field(field_height, CHECKOPT_STRLEN-1, field_row, field_col, 0, 0);
+	set_field_back(max_ele_field, COLOR_PAIR(1)|A_UNDERLINE);
+	FIELD *max_ele_field_desc = new_field(field_height, field_width, field_row, CHECKOPT_STRLEN, 0, 0);
+	field_opts_off(max_ele_field, O_STATIC);
+	set_max_field(max_ele_field, MAX_NUM_CHARS);
+	set_max_field(max_ele_field_desc, MAX_NUM_CHARS);
+	FIELD *fields[3] = {max_ele_field, max_ele_field_desc, NULL};
+	FORM *form = new_form(fields);
+
+	
+	int form_rows, form_cols;
+	scale_form(form, &form_rows, &form_cols);
+	int form_row, form_col;
+	getmaxyx(checklist->window, form_row, form_col);
+	form_row++;
+	set_form_win(form, option_window);
+	set_form_sub(form, derwin(option_window, form_rows, form_cols, form_row, 1));
+
+	post_form(form);
+	set_field_buffer(max_ele_field, 0, "0");
+	set_field_buffer(max_ele_field_desc, 0, "Max elevation threshold");
+	form_driver(form, REQ_VALIDATION);
+	wrefresh(option_window);
+
 	while((c = wgetch(option_window)) != KEY_F(1))
 	{       switch(c)
 	        {	case KEY_DOWN:
-				menu_driver(checklist->menu, REQ_DOWN_ITEM);
+		//		if (in_checklist && (item_index(current_item(checklist->menu) == checklist->num_items-1))) {
+		//			in_checklist = false;
+		//			in_form = true;
+		//		} else if (in_checklist) {
+					menu_driver(checklist->menu, REQ_DOWN_ITEM);
+		//		}
+
 				break;
 			case KEY_UP:
 				menu_driver(checklist->menu, REQ_UP_ITEM);
@@ -1450,7 +1486,6 @@ void multitrack_edit_settings(multitrack_listing_t *listing)
 							checklist_check_item(checklist, i, false);
 						}
 					}
-
 				}
 			break;
 		}
