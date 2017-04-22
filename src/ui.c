@@ -2008,7 +2008,8 @@ void PrintMainMenu(WINDOW *window)
 	column = PrintMainMenuOption(window, row, column, 'N', "Lunar Pass Predictions   ");
 	column = 0;
 	row++;
-	column = PrintMainMenuOption(window, row, column, 'U', "Update Sat Elements                                ");
+	column = PrintMainMenuOption(window, row, column, 'U', "Update Sat Elements      ");
+	column = PrintMainMenuOption(window, row, column, 'M', "Multitrack settings      ");
 	column = PrintMainMenuOption(window, row, column, 'Q', "Exit flyby               ");
 
 	wrefresh(window);
