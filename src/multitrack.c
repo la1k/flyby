@@ -1283,26 +1283,73 @@ struct checklist_item {
 	ITEM *item;
 	bool checked;
 	char *title;
+	char *checked_title;
 };
+
+#define CHECKOPT_STRLEN 4
 
 struct checklist {
 	MENU *menu;
 	ITEM **menu_items;
-	struct checklist_item items;
+	int num_items;
+	struct checklist_item *items;
 };
 
-struct checklist* checklist_create(const char **item_names)
+struct checklist* checklist_create(WINDOW *window, int num_items, const char **item_names)
 {
+	struct checklist *checklist = (struct checklist*)malloc(sizeof(struct checklist));
+	checklist->items = (struct checklist_item*)calloc(num_items, sizeof(struct checklist_item));
+	for (int i=0; i < num_items; i++) {
+		checklist->items[i].checked = false;
+		checklist->items[i].title = strdup(item_names[i]);
+		checklist->items[i].item = NULL;
+		int item_length = strlen(item_names[i]) + CHECKOPT_STRLEN + 1;
+		checklist->items[i].checked_title = (char*)calloc(item_length, sizeof(char));
+		strncpy(checklist->items[i].checked_title, "[ ] ", item_length);
+		strncpy(checklist->items[i].checked_title + CHECKOPT_STRLEN, checklist->items[i].title, item_length - CHECKOPT_STRLEN);
+	}
+
+	checklist->menu_items = (ITEM**)calloc(num_items+1, sizeof(ITEM*));
+	checklist->menu = new_menu(NULL);
+	checklist->num_items = num_items;
+
+        set_menu_win(checklist->menu, window);
+        set_menu_sub(checklist->menu, derwin(window, SORTING_MENU_HEIGHT, SORTING_MENU_WIDTH, 1, 1));
+	set_menu_format(checklist->menu, 2, 2);
+	set_menu_mark(checklist->menu, "");
+	menu_opts_off(checklist->menu, O_SHOWDESC);
+
+
+	keypad(window, TRUE);
+
+	post_menu(checklist->menu);
+
+	checklist_update(checklist);
+	return checklist;
 }
+
 
 void checklist_update(struct checklist *checklist)
 {
-}
+	unpost_menu(checklist->menu);
 
-void prepare_items(ITEM **items, 
+	for (int i=0; i < checklist->num_items; i++) {
+		struct checklist_item *item = &(checklist->items[i]);
+		if (item->item != NULL) {
+			free_item(item->item);
+		}
+
+		item->item = new_item(item->checked_title, "");
+		checklist->menu_items[i] = item->item;
+	}
+	set_menu_items(checklist->menu, checklist->menu_items);
+	post_menu(checklist->menu);
+	
+}
 
 void multitrack_edit_settings(multitrack_listing_t *listing)
 {
+	cbreak(); //turn off halfdelay mode so that getch blocks
 	WINDOW *option_window = newwin(LINES, OPTION_WINDOW_WIDTH, OPTION_WINDOW_ROW, OPTION_WINDOW_COL);
 
 	int row = 1;
@@ -1337,53 +1384,35 @@ void multitrack_edit_settings(multitrack_listing_t *listing)
 	box(option_window, 0, 0);
 
 	//prepare menu
-	ITEM *items[NUM_SORTING_OPTIONS+1] = {0};
-	MENU *menu;
-
-	int i=0;
-	items[i++] = new_item("[ ] Sort by AOS", "");
-	items[i++] = new_item("[ ] Sort by max elevation", "");
-
-	menu = new_menu((ITEM **)items);
-	cbreak(); //turn off halfdelay mode so that getch blocks
-
-	menu_opts_off(menu, O_SHOWDESC);
-
-	/* Set main window and sub window */
-        set_menu_win(menu, option_window);
-        set_menu_sub(menu, derwin(option_window, SORTING_MENU_HEIGHT, SORTING_MENU_WIDTH, 1, 1));
-	set_menu_format(menu, 2, 2);
-	set_menu_mark(menu, "");
-	post_menu(menu);
-	wrefresh(option_window);
-	keypad(option_window, TRUE);
+	const char *titles[] = {"Sort by AOS", "Sort by max elevation"};
+	struct checklist *checklist = checklist_create(option_window, 2, titles);
 
 	int c;
 	ITEM *selected_item;
 	while((c = wgetch(option_window)) != KEY_F(1))
 	{       switch(c)
 	        {	case KEY_DOWN:
-				menu_driver(menu, REQ_DOWN_ITEM);
+				menu_driver(checklist->menu, REQ_DOWN_ITEM);
 				break;
 			case KEY_UP:
-				menu_driver(menu, REQ_UP_ITEM);
+				menu_driver(checklist->menu, REQ_UP_ITEM);
 				break;
 			case KEY_LEFT:
-				menu_driver(menu, REQ_LEFT_ITEM);
+				menu_driver(checklist->menu, REQ_LEFT_ITEM);
 				break;
 			case KEY_RIGHT:
-				menu_driver(menu, REQ_RIGHT_ITEM);
+				menu_driver(checklist->menu, REQ_RIGHT_ITEM);
 				break;
 			case ' ':
-				pos_menu_cursor(menu);
-				selected_item = current_item(menu);
+				pos_menu_cursor(checklist->menu);
+				selected_item = current_item(checklist->menu);
 			break;
 		}
                 wrefresh(option_window);
 	}
 
-        unpost_menu(menu);
-        free_menu(menu);
+//        unpost_menu(menu);
+  //      free_menu(menu);
 
 	delwin(option_window);
 }
