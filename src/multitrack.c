@@ -1328,10 +1328,17 @@ struct checklist* checklist_create(WINDOW *window, int num_items, const char **i
 	return checklist;
 }
 
+#define CHECKMARK_POSITION 1
 
 void checklist_update(struct checklist *checklist)
 {
 	unpost_menu(checklist->menu);
+	char *curr_selected;
+	bool menu_initialized = (checklist->menu_items[0] != NULL);
+	int selected_index=0;
+	if (menu_initialized) {
+		selected_index = item_index(current_item(checklist->menu));
+	}
 
 	for (int i=0; i < checklist->num_items; i++) {
 		struct checklist_item *item = &(checklist->items[i]);
@@ -1339,12 +1346,24 @@ void checklist_update(struct checklist *checklist)
 			free_item(item->item);
 		}
 
+		if (item->checked) {
+			item->checked_title[CHECKMARK_POSITION] = 'x';
+		} else {
+			item->checked_title[CHECKMARK_POSITION] = ' ';
+		}
+
 		item->item = new_item(item->checked_title, "");
 		checklist->menu_items[i] = item->item;
+
+		if (i == selected_index) {
+			curr_selected = strdup(item->checked_title);
+		}
 	}
 	set_menu_items(checklist->menu, checklist->menu_items);
 	post_menu(checklist->menu);
-	
+
+	set_menu_pattern(checklist->menu, curr_selected);
+	free(curr_selected);
 }
 
 void multitrack_edit_settings(multitrack_listing_t *listing)
@@ -1388,7 +1407,7 @@ void multitrack_edit_settings(multitrack_listing_t *listing)
 	struct checklist *checklist = checklist_create(option_window, 2, titles);
 
 	int c;
-	ITEM *selected_item;
+	int current_item_index = 0;
 	while((c = wgetch(option_window)) != KEY_F(1))
 	{       switch(c)
 	        {	case KEY_DOWN:
@@ -1405,7 +1424,9 @@ void multitrack_edit_settings(multitrack_listing_t *listing)
 				break;
 			case ' ':
 				pos_menu_cursor(checklist->menu);
-				selected_item = current_item(checklist->menu);
+				current_item_index = item_index(current_item(checklist->menu));
+				checklist->items[current_item_index].checked = !checklist->items[current_item_index].checked;
+				checklist_update(checklist);
 			break;
 		}
                 wrefresh(option_window);
