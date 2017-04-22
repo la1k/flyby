@@ -1441,8 +1441,9 @@ void multitrack_edit_settings(multitrack_listing_t *listing)
 	set_field_back(max_ele_field, FIELDSTYLE_INACTIVE);
 	FIELD *max_ele_field_desc = new_field(field_height, field_width, field_row, CHECKOPT_STRLEN, 0, 0);
 	field_opts_off(max_ele_field, O_STATIC);
-	set_max_field(max_ele_field, MAX_NUM_CHARS);
+	set_max_field(max_ele_field, CHECKOPT_STRLEN-1);
 	set_max_field(max_ele_field_desc, MAX_NUM_CHARS);
+	field_opts_off(max_ele_field_desc, O_ACTIVE);
 	FIELD *fields[3] = {max_ele_field, max_ele_field_desc, NULL};
 	FORM *form = new_form(fields);
 
@@ -1486,6 +1487,9 @@ void multitrack_edit_settings(multitrack_listing_t *listing)
 					in_form = false;
 				}
 				break;
+			case KEY_BACKSPACE:
+				form_driver(form, REQ_CLR_FIELD);
+				break;
 			case ' ':
 				if (in_checklist) {
 					selected_item = item_index(current_item(checklist->menu));
@@ -1500,6 +1504,9 @@ void multitrack_edit_settings(multitrack_listing_t *listing)
 						}
 					}
 				}
+				break;
+			default:
+				form_driver(form, c);
 			break;
 		}
                 wrefresh(option_window);

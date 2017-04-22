@@ -32,7 +32,7 @@ typedef struct {
 	double next_aos;
 	///Time for next LOS
 	double next_los;
-	///Maximum elevation of the next or current pass
+	///Maximum elevation of the next or current pass in degrees
 	double max_elevation;
 	///Whether satellite currently is above horizon
 	bool above_horizon;
@@ -156,7 +156,7 @@ typedef struct {
 	int terminal_width;
 	///Sorting options
 	int sort_option;
-	///Thresholding options
+	///Max elevation threshold in degrees
 	double max_elevation_threshold;
 } multitrack_listing_t;
 
