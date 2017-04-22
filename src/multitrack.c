@@ -1347,7 +1347,7 @@ void checklist_update(struct checklist *checklist)
 		}
 
 		if (item->checked) {
-			item->checked_title[CHECKMARK_POSITION] = 'x';
+			item->checked_title[CHECKMARK_POSITION] = '*';
 		} else {
 			item->checked_title[CHECKMARK_POSITION] = ' ';
 		}
@@ -1364,6 +1364,17 @@ void checklist_update(struct checklist *checklist)
 
 	set_menu_pattern(checklist->menu, curr_selected);
 	free(curr_selected);
+}
+
+void checklist_check_item(struct checklist *checklist, int index, bool check)
+{
+	checklist->items[index].checked = check;
+	checklist_update(checklist);
+}
+
+bool checklist_item_checked(struct checklist *checklist, int index)
+{
+	return checklist->items[index].checked;
 }
 
 void multitrack_edit_settings(multitrack_listing_t *listing)
@@ -1403,11 +1414,16 @@ void multitrack_edit_settings(multitrack_listing_t *listing)
 	box(option_window, 0, 0);
 
 	//prepare menu
+	int sort_by_aos_ind = 0;
+	int sort_by_maxele_ind = 1;
 	const char *titles[] = {"Sort by AOS", "Sort by max elevation"};
 	struct checklist *checklist = checklist_create(option_window, 2, titles);
 
+	checklist_check_item(checklist, sort_by_aos_ind, listing->sort_option == SORT_BY_AOS);
+	checklist_check_item(checklist, sort_by_maxele_ind, listing->sort_option == SORT_BY_MAX_ELEVATION);
+
 	int c;
-	int current_item_index = 0;
+	int selected_item = 0;
 	while((c = wgetch(option_window)) != KEY_F(1))
 	{       switch(c)
 	        {	case KEY_DOWN:
@@ -1424,13 +1440,25 @@ void multitrack_edit_settings(multitrack_listing_t *listing)
 				break;
 			case ' ':
 				pos_menu_cursor(checklist->menu);
-				current_item_index = item_index(current_item(checklist->menu));
-				checklist->items[current_item_index].checked = !checklist->items[current_item_index].checked;
-				checklist_update(checklist);
+				selected_item = item_index(current_item(checklist->menu));
+
+				//check item if not selected, deselect all other items
+				if (!checklist_item_checked(checklist, selected_item)) {
+					checklist_check_item(checklist, selected_item, true);
+					for (int i=0; i < checklist->num_items; i++) {
+						if (i != selected_item) {
+							checklist_check_item(checklist, i, false);
+						}
+					}
+
+				}
 			break;
 		}
                 wrefresh(option_window);
 	}
+
+
+
 
 //        unpost_menu(menu);
   //      free_menu(menu);
