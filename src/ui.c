@@ -2512,7 +2512,7 @@ void RunFlybyUI(bool new_user, const char *qthfile, predict_observer_t *observer
 
 						case 'M':
 						case 'm':
-							multitrack_options(listing);
+							multitrack_edit_settings(listing);
 							break;
 
 						case 'G':

@@ -687,52 +687,6 @@ void multitrack_display_entry(WINDOW *window, int row, int col, multitrack_entry
 	mvwprintw(window, row, col, "%s", entry->display_string);
 }
 
-#define MULTITRACK_OPTION_WINDOW_WIDTH 70
-#define MULTITRACK_OPTION_WINDOW_ROW 7
-#define MULTITRACK_OPTION_WINDOW_COL 3
-
-void multitrack_options(multitrack_listing_t *listing)
-{
-	WINDOW *option_window = newwin(LINES, MULTITRACK_OPTION_WINDOW_WIDTH, MULTITRACK_OPTION_WINDOW_ROW, MULTITRACK_OPTION_WINDOW_COL);
-
-	int row = 1;
-	int col = 1;
-	mvwprintw(option_window, row++, col, "[*] Sort by AOS");
-	mvwprintw(option_window, row++, col, "[ ] Sort by max elevation");
-	mvwprintw(option_window, row++, col, "    Max elevation threshold");
-
-	col = 1;
-	row++;
-	int help_row = row;
-	mvwprintw(option_window, row++, col, "Keybindings:");
-	mvwprintw(option_window, row++, col, "F3/`/`:  Search for satellite");
-	row = help_row;
-	col = 32;
-
-	mvwprintw(option_window, row++, col, "Colorscheme:");
-
-	wattrset(option_window, multitrack_colors(3000, 1));
-	mvwprintw(option_window, row++, col, "Satellite above horizon");
-	wattrset(option_window, SATELLITE_CLOSE_COLOR);
-	mvwprintw(option_window, row++, col, "Satellite about to pass over horizon");
-	wattrset(option_window, SATELLITE_FAR_COLOR);
-	mvwprintw(option_window, row++, col, "Satellite scheduled for pass");
-	wattrset(option_window, SATELLITE_IGNORED_COLOR);
-	mvwprintw(option_window, row++, col, "Ignored satellite");
-
-	wresize(option_window, row+1, MULTITRACK_OPTION_WINDOW_WIDTH);
-
-
-	wattrset(option_window, COLOR_PAIR(4));
-	box(option_window, 0, 0);
-	wrefresh(option_window);
-
-	cbreak(); //turn off halfdelay mode so that getch blocks
-	getch();
-
-	delwin(option_window);
-}
-
 void multitrack_print_scrollbar(multitrack_listing_t *listing)
 {
 	int scrollarea_offset = 0;
@@ -1316,4 +1270,120 @@ void multitrack_search_field_add_match(multitrack_search_field_t *search_field, 
 	}
 
 	search_field->matches[search_field->num_matches++] = index;
+}
+
+#define OPTION_WINDOW_WIDTH 70
+#define OPTION_WINDOW_ROW 7
+#define OPTION_WINDOW_COL 3
+#define NUM_SORTING_OPTIONS 2
+#define SORTING_MENU_HEIGHT 6
+#define SORTING_MENU_WIDTH 60
+
+struct checklist_item {
+	ITEM *item;
+	bool checked;
+	char *title;
+};
+
+struct checklist {
+	MENU *menu;
+	ITEM **menu_items;
+	struct checklist_item items;
+};
+
+struct checklist* checklist_create(const char **item_names)
+{
+}
+
+void checklist_update(struct checklist *checklist)
+{
+}
+
+void prepare_items(ITEM **items, 
+
+void multitrack_edit_settings(multitrack_listing_t *listing)
+{
+	WINDOW *option_window = newwin(LINES, OPTION_WINDOW_WIDTH, OPTION_WINDOW_ROW, OPTION_WINDOW_COL);
+
+	int row = 1;
+	int col = 1;
+//	mvwprintw(option_window, row++, col, "[*] Sort by AOS");
+///	mvwprintw(option_window, row++, col, "[ ] Sort by max elevation");
+//	mvwprintw(option_window, row++, col, "    Max elevation threshold");
+
+	col = 1;
+	row = 5;
+	int help_row = row;
+	mvwprintw(option_window, row++, col, "Keybindings:");
+	mvwprintw(option_window, row++, col, "F3/`/`:  Search for satellite");
+	row = help_row;
+	col = 32;
+
+	mvwprintw(option_window, row++, col, "Colorscheme:");
+
+	wattrset(option_window, multitrack_colors(3000, 1));
+	mvwprintw(option_window, row++, col, "Satellite above horizon");
+	wattrset(option_window, SATELLITE_CLOSE_COLOR);
+	mvwprintw(option_window, row++, col, "Satellite about to pass over horizon");
+	wattrset(option_window, SATELLITE_FAR_COLOR);
+	mvwprintw(option_window, row++, col, "Satellite scheduled for pass");
+	wattrset(option_window, SATELLITE_IGNORED_COLOR);
+	mvwprintw(option_window, row++, col, "Ignored satellite");
+
+	wresize(option_window, row+1, OPTION_WINDOW_WIDTH);
+
+
+	wattrset(option_window, COLOR_PAIR(4));
+	box(option_window, 0, 0);
+
+	//prepare menu
+	ITEM *items[NUM_SORTING_OPTIONS+1] = {0};
+	MENU *menu;
+
+	int i=0;
+	items[i++] = new_item("[ ] Sort by AOS", "");
+	items[i++] = new_item("[ ] Sort by max elevation", "");
+
+	menu = new_menu((ITEM **)items);
+	cbreak(); //turn off halfdelay mode so that getch blocks
+
+	menu_opts_off(menu, O_SHOWDESC);
+
+	/* Set main window and sub window */
+        set_menu_win(menu, option_window);
+        set_menu_sub(menu, derwin(option_window, SORTING_MENU_HEIGHT, SORTING_MENU_WIDTH, 1, 1));
+	set_menu_format(menu, 2, 2);
+	set_menu_mark(menu, "");
+	post_menu(menu);
+	wrefresh(option_window);
+	keypad(option_window, TRUE);
+
+	int c;
+	ITEM *selected_item;
+	while((c = wgetch(option_window)) != KEY_F(1))
+	{       switch(c)
+	        {	case KEY_DOWN:
+				menu_driver(menu, REQ_DOWN_ITEM);
+				break;
+			case KEY_UP:
+				menu_driver(menu, REQ_UP_ITEM);
+				break;
+			case KEY_LEFT:
+				menu_driver(menu, REQ_LEFT_ITEM);
+				break;
+			case KEY_RIGHT:
+				menu_driver(menu, REQ_RIGHT_ITEM);
+				break;
+			case ' ':
+				pos_menu_cursor(menu);
+				selected_item = current_item(menu);
+			break;
+		}
+                wrefresh(option_window);
+	}
+
+        unpost_menu(menu);
+        free_menu(menu);
+
+	delwin(option_window);
 }

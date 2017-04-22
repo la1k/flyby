@@ -204,8 +204,10 @@ bool multitrack_handle_listing(multitrack_listing_t *listing, int input_key);
 
 /**
  * Edit multitrack options.
+ *
+ * \param listing Multitrack listing
  **/
-void multitrack_options(multitrack_listing_t *listing);
+void multitrack_edit_settings(multitrack_listing_t *listing);
 
 /**
  * Return currently selected entry, in terms of index in the TLE database.
