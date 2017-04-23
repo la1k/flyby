@@ -160,6 +160,8 @@ typedef struct {
 	int sort_option;
 	///Max elevation threshold in degrees
 	double max_elevation_threshold;
+	///Whether listing should be sorted in multitrack_update_listing_data().
+	bool should_sort;
 } multitrack_listing_t;
 
 /**

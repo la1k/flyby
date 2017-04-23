@@ -67,7 +67,7 @@ void multitrack_display_entry(WINDOW *window, int row, int col, multitrack_entry
  * \param qth QTH coordinates
  * \param entry Multitrack entry
  * \param time Time at which satellite status should be calculated
- * \return True if listing sorting should be triggered, false otherwise
+ * \return True if aos/los times change, false otherwise
  **/
 bool multitrack_update_entry(double max_elevation_threshold, predict_observer_t *qth, multitrack_entry_t *entry, predict_julian_date_t time);
 
@@ -320,6 +320,10 @@ multitrack_listing_t* multitrack_create_listing(predict_observer_t *observer, st
 
 	listing->qth = observer;
 
+	listing->sort_option = SORT_BY_AOS;
+	listing->max_elevation_threshold = 0;
+	multitrack_settings_from_file(listing);
+
 	multitrack_refresh_tles(listing, tle_db);
 
 	listing->option_selector = multitrack_option_selector_create();
@@ -330,11 +334,6 @@ multitrack_listing_t* multitrack_create_listing(predict_observer_t *observer, st
 
 	listing->terminal_height = LINES;
 	listing->terminal_width = LINES;
-
-	listing->sort_option = SORT_BY_AOS;
-	listing->max_elevation_threshold = 0;
-
-	multitrack_settings_from_file(listing);
 	return listing;
 }
 
@@ -466,8 +465,6 @@ NCURSES_ATTR_T multitrack_colors(double range, double elevation)
 
 bool multitrack_update_entry(double max_elevation_threshold, predict_observer_t *qth, multitrack_entry_t *entry, predict_julian_date_t time)
 {
-	bool trigger_resorting = false;
-
 	entry->geostationary = false;
 
 	struct predict_observation obs;
@@ -569,7 +566,6 @@ bool multitrack_update_entry(double max_elevation_threshold, predict_observer_t 
 	if (calculate_next_aos || calculate_next_los) {
 		struct predict_observation max_elevation_obs = predict_at_max_elevation(qth, entry->orbital_elements, time);
 		entry->max_elevation = max_elevation_obs.elevation*180.0/M_PI;
-		trigger_resorting = true;
 	}
 
 	if (calculate_next_aos) {
@@ -610,7 +606,7 @@ bool multitrack_update_entry(double max_elevation_threshold, predict_observer_t 
 	entry->decayed = orbit.decayed;
 
 	entry->never_visible = !predict_aos_happens(entry->orbital_elements, qth->latitude) || (predict_is_geostationary(entry->orbital_elements) && (obs.elevation <= 0.0));
-	return trigger_resorting;
+	return calculate_next_aos || calculate_next_los;
 }
 
 void multitrack_update_listing_data(multitrack_listing_t *listing, predict_julian_date_t time)
@@ -623,11 +619,15 @@ void multitrack_update_listing_data(multitrack_listing_t *listing, predict_julia
 			wrefresh(listing->window);
 		}
 		multitrack_entry_t *entry = listing->entries[i];
-		multitrack_update_entry(listing->max_elevation_threshold, listing->qth, entry, time);
+		bool aoslos_changed = multitrack_update_entry(listing->max_elevation_threshold, listing->qth, entry, time);
+		if (aoslos_changed) {
+			listing->should_sort = true;
+		}
 	}
 
-	if (!multitrack_option_selector_visible(listing->option_selector) && !multitrack_search_field_visible(listing->search_field)) {
+	if (!multitrack_option_selector_visible(listing->option_selector) && !multitrack_search_field_visible(listing->search_field) && listing->should_sort) {
 		multitrack_sort_listing(listing); //freeze sorting when option selector is hovering over a satellite
+		listing->should_sort = false;
 	}
 
 	listing->not_displayed = false;
@@ -1785,6 +1785,9 @@ void multitrack_edit_settings(multitrack_listing_t *listing)
 
 	//write settings to file
 	multitrack_settings_to_file(listing);
+
+	//trigger resort
+	listing->should_sort = true;
 }
 
 #include "xdg_basedirs.h"
