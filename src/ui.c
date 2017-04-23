@@ -2516,6 +2516,11 @@ void RunFlybyUI(bool new_user, const char *qthfile, predict_observer_t *observer
 							multitrack_edit_settings(listing);
 							break;
 
+						case 'H':
+						case 'h':
+							multitrack_show_help();
+							break;
+
 						case 'G':
 						case 'g':
 							QthEdit(qthfile, observer);

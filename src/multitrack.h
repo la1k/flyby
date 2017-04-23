@@ -205,11 +205,16 @@ void multitrack_display_listing(multitrack_listing_t *listing);
 bool multitrack_handle_listing(multitrack_listing_t *listing, int input_key);
 
 /**
- * Edit multitrack options.
+ * Edit multitrack options. Will save to config file on exit.
  *
  * \param listing Multitrack listing
  **/
 void multitrack_edit_settings(multitrack_listing_t *listing);
+
+/**
+ * Show help window.
+ **/
+void multitrack_show_help();
 
 /**
  * Return currently selected entry, in terms of index in the TLE database.

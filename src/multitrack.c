@@ -1589,39 +1589,60 @@ void checklist_free(struct checklist **input_checklist)
 //start column for multitrack option window
 #define OPTION_WINDOW_COL 3
 
+#define OPTION_WINDOW_HEIGHT 7
+
+void multitrack_show_help()
+{
+	WINDOW *help_window = newwin(LINES, OPTION_WINDOW_WIDTH, OPTION_WINDOW_ROW, OPTION_WINDOW_COL);
+
+	//print keybindings/color scheme cheatsheet in help window
+	int row = 1;
+	int col = 1;
+	int help_row = row;
+	mvwprintw(help_window, row++, col, "Keybindings:");
+	mvwprintw(help_window, row++, col, "F3/`/`:  Search for satellite");
+	row = help_row;
+	col = 32;
+	mvwprintw(help_window, row++, col, "Colorscheme:");
+	wattrset(help_window, multitrack_colors(3000, 1));
+	mvwprintw(help_window, row++, col, "Satellite above horizon");
+	wattrset(help_window, SATELLITE_CLOSE_COLOR);
+	mvwprintw(help_window, row++, col, "Satellite about to pass over horizon");
+	wattrset(help_window, SATELLITE_FAR_COLOR);
+	mvwprintw(help_window, row++, col, "Satellite scheduled for pass");
+	wattrset(help_window, SATELLITE_IGNORED_COLOR);
+	mvwprintw(help_window, row++, col, "Ignored satellite");
+	wattrset(help_window, COLOR_PAIR(4));
+	col = 1;
+
+	//resize and add border
+	wresize(help_window, row+1, OPTION_WINDOW_WIDTH);
+	box(help_window, 0, 0);
+
+	//title
+	mvwprintw(help_window, 0, 3, "Multitrack help");
+
+	wrefresh(help_window);
+
+	cbreak(); //turn off halfdelay mode so that getch blocks
+	getch();
+	delwin(help_window);
+}
+
 void multitrack_edit_settings(multitrack_listing_t *listing)
 {
 	cbreak(); //turn off halfdelay mode so that getch blocks
-	WINDOW *option_window = newwin(LINES, OPTION_WINDOW_WIDTH, OPTION_WINDOW_ROW, OPTION_WINDOW_COL);
+	WINDOW *option_window = newwin(OPTION_WINDOW_HEIGHT, OPTION_WINDOW_WIDTH, OPTION_WINDOW_ROW, OPTION_WINDOW_COL);
 
-	//print keybindings/color scheme cheatsheet
-	int row = 5;
 	int col = 1;
-	int help_row = row;
-	mvwprintw(option_window, row++, col, "Keybindings:");
-	mvwprintw(option_window, row++, col, "F3/`/`:  Search for satellite");
-	row = help_row;
-	col = 32;
-	mvwprintw(option_window, row++, col, "Colorscheme:");
-	wattrset(option_window, multitrack_colors(3000, 1));
-	mvwprintw(option_window, row++, col, "Satellite above horizon");
-	wattrset(option_window, SATELLITE_CLOSE_COLOR);
-	mvwprintw(option_window, row++, col, "Satellite about to pass over horizon");
-	wattrset(option_window, SATELLITE_FAR_COLOR);
-	mvwprintw(option_window, row++, col, "Satellite scheduled for pass");
-	wattrset(option_window, SATELLITE_IGNORED_COLOR);
-	mvwprintw(option_window, row++, col, "Ignored satellite");
-	wattrset(option_window, COLOR_PAIR(4));
-	col = 1;
-	row++;
-	mvwprintw(option_window, row++, col, "Press q or ENTER to return");
 
-	//resize window to contents
-	wresize(option_window, row+1, OPTION_WINDOW_WIDTH);
+	//window border and exit hint
+	wattrset(option_window, COLOR_PAIR(4));
+	mvwprintw(option_window, OPTION_WINDOW_HEIGHT-2, col, "Press q or ENTER to return");
 	box(option_window, 0, 0);
 
 	//window title
-	mvwprintw(option_window, 0, 3, "Multitrack settings/help");
+	mvwprintw(option_window, 0, 3, "Multitrack settings");
 
 	//radio button menu for selecting sorting options
 	const char *sort_settings_names[NUM_SORT_SETTINGS] = {"Sort by AOS", "Sort by max elevation"};
