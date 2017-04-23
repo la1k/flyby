@@ -548,7 +548,7 @@ void multitrack_update_entry(double max_elevation_threshold, predict_observer_t 
 		sprintf(aos_los, "*GeoS-NoAOS*");
 	}
 
-	entry->above_max_elevation_threshold = (entry->max_elevation > max_elevation_threshold) || (entry->geostationary && obs.elevation*180.0/M_PI > max_elevation_threshold);
+	entry->above_max_elevation_threshold = (entry->max_elevation > max_elevation_threshold);
 	if (!entry->above_max_elevation_threshold) {
 		entry->display_attributes = SATELLITE_IGNORED_COLOR;
 	}
@@ -556,11 +556,12 @@ void multitrack_update_entry(double max_elevation_threshold, predict_observer_t 
 	char abs_pos_string[MAX_NUM_CHARS] = {0};
 	sprintf(abs_pos_string, "%3.0f  %3.0f", orbit.latitude*180.0/M_PI, orbit.longitude*180.0/M_PI);
 
-	/* Calculate Next Event (AOS/LOS) Times */
+	//calculate next LOS
 	if (can_predict && (time > entry->next_los) && (obs.elevation > 0)) {
 		entry->next_los= predict_next_los(qth, entry->orbital_elements, time);
 	}
 
+	//calculate next AOS and max elevation
 	if (can_predict && (time > entry->next_aos)) {
 		if (obs.elevation < 0) {
 			entry->next_aos = predict_next_aos(qth, entry->orbital_elements, time);
@@ -572,6 +573,11 @@ void multitrack_update_entry(double max_elevation_threshold, predict_observer_t 
 		predict_orbit(entry->orbital_elements, &orbit, max_ele_time);
 		predict_observe_orbit(qth, &orbit, &observation);
 		entry->max_elevation = observation.elevation*180.0/M_PI;
+	}
+
+	//use current elevation as max elevation if satellite is above horizon and geostationary
+	if (entry->geostationary && obs.elevation > 0) {
+	       entry->max_elevation = obs.elevation*180.0/M_PI;
 	}
 
 	char max_ele_str[MAX_NUM_CHARS] = {0};
@@ -644,20 +650,48 @@ bool below_threshold(const multitrack_entry_t *entry)
 	return !entry->never_visible && !entry->above_max_elevation_threshold && !entry->decayed;
 }
 
+struct sort_helper {
+	int index;
+	double sort_value;
+};
+
+int ascending(const void *lvalue, const void *rvalue)
+{
+	return ceil(((struct sort_helper*)lvalue)->sort_value - ((struct sort_helper*)rvalue)->sort_value);
+}
+
+int descending(const void *lvalue, const void *rvalue)
+{
+	return ceil(((struct sort_helper*)rvalue)->sort_value - ((struct sort_helper*)lvalue)->sort_value);
+}
+
+
 void sort_satellites(multitrack_entry_t **entries, int num_entries, int *entry_mapping, int sort_option)
 {
-	for (int i=0; i < num_entries-1; i++) {
-		for (int j=0; j < num_entries-1; j++){
-			bool max_ele_larger = entries[entry_mapping[j]]->max_elevation < entries[entry_mapping[j+1]]->max_elevation;
-			bool next_aos_larger = entries[entry_mapping[j]]->next_aos > entries[entry_mapping[j+1]]->next_aos;
-
-			if (((sort_option == SORT_BY_AOS) && next_aos_larger) || ((sort_option == SORT_BY_MAX_ELEVATION) && max_ele_larger)) {
-				int x = entry_mapping[j];
-				entry_mapping[j] = entry_mapping[j+1];
-				entry_mapping[j+1] = x;
-			}
+	//prepare array for sorting using stdlib's qsort
+	struct sort_helper *sorting = (struct sort_helper*)malloc(sizeof(struct sort_helper)*num_entries);
+	for (int i=0; i < num_entries; i++) {
+		sorting[i].index = entry_mapping[i];
+		if (sort_option == SORT_BY_MAX_ELEVATION) {
+			sorting[i].sort_value = entries[entry_mapping[i]]->max_elevation;
+		} else if (sort_option == SORT_BY_AOS) {
+			sorting[i].sort_value = entries[entry_mapping[i]]->next_aos;
 		}
+
 	}
+
+	if (sort_option == SORT_BY_MAX_ELEVATION) {
+		qsort(sorting, num_entries, sizeof(struct sort_helper), descending);
+	} else if (sort_option == SORT_BY_AOS) {
+		qsort(sorting, num_entries, sizeof(struct sort_helper), ascending);
+	}
+
+	//extract results
+	for (int i=0; i < num_entries; i++) {
+		entry_mapping[i] = sorting[i].index;
+	}
+
+	free(sorting);
 }
 
 void multitrack_sort_listing(multitrack_listing_t *listing)
