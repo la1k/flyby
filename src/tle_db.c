@@ -37,8 +37,8 @@ void tle_db_destroy(struct tle_db **tle_db)
  **/
 bool tle_is_newer_than(char *tle_1[2], char *tle_2[2])
 {
-	predict_orbital_elements_t *orbele_1 = predict_parse_tle(tle_1);
-	predict_orbital_elements_t *orbele_2 = predict_parse_tle(tle_2);
+	predict_orbital_elements_t *orbele_1 = predict_parse_tle(tle_1[0], tle_1[1]);
+	predict_orbital_elements_t *orbele_2 = predict_parse_tle(tle_2[0], tle_1[1]);
 
 	double epoch_1 = orbele_1->epoch_year*1000.0 + orbele_1->epoch_day;
 	double epoch_2 = orbele_2->epoch_year*1000.0 + orbele_2->epoch_day;
@@ -259,8 +259,7 @@ int tle_db_from_file(const char *tle_file, struct tle_db *ret_db)
 
 				/* Get satellite number, so that the satellite database can be parsed. */
 
-				char *tle[2] = {entry.line1, entry.line2};
-				predict_orbital_elements_t *temp_elements = predict_parse_tle(tle);
+				predict_orbital_elements_t *temp_elements = predict_parse_tle(entry.line1, entry.line2);
 				entry.satellite_number = temp_elements->satellite_number;
 				predict_destroy_orbital_elements(temp_elements);
 
@@ -511,8 +510,7 @@ predict_orbital_elements_t *tle_db_entry_to_orbital_elements(const struct tle_db
 {
 	if ((tle_index < db->num_tles) && (tle_index >= 0)) {
 		const struct tle_db_entry *entry = &(db->tles[tle_index]);
-		char *tle[2] = {(char*)(entry->line1), (char*)(entry->line2)};
-		return predict_parse_tle(tle);
+		return predict_parse_tle(entry->line1, entry->line2);
 	} else {
 		return NULL;
 	}
