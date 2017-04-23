@@ -644,10 +644,21 @@ bool below_threshold(const multitrack_entry_t *entry)
 	return !entry->never_visible && !entry->above_max_elevation_threshold && !entry->decayed;
 }
 
-void sort_satellites()
+void sort_satellites(multitrack_entry_t **entries, int num_entries, int *entry_mapping, int sort_option)
 {
-}
+	for (int i=0; i < num_entries-1; i++) {
+		for (int j=0; j < num_entries-1; j++){
+			bool max_ele_larger = entries[entry_mapping[j]]->max_elevation < entries[entry_mapping[j+1]]->max_elevation;
+			bool next_aos_larger = entries[entry_mapping[j]]->next_aos > entries[entry_mapping[j+1]]->next_aos;
 
+			if (((sort_option == SORT_BY_AOS) && next_aos_larger) || ((sort_option == SORT_BY_MAX_ELEVATION) && max_ele_larger)) {
+				int x = entry_mapping[j];
+				entry_mapping[j] = entry_mapping[j+1];
+				entry_mapping[j+1] = x;
+			}
+		}
+	}
+}
 
 void multitrack_sort_listing(multitrack_listing_t *listing)
 {
@@ -700,37 +711,17 @@ void multitrack_sort_listing(multitrack_listing_t *listing)
 
 	if (listing->sort_option == SORT_BY_AOS) {
 		//sort those with nonzero elevation according to max elevation
-		for (int i=0; i < above_horizon_counter-1; i++) {
-			for (int j=0; j < above_horizon_counter-1; j++){
-				if (listing->entries[listing->sorted_index[j]]->max_elevation < listing->entries[listing->sorted_index[j+1]]->max_elevation) {
-					int x = listing->sorted_index[j];
-					listing->sorted_index[j] = listing->sorted_index[j+1];
-					listing->sorted_index[j+1] = x;
-				}
-			}
-		}
+		sort_satellites(listing->entries, above_horizon_counter, listing->sorted_index, SORT_BY_MAX_ELEVATION);
 
-		//sort internally according to AOS/LOS
-		for (int i=above_horizon_counter; i < above_horizon_counter + below_horizon_counter; i++) {
-			for (int j=above_horizon_counter; j < above_horizon_counter + below_horizon_counter - 1; j++){
-				if (listing->entries[listing->sorted_index[j]]->next_aos > listing->entries[listing->sorted_index[j+1]]->next_aos) {
-					int x = listing->sorted_index[j];
-					listing->sorted_index[j] = listing->sorted_index[j+1];
-					listing->sorted_index[j+1] = x;
-				}
-			}
-		}
+		//sort the rest according to AOS/LOS
+		sort_satellites(listing->entries, below_horizon_counter, listing->sorted_index + above_horizon_counter, SORT_BY_AOS);
 	} else if (listing->sort_option == SORT_BY_MAX_ELEVATION) {
-		for (int i=0; i < above_horizon_counter + below_horizon_counter; i++) {
-			for (int j=0; j < above_horizon_counter + below_horizon_counter - 1; j++){
-				if (listing->entries[listing->sorted_index[j]]->max_elevation < listing->entries[listing->sorted_index[j+1]]->max_elevation) {
-					int x = listing->sorted_index[j];
-					listing->sorted_index[j] = listing->sorted_index[j+1];
-					listing->sorted_index[j+1] = x;
-				}
-			}
-		}
+		//sort all according to max elevation
+		sort_satellites(listing->entries, above_horizon_counter + below_horizon_counter, listing->sorted_index, SORT_BY_MAX_ELEVATION);
 	}
+
+	//sort satellites below threshold according to max elevation
+	sort_satellites(listing->entries, below_threshold_counter, listing->sorted_index + above_horizon_counter + below_horizon_counter, SORT_BY_MAX_ELEVATION);
 }
 
 void multitrack_display_entry(WINDOW *window, int row, int col, multitrack_entry_t *entry)
