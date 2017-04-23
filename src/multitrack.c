@@ -548,7 +548,7 @@ void multitrack_update_entry(double max_elevation_threshold, predict_observer_t 
 		sprintf(aos_los, "*GeoS-NoAOS*");
 	}
 
-	entry->above_max_elevation_threshold = entry->max_elevation > max_elevation_threshold;
+	entry->above_max_elevation_threshold = (entry->max_elevation > max_elevation_threshold) || (entry->geostationary && obs.elevation*180.0/M_PI > max_elevation_threshold);
 	if (!entry->above_max_elevation_threshold) {
 		entry->display_attributes = SATELLITE_IGNORED_COLOR;
 	}
@@ -625,6 +625,30 @@ void multitrack_update_listing_data(multitrack_listing_t *listing, predict_julia
 	listing->not_displayed = false;
 }
 
+/**
+ * Helper functions for category sorting of multitrack listing.
+ **/
+
+bool above_horizon(const multitrack_entry_t *entry)
+{
+	return entry->above_horizon && !entry->decayed && entry->above_max_elevation_threshold;
+}
+
+bool will_rise(const multitrack_entry_t *entry)
+{
+	return !(entry->above_horizon) && !(entry->never_visible) && !(entry->decayed) && entry->above_max_elevation_threshold;
+}
+
+bool below_threshold(const multitrack_entry_t *entry)
+{
+	return !entry->never_visible && !entry->above_max_elevation_threshold && !entry->decayed;
+}
+
+void sort_satellites()
+{
+}
+
+
 void multitrack_sort_listing(multitrack_listing_t *listing)
 {
 	int num_orbits = listing->num_entries;
@@ -632,7 +656,7 @@ void multitrack_sort_listing(multitrack_listing_t *listing)
 	//those with elevation > 0 at the top
 	int above_horizon_counter = 0;
 	for (int i=0; i < num_orbits; i++) {
-		if (listing->entries[i]->above_horizon && !(listing->entries[i]->decayed) && listing->entries[i]->above_max_elevation_threshold) {
+		if (above_horizon(listing->entries[i])) {
 			listing->sorted_index[above_horizon_counter] = i;
 			above_horizon_counter++;
 		}
@@ -642,7 +666,7 @@ void multitrack_sort_listing(multitrack_listing_t *listing)
 	//satellites that will eventually rise above the horizon
 	int below_horizon_counter = 0;
 	for (int i=0; i < num_orbits; i++) {
-		if (!(listing->entries[i]->above_horizon) && !(listing->entries[i]->never_visible) && !(listing->entries[i]->decayed) && listing->entries[i]->above_max_elevation_threshold) {
+		if (will_rise(listing->entries[i])) {
 			listing->sorted_index[below_horizon_counter + above_horizon_counter] = i;
 			below_horizon_counter++;
 		}
@@ -652,7 +676,7 @@ void multitrack_sort_listing(multitrack_listing_t *listing)
 	//satellites below max elevation threshold
 	int below_threshold_counter = 0;
 	for (int i=0; i < num_orbits; i++) {
-		if (!listing->entries[i]->never_visible && !listing->entries[i]->above_max_elevation_threshold && !listing->entries[i]->decayed) {
+		if (below_threshold(listing->entries[i])) {
 			listing->sorted_index[below_horizon_counter + above_horizon_counter + below_threshold_counter] = i;
 			below_threshold_counter++;
 		}
