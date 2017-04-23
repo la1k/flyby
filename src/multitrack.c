@@ -332,6 +332,8 @@ multitrack_listing_t* multitrack_create_listing(predict_observer_t *observer, st
 
 	listing->sort_option = SORT_BY_AOS;
 	listing->max_elevation_threshold = 0;
+
+	multitrack_settings_from_file(listing);
 	return listing;
 }
 
@@ -1690,7 +1692,7 @@ void multitrack_edit_settings(multitrack_listing_t *listing)
 #include "xdg_basedirs.h"
 
 /**
- * Return XDG location for multitrack settings filepath. String has to be free'd after use.
+ * Return XDG location for multitrack settings filepath. Returned string has to be free'd after use.
  **/
 char *multitrack_settings_filepath()
 {
@@ -1707,13 +1709,6 @@ char *multitrack_settings_filepath()
 	return ret_str;
 }
 
-void multitrack_settings_from_file(multitrack_listing_t *listing)
-{
-	char *settings_filepath = multitrack_settings_filepath();
-
-	free(settings_filepath);
-}
-
 //config prefix for aos sort option
 #define FILESETTING_SORT_BY_AOS "sort by aos = "
 
@@ -1723,13 +1718,49 @@ void multitrack_settings_from_file(multitrack_listing_t *listing)
 //config prefix for max elevation threshold
 #define FILESETTING_MAX_ELEVATION_THRESHOLD "max elevation threshold = "
 
+void multitrack_settings_from_file(multitrack_listing_t *listing)
+{
+	char *settings_filepath = multitrack_settings_filepath();
+
+	FILE *read_file = fopen(settings_filepath, "r");
+
+	if (read_file != NULL) {
+		char line[MAX_NUM_CHARS];
+
+		//set to sort by max elevation if this is set and in order in file, default to sorting by aos otherwise
+		int sort_by_max_elevation = 0;
+		fgets(line, MAX_NUM_CHARS, read_file);
+		sscanf(line, FILESETTING_SORT_BY_MAX_ELEVATION "%d", &sort_by_max_elevation);
+		if (sort_by_max_elevation == 1) {
+			listing->sort_option = SORT_BY_MAX_ELEVATION;
+		} else {
+			listing->sort_option = SORT_BY_AOS;
+		}
+
+		//skip over sort by aos option since this is covered by above
+		fgets(line, MAX_NUM_CHARS, read_file);
+
+		//read max elevation threshold
+		float threshold = 0;
+		fgets(line, MAX_NUM_CHARS, read_file);
+		sscanf(line, FILESETTING_MAX_ELEVATION_THRESHOLD "%f", &threshold);
+		fprintf(stderr, "%f\n", threshold);
+		if ((threshold >= 0) && (threshold < 90)) {
+			listing->max_elevation_threshold = threshold;
+		}
+		fclose(read_file);
+	}
+
+	free(settings_filepath);
+}
+
 void multitrack_settings_to_file(multitrack_listing_t *listing)
 {
 	char *settings_filepath = multitrack_settings_filepath();
 
 	FILE *write_file = fopen(settings_filepath, "w");
-	fprintf(write_file, "%s%d\n", FILESETTING_SORT_BY_AOS, listing->sort_option == SORT_BY_AOS);
 	fprintf(write_file, "%s%d\n", FILESETTING_SORT_BY_MAX_ELEVATION, listing->sort_option == SORT_BY_MAX_ELEVATION);
+	fprintf(write_file, "%s%d\n", FILESETTING_SORT_BY_AOS, listing->sort_option == SORT_BY_AOS);
 	fprintf(write_file, "%s%f\n", FILESETTING_MAX_ELEVATION_THRESHOLD, listing->max_elevation_threshold);
 	fclose(write_file);
 
