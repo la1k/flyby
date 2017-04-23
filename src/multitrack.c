@@ -1539,7 +1539,7 @@ void multitrack_edit_settings(multitrack_listing_t *listing)
 	wattrset(option_window, COLOR_PAIR(4));
 	col = 1;
 	row++;
-	mvwprintw(option_window, row++, col, "Press ESC or ENTER to return");
+	mvwprintw(option_window, row++, col, "Press q or ENTER to return");
 
 	//resize window to contents
 	wresize(option_window, row+1, OPTION_WINDOW_WIDTH);
@@ -1649,8 +1649,8 @@ void multitrack_edit_settings(multitrack_listing_t *listing)
 					}
 				}
 				break;
+			case 'q':
 			case 10:
-			case 23:
 				run = false;
 				break;
 			default:
