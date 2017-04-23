@@ -67,8 +67,9 @@ void multitrack_display_entry(WINDOW *window, int row, int col, multitrack_entry
  * \param qth QTH coordinates
  * \param entry Multitrack entry
  * \param time Time at which satellite status should be calculated
+ * \return True if listing sorting should be triggered, false otherwise
  **/
-void multitrack_update_entry(double max_elevation_threshold, predict_observer_t *qth, multitrack_entry_t *entry, predict_julian_date_t time);
+bool multitrack_update_entry(double max_elevation_threshold, predict_observer_t *qth, multitrack_entry_t *entry, predict_julian_date_t time);
 
 /**
  * Sort satellite listing in different categories: Currently above horizon, below horizon but will rise, will never rise above horizon, decayed satellites. The satellites below the horizon are sorted internally according to AOS times.
@@ -463,8 +464,10 @@ NCURSES_ATTR_T multitrack_colors(double range, double elevation)
 #define SATELLITE_FAR_COLOR COLOR_PAIR(4)
 #define SATELLITE_IGNORED_COLOR COLOR_PAIR(3)
 
-void multitrack_update_entry(double max_elevation_threshold, predict_observer_t *qth, multitrack_entry_t *entry, predict_julian_date_t time)
+bool multitrack_update_entry(double max_elevation_threshold, predict_observer_t *qth, multitrack_entry_t *entry, predict_julian_date_t time)
 {
+	bool trigger_resorting = false;
+
 	entry->geostationary = false;
 
 	struct predict_observation obs;
@@ -556,19 +559,21 @@ void multitrack_update_entry(double max_elevation_threshold, predict_observer_t 
 	char abs_pos_string[MAX_NUM_CHARS] = {0};
 	sprintf(abs_pos_string, "%3.0f  %3.0f", orbit.latitude*180.0/M_PI, orbit.longitude*180.0/M_PI);
 
-	//calculate next LOS
-	if (can_predict && (time > entry->next_los) && (obs.elevation > 0)) {
+	//predict next aos/los and maximum elevation
+	bool calculate_next_los = can_predict && (time > entry->next_los) && (obs.elevation > 0);
+	bool calculate_next_aos = can_predict && (time > entry->next_aos) && (obs.elevation < 0);
+	if (calculate_next_los) {
 		entry->next_los= predict_next_los(qth, entry->orbital_elements, time);
 	}
 
-	//calculate next AOS and max elevation
-	if (can_predict && (time > entry->next_aos)) {
-		if (obs.elevation < 0) {
-			entry->next_aos = predict_next_aos(qth, entry->orbital_elements, time);
-		}
-
+	if (calculate_next_aos || calculate_next_los) {
 		struct predict_observation max_elevation_obs = predict_at_max_elevation(qth, entry->orbital_elements, time);
 		entry->max_elevation = max_elevation_obs.elevation*180.0/M_PI;
+		trigger_resorting = true;
+	}
+
+	if (calculate_next_aos) {
+		entry->next_aos = predict_next_aos(qth, entry->orbital_elements, time);
 	}
 
 	//use current elevation as max elevation if satellite is above horizon and geostationary
@@ -605,6 +610,7 @@ void multitrack_update_entry(double max_elevation_threshold, predict_observer_t 
 	entry->decayed = orbit.decayed;
 
 	entry->never_visible = !predict_aos_happens(entry->orbital_elements, qth->latitude) || (predict_is_geostationary(entry->orbital_elements) && (obs.elevation <= 0.0));
+	return trigger_resorting;
 }
 
 void multitrack_update_listing_data(multitrack_listing_t *listing, predict_julian_date_t time)
