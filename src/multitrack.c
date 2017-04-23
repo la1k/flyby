@@ -625,7 +625,7 @@ void multitrack_update_listing_data(multitrack_listing_t *listing, predict_julia
 		}
 	}
 
-	if (!multitrack_option_selector_visible(listing->option_selector) && !multitrack_search_field_visible(listing->search_field) && listing->should_sort) {
+	if (!listing->not_displayed && !multitrack_option_selector_visible(listing->option_selector) && !multitrack_search_field_visible(listing->search_field) && listing->should_sort) {
 		multitrack_sort_listing(listing); //freeze sorting when option selector is hovering over a satellite
 		listing->should_sort = false;
 	}
@@ -1845,7 +1845,6 @@ void multitrack_settings_from_file(multitrack_listing_t *listing)
 		float threshold = 0;
 		fgets(line, MAX_NUM_CHARS, read_file);
 		sscanf(line, FILESETTING_MAX_ELEVATION_THRESHOLD "%f", &threshold);
-		fprintf(stderr, "%f\n", threshold);
 		if ((threshold >= 0) && (threshold < 90)) {
 			listing->max_elevation_threshold = threshold;
 		}
