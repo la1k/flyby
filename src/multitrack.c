@@ -632,25 +632,6 @@ void multitrack_update_listing_data(multitrack_listing_t *listing, predict_julia
 }
 
 /**
- * Helper functions for category sorting of multitrack listing.
- **/
-
-bool above_horizon(const multitrack_entry_t *entry)
-{
-	return entry->above_horizon && !entry->decayed && entry->above_max_elevation_threshold;
-}
-
-bool will_rise(const multitrack_entry_t *entry)
-{
-	return !(entry->above_horizon) && !(entry->never_visible) && !(entry->decayed) && entry->above_max_elevation_threshold;
-}
-
-bool below_threshold(const multitrack_entry_t *entry)
-{
-	return !entry->never_visible && !entry->above_max_elevation_threshold && !entry->decayed;
-}
-
-/**
  * Used for sorting according to sort_value using qsort, but retain access to original index.
  **/
 struct sort_helper {
@@ -708,6 +689,25 @@ void sort_satellites(multitrack_entry_t **entries, int num_entries, int *entry_m
 	}
 
 	free(sorting);
+}
+
+/**
+ * Helper functions for category sorting of multitrack listing.
+ **/
+
+bool above_horizon(const multitrack_entry_t *entry)
+{
+	return entry->above_horizon && !entry->decayed && entry->above_max_elevation_threshold;
+}
+
+bool will_rise(const multitrack_entry_t *entry)
+{
+	return !(entry->above_horizon) && !(entry->never_visible) && !(entry->decayed) && entry->above_max_elevation_threshold;
+}
+
+bool below_threshold(const multitrack_entry_t *entry)
+{
+	return !entry->never_visible && !entry->above_max_elevation_threshold && !entry->decayed;
 }
 
 void multitrack_sort_listing(multitrack_listing_t *listing)
