@@ -650,22 +650,38 @@ bool below_threshold(const multitrack_entry_t *entry)
 	return !entry->never_visible && !entry->above_max_elevation_threshold && !entry->decayed;
 }
 
+/**
+ * Used for sorting according to sort_value using qsort, but retain access to original index.
+ **/
 struct sort_helper {
 	int index;
 	double sort_value;
 };
 
+/**
+ * Comparison function for qsort (sort in ascending order).
+ **/
 int ascending(const void *lvalue, const void *rvalue)
 {
 	return ceil(((struct sort_helper*)lvalue)->sort_value - ((struct sort_helper*)rvalue)->sort_value);
 }
 
+/**
+ * Comparison function for qsort (sort in descending order).
+ **/
 int descending(const void *lvalue, const void *rvalue)
 {
 	return ceil(((struct sort_helper*)rvalue)->sort_value - ((struct sort_helper*)lvalue)->sort_value);
 }
 
-
+/**
+ * Sort entry_mapping according to satellite values and sorting options.
+ *
+ * \param entries Satellite entries
+ * \param num_entries Number of entries in entry_mapping
+ * \param entry_mapping Entry mapping, maps indices in entries
+ * \param sort_option Sorting option defined in enum sort_options. Currently assumed to be either SORT_BY_AOS (sort by next_aos field in ascending order) or SORT_BY_MAX_ELEVATION (sort by max_elevation in descending order)
+ **/
 void sort_satellites(multitrack_entry_t **entries, int num_entries, int *entry_mapping, int sort_option)
 {
 	//prepare array for sorting using stdlib's qsort
