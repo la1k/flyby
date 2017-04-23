@@ -631,7 +631,7 @@ void multitrack_sort_listing(multitrack_listing_t *listing)
 
 	//those with elevation > 0 at the top
 	int above_horizon_counter = 0;
-	for (int i=0; i < num_orbits; i++){
+	for (int i=0; i < num_orbits; i++) {
 		if (listing->entries[i]->above_horizon && !(listing->entries[i]->decayed) && listing->entries[i]->above_max_elevation_threshold) {
 			listing->sorted_index[above_horizon_counter] = i;
 			above_horizon_counter++;
@@ -641,7 +641,7 @@ void multitrack_sort_listing(multitrack_listing_t *listing)
 
 	//satellites that will eventually rise above the horizon
 	int below_horizon_counter = 0;
-	for (int i=0; i < num_orbits; i++){
+	for (int i=0; i < num_orbits; i++) {
 		if (!(listing->entries[i]->above_horizon) && !(listing->entries[i]->never_visible) && !(listing->entries[i]->decayed) && listing->entries[i]->above_max_elevation_threshold) {
 			listing->sorted_index[below_horizon_counter + above_horizon_counter] = i;
 			below_horizon_counter++;
@@ -649,12 +649,22 @@ void multitrack_sort_listing(multitrack_listing_t *listing)
 	}
 	listing->num_below_horizon = below_horizon_counter;
 
+	//satellites below max elevation threshold
+	int below_threshold_counter = 0;
+	for (int i=0; i < num_orbits; i++) {
+		if (!listing->entries[i]->never_visible && !listing->entries[i]->above_max_elevation_threshold && !listing->entries[i]->decayed) {
+			listing->sorted_index[below_horizon_counter + above_horizon_counter + below_threshold_counter] = i;
+			below_threshold_counter++;
+		}
+	}
+	listing->num_below_threshold = below_threshold_counter;
+
 	//satellites that will never be visible, with decayed orbits last
 	int nevervisible_counter = 0;
 	int decayed_counter = 0;
-	for (int i=0; i < num_orbits; i++){
-		if ((listing->entries[i]->never_visible || !listing->entries[i]->above_max_elevation_threshold) && !(listing->entries[i]->decayed)) {
-			listing->sorted_index[below_horizon_counter + above_horizon_counter + nevervisible_counter] = i;
+	for (int i=0; i < num_orbits; i++) {
+		if (listing->entries[i]->never_visible && !(listing->entries[i]->decayed)) {
+			listing->sorted_index[below_horizon_counter + above_horizon_counter + below_threshold_counter + nevervisible_counter] = i;
 			nevervisible_counter++;
 		} else if (listing->entries[i]->decayed) {
 			listing->sorted_index[num_orbits - 1 - decayed_counter] = i;

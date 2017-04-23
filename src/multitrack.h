@@ -140,6 +140,8 @@ typedef struct {
 	int num_above_horizon;
 	///Current number of satellites below the horizon (but will eventually rise) (displayed next, next part of sorted mapping)
 	int num_below_horizon;
+	///Number of satellites below max elevation threshold
+	int num_below_threshold;
 	///Number of satellites that will never be visible from the current QTH
 	int num_nevervisible;
 	///Number of decayed satellites (last part of menu listing, last part of sorted mapping)
