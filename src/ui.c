@@ -2034,7 +2034,8 @@ void PrintMainMenu(WINDOW *window)
 	column = PrintMainMenuOption(window, row, column, 'N', "Lunar Pass Predictions   ");
 	column = 0;
 	row++;
-	column = PrintMainMenuOption(window, row, column, 'U', "Update Sat Elements                                ");
+	column = PrintMainMenuOption(window, row, column, 'U', "Update Sat Elements      ");
+	column = PrintMainMenuOption(window, row, column, 'M', "Multitrack settings      ");
 	column = PrintMainMenuOption(window, row, column, 'Q', "Exit flyby               ");
 
 	wrefresh(window);
@@ -2534,6 +2535,16 @@ void RunFlybyUI(bool new_user, const char *qthfile, predict_observer_t *observer
 						case 'U':
 						case 'u':
 							AutoUpdate("", tle_db);
+							break;
+
+						case 'M':
+						case 'm':
+							multitrack_edit_settings(listing);
+							break;
+
+						case 'H':
+						case 'h':
+							multitrack_show_help();
 							break;
 
 						case 'G':

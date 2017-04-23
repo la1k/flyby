@@ -8,8 +8,13 @@
 //Width of multitrack window
 #define MULTITRACK_WINDOW_WIDTH 67
 
+//Height of multitrack header window
+#define MULTITRACK_HEADER_HEIGHT 2
+
 //Start row for multitrack window printing
-#define MULTITRACK_WINDOW_ROW 2
+#define MULTITRACK_WINDOW_ROW (MULTITRACK_HEADER_HEIGHT+1)
+
+enum sort_options{SORT_BY_AOS, SORT_BY_MAX_ELEVATION};
 
 /**
  * Structs and functions used for showing a navigateable real-time satellite listing.
@@ -27,12 +32,16 @@ typedef struct {
 	double next_aos;
 	///Time for next LOS
 	double next_los;
+	///Maximum elevation of the next or current pass in degrees
+	double max_elevation;
 	///Whether satellite currently is above horizon
 	bool above_horizon;
 	///Whether satellite is geostationary
 	bool geostationary;
 	///Whether satellite is never visible
 	bool never_visible;
+	///Whether satellite is above maximum elevation threshold
+	bool above_max_elevation_threshold;
 	///Whether satellite has decayed
 	bool decayed;
 	///String used for information displaying in the satellite listing
@@ -131,6 +140,8 @@ typedef struct {
 	int num_above_horizon;
 	///Current number of satellites below the horizon (but will eventually rise) (displayed next, next part of sorted mapping)
 	int num_below_horizon;
+	///Number of satellites below max elevation threshold
+	int num_below_threshold;
 	///Number of satellites that will never be visible from the current QTH
 	int num_nevervisible;
 	///Number of decayed satellites (last part of menu listing, last part of sorted mapping)
@@ -145,6 +156,12 @@ typedef struct {
 	int terminal_height;
 	///Current terminal width
 	int terminal_width;
+	///Sorting options
+	int sort_option;
+	///Max elevation threshold in degrees
+	double max_elevation_threshold;
+	///Whether listing should be sorted in multitrack_update_listing_data().
+	bool should_sort;
 } multitrack_listing_t;
 
 /**
@@ -188,6 +205,18 @@ void multitrack_display_listing(multitrack_listing_t *listing);
  * \return True if input key was handled, false otherwise
  **/
 bool multitrack_handle_listing(multitrack_listing_t *listing, int input_key);
+
+/**
+ * Edit multitrack options. Will save to config file on exit.
+ *
+ * \param listing Multitrack listing
+ **/
+void multitrack_edit_settings(multitrack_listing_t *listing);
+
+/**
+ * Show help window.
+ **/
+void multitrack_show_help();
 
 /**
  * Return currently selected entry, in terms of index in the TLE database.

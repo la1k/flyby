@@ -21,6 +21,20 @@
 /** Private multitrack satellite listing prototypes. **/
 
 /**
+ * Read user-editable settings from default XDG config location.
+ *
+ * \param listing Multitrack listing
+ **/
+void multitrack_settings_from_file(multitrack_listing_t *listing);
+
+/**
+ * Write user-editable settings to default XDG config location.
+ *
+ * \param listing Multitrack listing
+ **/
+void multitrack_settings_to_file(multitrack_listing_t *listing);
+
+/**
  * Create entry in multitrack satellite listing.
  *
  * \param name Satellite name
@@ -49,11 +63,13 @@ void multitrack_display_entry(WINDOW *window, int row, int col, multitrack_entry
 /**
  * Update display strings and status in satellite entry.
  *
+ * \param max_elevation_threshold Max elevation threshold
  * \param qth QTH coordinates
  * \param entry Multitrack entry
  * \param time Time at which satellite status should be calculated
+ * \return True if aos/los times change, false otherwise
  **/
-void multitrack_update_entry(predict_observer_t *qth, multitrack_entry_t *entry, predict_julian_date_t time);
+bool multitrack_update_entry(double max_elevation_threshold, predict_observer_t *qth, multitrack_entry_t *entry, predict_julian_date_t time);
 
 /**
  * Sort satellite listing in different categories: Currently above horizon, below horizon but will rise, will never rise above horizon, decayed satellites. The satellites below the horizon are sorted internally according to AOS times.
@@ -253,6 +269,8 @@ multitrack_entry_t *multitrack_create_entry(const char *name, predict_orbital_el
 	entry->geostationary = 0;
 	entry->never_visible = 0;
 	entry->decayed = 0;
+	entry->max_elevation = 0;
+	entry->above_max_elevation_threshold = true;
 	return entry;
 }
 
@@ -279,7 +297,7 @@ void multitrack_resize(multitrack_listing_t *listing)
 	}
 
 	//make header line behave correctly
-	wresize(listing->header_window, 1, COLS);
+	wresize(listing->header_window, MULTITRACK_HEADER_HEIGHT, COLS);
 	wrefresh(listing->header_window);
 }
 
@@ -301,6 +319,10 @@ multitrack_listing_t* multitrack_create_listing(predict_observer_t *observer, st
 	listing->sorted_index = NULL;
 
 	listing->qth = observer;
+
+	listing->sort_option = SORT_BY_AOS;
+	listing->max_elevation_threshold = 0;
+	multitrack_settings_from_file(listing);
 
 	multitrack_refresh_tles(listing, tle_db);
 
@@ -437,7 +459,11 @@ NCURSES_ATTR_T multitrack_colors(double range, double elevation)
 		return (COLOR_PAIR(2)|A_REVERSE); /* reverse */
 }
 
-void multitrack_update_entry(predict_observer_t *qth, multitrack_entry_t *entry, predict_julian_date_t time)
+#define SATELLITE_CLOSE_COLOR COLOR_PAIR(2)
+#define SATELLITE_FAR_COLOR COLOR_PAIR(4)
+#define SATELLITE_IGNORED_COLOR COLOR_PAIR(3)
+
+bool multitrack_update_entry(double max_elevation_threshold, predict_observer_t *qth, multitrack_entry_t *entry, predict_julian_date_t time)
 {
 	entry->geostationary = false;
 
@@ -470,7 +496,9 @@ void multitrack_update_entry(predict_observer_t *qth, multitrack_entry_t *entry,
 
 	//set text formatting attributes according to satellite state, set AOS/LOS string
 	bool can_predict = !predict_is_geostationary(entry->orbital_elements) && predict_aos_happens(entry->orbital_elements, qth->latitude) && !(orbit.decayed);
+	char pass_info[MAX_NUM_CHARS] = {0};
 	char aos_los[MAX_NUM_CHARS] = {0};
+
 	if (obs.elevation >= 0) {
 		//different colours according to range and elevation
 		entry->display_attributes = multitrack_colors(obs.range, obs.elevation*180/M_PI);
@@ -484,9 +512,9 @@ void multitrack_update_entry(predict_observer_t *qth, multitrack_entry_t *entry,
 			gmtime_r(&epoch, &timeval);
 			if ((entry->next_los - time) > 1.0) {
 				int num_days = (entry->next_los - time);
-				snprintf(aos_los, MAX_NUM_CHARS, "%d days", num_days);
+				snprintf(aos_los, MAX_NUM_CHARS, ">%2.dd", num_days);
 			} else if (timeval.tm_hour > 0) {
-				strftime(aos_los, MAX_NUM_CHARS, "%H:%M:%S", &timeval);
+				strftime(aos_los, MAX_NUM_CHARS, ">%kh", &timeval);
 			} else {
 				strftime(aos_los, MAX_NUM_CHARS, "%M:%S", &timeval);
 			}
@@ -495,43 +523,67 @@ void multitrack_update_entry(predict_observer_t *qth, multitrack_entry_t *entry,
 	} else if ((obs.elevation < 0) && can_predict) {
 		if ((entry->next_aos-time) < 0.00694) {
 			//satellite is close, set bold
-			entry->display_attributes = COLOR_PAIR(2);
+			entry->display_attributes = SATELLITE_CLOSE_COLOR;
 			time_t epoch = predict_from_julian(entry->next_aos - time);
 			strftime(aos_los, MAX_NUM_CHARS, "%M:%S", gmtime(&epoch)); //minutes and seconds left until AOS
 		} else {
 			//satellite is far, set normal coloring
-			entry->display_attributes = COLOR_PAIR(4);
+			entry->display_attributes = SATELLITE_FAR_COLOR;
 			time_t aoslos_epoch = predict_from_julian(entry->next_aos);
 			time_t curr_epoch = predict_from_julian(time);
 			struct tm aostime, currtime;
 			gmtime_r(&aoslos_epoch, &aostime);
 			gmtime_r(&curr_epoch, &currtime);
-			aostime.tm_yday = aostime.tm_yday - currtime.tm_yday;
 			char temp[MAX_NUM_CHARS];
 			strftime(temp, MAX_NUM_CHARS, "%H:%MZ", &aostime);
-			if (aostime.tm_yday == 0) {
+			int num_days = entry->next_aos - time;
+			if (num_days == 0) {
 				strncpy(aos_los, temp, MAX_NUM_CHARS);
 			} else {
-				snprintf(aos_los, MAX_NUM_CHARS, "+%dd %s", aostime.tm_yday, temp);
+				snprintf(aos_los, MAX_NUM_CHARS, ">%2.dd", num_days);
 			}
 		}
 	} else if (!can_predict) {
-		entry->display_attributes = COLOR_PAIR(3);
+		entry->display_attributes = SATELLITE_IGNORED_COLOR;
 		sprintf(aos_los, "*GeoS-NoAOS*");
+	}
+
+	entry->above_max_elevation_threshold = (entry->max_elevation > max_elevation_threshold);
+	if (!entry->above_max_elevation_threshold) {
+		entry->display_attributes = SATELLITE_IGNORED_COLOR;
 	}
 
 	char abs_pos_string[MAX_NUM_CHARS] = {0};
 	sprintf(abs_pos_string, "%3.0f  %3.0f", orbit.latitude*180.0/M_PI, orbit.longitude*180.0/M_PI);
 
-	/* Calculate Next Event (AOS/LOS) Times */
-	if (can_predict && (time > entry->next_los) && (obs.elevation > 0)) {
+	//predict next aos/los and maximum elevation
+	bool calculate_next_los = can_predict && (time > entry->next_los) && (obs.elevation > 0);
+	bool calculate_next_aos = can_predict && (time > entry->next_aos) && (obs.elevation < 0);
+	if (calculate_next_los) {
 		entry->next_los= predict_next_los(qth, entry->orbital_elements, time);
 	}
 
-	if (can_predict && (time > entry->next_aos)) {
-		if (obs.elevation < 0) {
-			entry->next_aos = predict_next_aos(qth, entry->orbital_elements, time);
-		}
+	if (calculate_next_aos || calculate_next_los) {
+		struct predict_observation max_elevation_obs = predict_at_max_elevation(qth, entry->orbital_elements, time);
+		entry->max_elevation = max_elevation_obs.elevation*180.0/M_PI;
+	}
+
+	if (calculate_next_aos) {
+		entry->next_aos = predict_next_aos(qth, entry->orbital_elements, time);
+	}
+
+	//use current elevation as max elevation if satellite is above horizon and geostationary
+	if (entry->geostationary && obs.elevation > 0) {
+	       entry->max_elevation = obs.elevation*180.0/M_PI;
+	}
+
+	char max_ele_str[MAX_NUM_CHARS] = {0};
+	snprintf(max_ele_str, MAX_NUM_CHARS, "%d", (int)(entry->max_elevation));
+
+	if (can_predict) {
+		snprintf(pass_info, MAX_NUM_CHARS, "%s %6s", max_ele_str, aos_los);
+	} else {
+		snprintf(pass_info, MAX_NUM_CHARS, "%s", aos_los);
 	}
 
 	//altitude and range in km/miles
@@ -540,7 +592,7 @@ void multitrack_update_entry(predict_observer_t *qth, multitrack_entry_t *entry,
 
 	//set string to display
 	char disp_string[MAX_NUM_CHARS];
-	sprintf(disp_string, " %-10.8s%5.1f  %5.1f %8s%6.0f %6.0f %c %c %12s ", entry->name, obs.azimuth*180.0/M_PI, obs.elevation*180.0/M_PI, abs_pos_string, disp_altitude, disp_range, sunstat, rangestat, aos_los);
+	sprintf(disp_string, " %-10.8s%5.1f  %5.1f %8s%6.0f %6.0f %c %c %12s ", entry->name, obs.azimuth*180.0/M_PI, obs.elevation*180.0/M_PI, abs_pos_string, disp_altitude, disp_range, sunstat, rangestat, pass_info);
 
 	//overwrite everything if orbit was decayed
 	if (orbit.decayed) {
@@ -554,6 +606,7 @@ void multitrack_update_entry(predict_observer_t *qth, multitrack_entry_t *entry,
 	entry->decayed = orbit.decayed;
 
 	entry->never_visible = !predict_aos_happens(entry->orbital_elements, qth->latitude) || (predict_is_geostationary(entry->orbital_elements) && (obs.elevation <= 0.0));
+	return calculate_next_aos || calculate_next_los;
 }
 
 void multitrack_update_listing_data(multitrack_listing_t *listing, predict_julian_date_t time)
@@ -566,14 +619,97 @@ void multitrack_update_listing_data(multitrack_listing_t *listing, predict_julia
 			wrefresh(listing->window);
 		}
 		multitrack_entry_t *entry = listing->entries[i];
-		multitrack_update_entry(listing->qth, entry, time);
+		bool aoslos_changed = multitrack_update_entry(listing->max_elevation_threshold, listing->qth, entry, time);
+		if (aoslos_changed) {
+			listing->should_sort = true;
+		}
 	}
 
-	if (!multitrack_option_selector_visible(listing->option_selector) && !multitrack_search_field_visible(listing->search_field)) {
+	if (!multitrack_option_selector_visible(listing->option_selector) && !multitrack_search_field_visible(listing->search_field) && listing->should_sort) {
 		multitrack_sort_listing(listing); //freeze sorting when option selector is hovering over a satellite
+		listing->should_sort = false;
 	}
 
 	listing->not_displayed = false;
+}
+
+/**
+ * Used for sorting according to sort_value using qsort, but retain access to original index.
+ **/
+struct sort_helper {
+	int index;
+	double sort_value;
+};
+
+/**
+ * Comparison function for qsort (sort in ascending order).
+ **/
+int ascending(const void *lvalue, const void *rvalue)
+{
+	return ceil(((struct sort_helper*)lvalue)->sort_value - ((struct sort_helper*)rvalue)->sort_value);
+}
+
+/**
+ * Comparison function for qsort (sort in descending order).
+ **/
+int descending(const void *lvalue, const void *rvalue)
+{
+	return ceil(((struct sort_helper*)rvalue)->sort_value - ((struct sort_helper*)lvalue)->sort_value);
+}
+
+/**
+ * Sort entry_mapping according to satellite values and sorting options.
+ *
+ * \param entries Satellite entries
+ * \param num_entries Number of entries in entry_mapping
+ * \param entry_mapping Entry mapping, maps indices in entries
+ * \param sort_option Sorting option defined in enum sort_options. Currently assumed to be either SORT_BY_AOS (sort by next_aos field in ascending order) or SORT_BY_MAX_ELEVATION (sort by max_elevation in descending order)
+ **/
+void sort_satellites(multitrack_entry_t **entries, int num_entries, int *entry_mapping, int sort_option)
+{
+	//prepare array for sorting using stdlib's qsort
+	struct sort_helper *sorting = (struct sort_helper*)malloc(sizeof(struct sort_helper)*num_entries);
+	for (int i=0; i < num_entries; i++) {
+		sorting[i].index = entry_mapping[i];
+		if (sort_option == SORT_BY_MAX_ELEVATION) {
+			sorting[i].sort_value = entries[entry_mapping[i]]->max_elevation;
+		} else if (sort_option == SORT_BY_AOS) {
+			sorting[i].sort_value = entries[entry_mapping[i]]->next_aos;
+		}
+
+	}
+
+	if (sort_option == SORT_BY_MAX_ELEVATION) {
+		qsort(sorting, num_entries, sizeof(struct sort_helper), descending);
+	} else if (sort_option == SORT_BY_AOS) {
+		qsort(sorting, num_entries, sizeof(struct sort_helper), ascending);
+	}
+
+	//extract results
+	for (int i=0; i < num_entries; i++) {
+		entry_mapping[i] = sorting[i].index;
+	}
+
+	free(sorting);
+}
+
+/**
+ * Helper functions for category sorting of multitrack listing.
+ **/
+
+bool above_horizon(const multitrack_entry_t *entry)
+{
+	return entry->above_horizon && !entry->decayed && entry->above_max_elevation_threshold;
+}
+
+bool will_rise(const multitrack_entry_t *entry)
+{
+	return !(entry->above_horizon) && !(entry->never_visible) && !(entry->decayed) && entry->above_max_elevation_threshold;
+}
+
+bool below_threshold(const multitrack_entry_t *entry)
+{
+	return !entry->never_visible && !entry->above_max_elevation_threshold && !entry->decayed;
 }
 
 void multitrack_sort_listing(multitrack_listing_t *listing)
@@ -582,8 +718,8 @@ void multitrack_sort_listing(multitrack_listing_t *listing)
 
 	//those with elevation > 0 at the top
 	int above_horizon_counter = 0;
-	for (int i=0; i < num_orbits; i++){
-		if (listing->entries[i]->above_horizon && !(listing->entries[i]->decayed)) {
+	for (int i=0; i < num_orbits; i++) {
+		if (above_horizon(listing->entries[i])) {
 			listing->sorted_index[above_horizon_counter] = i;
 			above_horizon_counter++;
 		}
@@ -592,20 +728,30 @@ void multitrack_sort_listing(multitrack_listing_t *listing)
 
 	//satellites that will eventually rise above the horizon
 	int below_horizon_counter = 0;
-	for (int i=0; i < num_orbits; i++){
-		if (!(listing->entries[i]->above_horizon) && !(listing->entries[i]->never_visible) && !(listing->entries[i]->decayed)) {
+	for (int i=0; i < num_orbits; i++) {
+		if (will_rise(listing->entries[i])) {
 			listing->sorted_index[below_horizon_counter + above_horizon_counter] = i;
 			below_horizon_counter++;
 		}
 	}
 	listing->num_below_horizon = below_horizon_counter;
 
+	//satellites below max elevation threshold
+	int below_threshold_counter = 0;
+	for (int i=0; i < num_orbits; i++) {
+		if (below_threshold(listing->entries[i])) {
+			listing->sorted_index[below_horizon_counter + above_horizon_counter + below_threshold_counter] = i;
+			below_threshold_counter++;
+		}
+	}
+	listing->num_below_threshold = below_threshold_counter;
+
 	//satellites that will never be visible, with decayed orbits last
 	int nevervisible_counter = 0;
 	int decayed_counter = 0;
-	for (int i=0; i < num_orbits; i++){
+	for (int i=0; i < num_orbits; i++) {
 		if (listing->entries[i]->never_visible && !(listing->entries[i]->decayed)) {
-			listing->sorted_index[below_horizon_counter + above_horizon_counter + nevervisible_counter] = i;
+			listing->sorted_index[below_horizon_counter + above_horizon_counter + below_threshold_counter + nevervisible_counter] = i;
 			nevervisible_counter++;
 		} else if (listing->entries[i]->decayed) {
 			listing->sorted_index[num_orbits - 1 - decayed_counter] = i;
@@ -615,16 +761,19 @@ void multitrack_sort_listing(multitrack_listing_t *listing)
 	listing->num_nevervisible = nevervisible_counter;
 	listing->num_decayed = decayed_counter;
 
-	//sort internally according to AOS/LOS
-	for (int i=0; i < above_horizon_counter + below_horizon_counter; i++) {
-		for (int j=0; j < above_horizon_counter + below_horizon_counter - 1; j++){
-			if (listing->entries[listing->sorted_index[j]]->next_aos > listing->entries[listing->sorted_index[j+1]]->next_aos) {
-				int x = listing->sorted_index[j];
-				listing->sorted_index[j] = listing->sorted_index[j+1];
-				listing->sorted_index[j+1] = x;
-			}
-		}
+	if (listing->sort_option == SORT_BY_AOS) {
+		//sort those with nonzero elevation according to max elevation
+		sort_satellites(listing->entries, above_horizon_counter, listing->sorted_index, SORT_BY_MAX_ELEVATION);
+
+		//sort the rest according to AOS/LOS
+		sort_satellites(listing->entries, below_horizon_counter, listing->sorted_index + above_horizon_counter, SORT_BY_AOS);
+	} else if (listing->sort_option == SORT_BY_MAX_ELEVATION) {
+		//sort all according to max elevation
+		sort_satellites(listing->entries, above_horizon_counter + below_horizon_counter, listing->sorted_index, SORT_BY_MAX_ELEVATION);
 	}
+
+	//sort satellites below threshold according to max elevation
+	sort_satellites(listing->entries, below_threshold_counter, listing->sorted_index + above_horizon_counter + below_horizon_counter, SORT_BY_MAX_ELEVATION);
 }
 
 void multitrack_display_entry(WINDOW *window, int row, int col, multitrack_entry_t *entry)
@@ -655,6 +804,8 @@ void multitrack_print_scrollbar(multitrack_listing_t *listing)
 	}
 }
 
+#define PASSINFO_HEADER_COL 52
+
 void multitrack_display_listing(multitrack_listing_t *listing)
 {
 	if ((listing->terminal_height != LINES) || (listing->terminal_width != COLS)) {
@@ -677,6 +828,9 @@ void multitrack_display_listing(multitrack_listing_t *listing)
 	char time_string[MAX_NUM_CHARS] = {0};
 	strftime(time_string, MAX_NUM_CHARS, "%H:%M:%SZ", gmtime(&epoch));
 	mvwprintw(listing->header_window, 0, strlen(header_text), "%s", time_string);
+
+	//print extra header info over maxele/aos/los
+	mvwprintw(listing->header_window, 1, PASSINFO_HEADER_COL, "Maxele  Time");
 
 	//show entries
 	if (listing->num_entries > 0) {
@@ -1211,4 +1365,505 @@ void multitrack_search_field_add_match(multitrack_search_field_t *search_field, 
 	}
 
 	search_field->matches[search_field->num_matches++] = index;
+}
+
+/**
+ * Item in checklist.
+ **/
+struct checklist_item {
+	///Current ITEM displayed in MENU
+	ITEM *item;
+	///Whether item is checked
+	bool checked;
+	///Title of item
+	char *title;
+	///Display string used in ITEM, displayed as "[ ]  title"
+	char *checked_title;
+};
+
+/**
+ * Checklist menu used for having a list of items where items are checked/unchecked by displaying a [x] or [ ] in front of
+ * each item, as an alternative to the multi-selectable option for MENU which looks a bit too imposing.
+ *
+ * Used in multitrack_settings_window, but with an additional restriction that only one item can be selected at a time.
+ **/
+struct checklist {
+	///Menu struct
+	MENU *menu;
+	///ITEM array for MENU above, regenerated in checklist_update()
+	ITEM **menu_items;
+	///Number of items in menu
+	int num_items;
+	///Checkable items
+	struct checklist_item *items;
+	///Menu window
+	WINDOW *window;
+};
+
+/**
+ * Return whether item in menu is checked.
+ *
+ * \param checklist Checklist
+ * \param index Index in menu
+ * \return True if checked, false otherwise
+ **/
+bool checklist_item_checked(struct checklist *checklist, int index);
+
+/**
+ * Check item in menu.
+ *
+ * \param checklist Checklist
+ * \param index Index in menu
+ * \param check Whether item should be checked or not
+ **/
+void checklist_check_item(struct checklist *checklist, int index, bool check);
+
+/**
+ * Update display menu according to current checked/unchecked state of its items.
+ *
+ * \param checklist Checklist
+ **/
+void checklist_update(struct checklist *checklist);
+
+/**
+ * Create checklist menu.
+ *
+ * \param window Window into which the checklist should be created
+ * \param num_items Number of items
+ * \param item_names Array over item names
+ * \return Checklist, free using checklist_free()
+ **/
+struct checklist* checklist_create(WINDOW *window, int num_items, const char **item_names);
+
+/**
+ * Destroy checklist.
+ *
+ * \param checklist Checklist to free
+ **/
+void checklist_free(struct checklist **checklist);
+
+//length of "[ ] " placed in front of each checklist menu option
+#define CHECKMARK_STRING_LENGTH 4
+
+//active menu item style
+#define CHECKLIST_STYLE_ACTIVE COLOR_PAIR(5)
+
+//inactive menu item style
+#define CHECKLIST_STYLE_INACTIVE COLOR_PAIR(1)
+
+//position in menu string for where checkmark should be placed
+#define CHECKMARK_POSITION 1
+
+struct checklist* checklist_create(WINDOW *window, int num_items, const char **item_names)
+{
+	//prepare checklist items
+	struct checklist *checklist = (struct checklist*)malloc(sizeof(struct checklist));
+	checklist->items = (struct checklist_item*)calloc(num_items, sizeof(struct checklist_item));
+	for (int i=0; i < num_items; i++) {
+		checklist->items[i].checked = false;
+		checklist->items[i].title = strdup(item_names[i]);
+		checklist->items[i].item = NULL;
+		int item_length = strlen(item_names[i]) + CHECKMARK_STRING_LENGTH + 1;
+		checklist->items[i].checked_title = (char*)calloc(item_length, sizeof(char));
+		strncpy(checklist->items[i].checked_title, "[ ] ", item_length);
+		strncpy(checklist->items[i].checked_title + CHECKMARK_STRING_LENGTH, checklist->items[i].title, item_length - CHECKMARK_STRING_LENGTH);
+	}
+
+	//prepare ITEMS and MENU
+	checklist->menu_items = (ITEM**)calloc(num_items+1, sizeof(ITEM*));
+	checklist->menu = new_menu(NULL);
+	checklist->num_items = num_items;
+	set_menu_fore(checklist->menu, CHECKLIST_STYLE_ACTIVE);
+	set_menu_mark(checklist->menu, "");
+	menu_opts_off(checklist->menu, O_SHOWDESC);
+
+	//prepare menu window
+        set_menu_win(checklist->menu, window);
+	int win_width = getmaxx(window);
+	checklist->window = derwin(window, num_items, win_width - 2, 1, 1);
+        set_menu_sub(checklist->menu, checklist->window);
+	set_menu_format(checklist->menu, num_items, 1);
+
+	keypad(window, TRUE);
+	post_menu(checklist->menu);
+	checklist_update(checklist);
+	return checklist;
+}
+
+void checklist_update(struct checklist *checklist)
+{
+	unpost_menu(checklist->menu);
+	char *curr_selected = NULL;
+	bool menu_initialized = (checklist->menu_items[0] != NULL);
+
+	int selected_index=0;
+	if (menu_initialized) {
+		selected_index = item_index(current_item(checklist->menu));
+	}
+
+	for (int i=0; i < checklist->num_items; i++) {
+		//remove menu ITEM so that we can modify the displayed string
+		struct checklist_item *item = &(checklist->items[i]);
+		if (item->item != NULL) {
+			free_item(item->item);
+		}
+
+		//replace "[ ] " with "[x] " if item is checked
+		if (item->checked) {
+			item->checked_title[CHECKMARK_POSITION] = '*';
+		} else {
+			item->checked_title[CHECKMARK_POSITION] = ' ';
+		}
+
+		//create new menu ITEM
+		item->item = new_item(item->checked_title, "");
+		checklist->menu_items[i] = item->item;
+
+		if (i == selected_index) {
+			curr_selected = strdup(item->checked_title);
+		}
+	}
+	set_menu_items(checklist->menu, checklist->menu_items);
+	post_menu(checklist->menu);
+
+	//retain selected position
+	if (curr_selected != NULL) {
+		set_menu_pattern(checklist->menu, curr_selected);
+		free(curr_selected);
+	}
+}
+
+void checklist_check_item(struct checklist *checklist, int index, bool check)
+{
+	if ((index < checklist->num_items) && (index >= 0)) {
+		checklist->items[index].checked = check;
+		checklist_update(checklist);
+	}
+}
+
+bool checklist_item_checked(struct checklist *checklist, int index)
+{
+	if ((index < checklist->num_items) && (index >= 0)) {
+		return checklist->items[index].checked;
+	}
+	return false;
+}
+
+void checklist_free(struct checklist **input_checklist)
+{
+	struct checklist *checklist = *input_checklist;
+
+	unpost_menu(checklist->menu);
+	for (int i=0; i < checklist->num_items; i++) {
+		free_item(checklist->items[i].item);
+		free(checklist->items[i].title);
+		free(checklist->items[i].checked_title);
+	}
+
+	free_menu(checklist->menu);
+	free(checklist->menu_items);
+	free(checklist->items);
+
+	free(checklist);
+}
+
+//inactive/deselected color style for settings field
+#define FIELDSTYLE_INACTIVE COLOR_PAIR(1)|A_UNDERLINE
+
+//active/selected color style for settings field
+#define FIELDSTYLE_ACTIVE CHECKLIST_STYLE_ACTIVE
+
+//number of sorting settings
+#define NUM_SORT_SETTINGS 2
+
+//index in sorting menu for AOS sort option
+#define SORT_AOS_IND 0
+
+//index in sorting menu for max elevation sort option
+#define SORT_MAXELE_IND 1
+
+//width of multitrack option window
+#define OPTION_WINDOW_WIDTH 70
+
+//start row for multitrack option window
+#define OPTION_WINDOW_ROW 7
+
+//start column for multitrack option window
+#define OPTION_WINDOW_COL 3
+
+#define OPTION_WINDOW_HEIGHT 7
+
+void multitrack_show_help()
+{
+	WINDOW *help_window = newwin(LINES, OPTION_WINDOW_WIDTH, OPTION_WINDOW_ROW, OPTION_WINDOW_COL);
+
+	//print keybindings/color scheme cheatsheet in help window
+	int row = 1;
+	int col = 1;
+	int help_row = row;
+	mvwprintw(help_window, row++, col, "Keybindings:");
+	mvwprintw(help_window, row++, col, "F3/`/`:  Search for satellite");
+	row = help_row;
+	col = 32;
+	mvwprintw(help_window, row++, col, "Colorscheme:");
+	wattrset(help_window, multitrack_colors(3000, 1));
+	mvwprintw(help_window, row++, col, "Satellite above horizon");
+	wattrset(help_window, SATELLITE_CLOSE_COLOR);
+	mvwprintw(help_window, row++, col, "Satellite about to pass over horizon");
+	wattrset(help_window, SATELLITE_FAR_COLOR);
+	mvwprintw(help_window, row++, col, "Satellite scheduled for pass");
+	wattrset(help_window, SATELLITE_IGNORED_COLOR);
+	mvwprintw(help_window, row++, col, "Ignored satellite");
+	wattrset(help_window, COLOR_PAIR(4));
+	col = 1;
+
+	//resize and add border
+	wresize(help_window, row+1, OPTION_WINDOW_WIDTH);
+	box(help_window, 0, 0);
+
+	//title
+	mvwprintw(help_window, 0, 3, "Multitrack help");
+
+	wrefresh(help_window);
+
+	cbreak(); //turn off halfdelay mode so that getch blocks
+	getch();
+	delwin(help_window);
+}
+
+void multitrack_edit_settings(multitrack_listing_t *listing)
+{
+	cbreak(); //turn off halfdelay mode so that getch blocks
+	WINDOW *option_window = newwin(OPTION_WINDOW_HEIGHT, OPTION_WINDOW_WIDTH, OPTION_WINDOW_ROW, OPTION_WINDOW_COL);
+
+	int col = 1;
+
+	//window border and exit hint
+	wattrset(option_window, COLOR_PAIR(4));
+	mvwprintw(option_window, OPTION_WINDOW_HEIGHT-2, col, "Press q or ENTER to return");
+	box(option_window, 0, 0);
+
+	//window title
+	mvwprintw(option_window, 0, 3, "Multitrack settings");
+
+	//radio button menu for selecting sorting options
+	const char *sort_settings_names[NUM_SORT_SETTINGS] = {"Sort by AOS", "Sort by max elevation"};
+	struct checklist *sort_settings = checklist_create(option_window, NUM_SORT_SETTINGS, sort_settings_names);
+
+	//display current sorting settings
+	checklist_check_item(sort_settings, SORT_AOS_IND, listing->sort_option == SORT_BY_AOS);
+	checklist_check_item(sort_settings, SORT_MAXELE_IND, listing->sort_option == SORT_BY_MAX_ELEVATION);
+
+	//prepare form for max elevation input
+	int field_height = 1, field_width = 25, field_row = 0, field_col = 0;
+	FIELD *max_ele_field = new_field(field_height, CHECKMARK_STRING_LENGTH-1, field_row, field_col, 0, 0);
+	FIELD *max_ele_field_description = new_field(field_height, field_width, field_row, CHECKMARK_STRING_LENGTH, 0, 0);
+	FIELD *fields[3] = {max_ele_field, max_ele_field_description, NULL};
+	FORM *form = new_form(fields);
+
+	set_field_back(max_ele_field, FIELDSTYLE_INACTIVE);
+	field_opts_off(max_ele_field, O_STATIC);
+	field_opts_off(max_ele_field_description, O_ACTIVE);
+
+	set_max_field(max_ele_field, CHECKMARK_STRING_LENGTH-1);
+	set_max_field(max_ele_field_description, MAX_NUM_CHARS);
+	set_field_buffer(max_ele_field_description, 0, "Max elevation threshold");
+
+	//place form window below sort settings window
+	int form_rows, form_cols;
+	scale_form(form, &form_rows, &form_cols);
+	int form_row = getmaxy(sort_settings->window);
+	form_row++;
+	set_form_win(form, option_window);
+	set_form_sub(form, derwin(option_window, form_rows, form_cols, form_row, 1));
+	post_form(form);
+
+	//display current max elevation threshold settings
+	char curr_max_ele_thresh[MAX_NUM_CHARS];
+	snprintf(curr_max_ele_thresh, MAX_NUM_CHARS, "%d", (int)listing->max_elevation_threshold);
+	set_field_buffer(max_ele_field, 0, curr_max_ele_thresh);
+	form_driver(form, REQ_VALIDATION);
+	wrefresh(option_window);
+
+	//handle key input to sort settings menu and max elevation input field
+	int c;
+	int selected_item = 0;
+	bool in_sort_settings = true;
+	bool in_form = false;
+	bool run = true;
+	while (run) {
+		c = wgetch(option_window);
+		switch(c) {
+			case KEY_DOWN:
+				if (in_sort_settings && (item_index(current_item(sort_settings->menu)) == sort_settings->num_items-1)) {
+					//on bottom of menu, jump to form
+					in_sort_settings = false;
+					in_form = true;
+
+					//make menu look like it has no selected elements
+					set_menu_fore(sort_settings->menu, CHECKLIST_STYLE_INACTIVE);
+
+					//make field look like it is selected
+					set_field_back(max_ele_field, FIELDSTYLE_ACTIVE);
+					form_driver(form, REQ_VALIDATION);
+				} else if (in_sort_settings) {
+					menu_driver(sort_settings->menu, REQ_DOWN_ITEM);
+				}
+
+				break;
+			case KEY_UP:
+				if (in_sort_settings) {
+					menu_driver(sort_settings->menu, REQ_UP_ITEM);
+				} else {
+					//in form, jump back to menu
+					in_sort_settings = true;
+					in_form = false;
+
+					//reset menu coloring
+					set_menu_fore(sort_settings->menu, CHECKLIST_STYLE_ACTIVE);
+
+					//make field look like it is inactive
+					set_field_back(max_ele_field, FIELDSTYLE_INACTIVE);
+					form_driver(form, REQ_VALIDATION);
+				}
+				break;
+			case KEY_BACKSPACE:
+				if (in_form) {
+					form_driver(form, REQ_CLR_FIELD);
+				}
+				break;
+			case ' ':
+				if (in_sort_settings) {
+					selected_item = item_index(current_item(sort_settings->menu));
+
+					//check item if not selected, deselect all other items (radio button behavior)
+					if (!checklist_item_checked(sort_settings, selected_item)) {
+						checklist_check_item(sort_settings, selected_item, true);
+						for (int i=0; i < sort_settings->num_items; i++) {
+							if (i != selected_item) {
+								checklist_check_item(sort_settings, i, false);
+							}
+						}
+					}
+				}
+				break;
+			case 'q':
+			case 10:
+				run = false;
+				break;
+			default:
+				if (in_form) {
+					form_driver(form, c);
+				}
+			break;
+		}
+                wrefresh(option_window);
+	}
+
+	//get settings from UI elements
+	if (checklist_item_checked(sort_settings, SORT_AOS_IND)) {
+		listing->sort_option = SORT_BY_AOS;
+	} else {
+		listing->sort_option = SORT_BY_MAX_ELEVATION;
+	}
+
+	//get current max elevation setting
+	form_driver(form, REQ_VALIDATION);
+	char *max_ele_thresh = strdup(field_buffer(max_ele_field, 0));
+	trim_whitespaces_from_end(max_ele_thresh);
+	listing->max_elevation_threshold = strtod(max_ele_thresh, NULL);
+	free(max_ele_thresh);
+
+	//cleanup
+	checklist_free(&sort_settings);
+	delwin(option_window);
+
+	unpost_form(form);
+	free_field(max_ele_field);
+	free_field(max_ele_field_description);
+	free_form(form);
+
+	//write settings to file
+	multitrack_settings_to_file(listing);
+
+	//trigger resort
+	listing->should_sort = true;
+}
+
+#include "xdg_basedirs.h"
+
+/**
+ * Return XDG location for multitrack settings filepath. Returned string has to be free'd after use.
+ **/
+char *multitrack_settings_filepath()
+{
+	create_xdg_dirs();
+
+	char *config_home = xdg_config_home();
+
+	int ret_size = strlen(config_home)*strlen(MULTITRACK_SETTINGS_FILE);
+	char *ret_str = (char*)malloc(sizeof(char)*ret_size);
+
+	snprintf(ret_str, ret_size, "%s%s", config_home, MULTITRACK_SETTINGS_FILE);
+
+	free(config_home);
+	return ret_str;
+}
+
+//config prefix for aos sort option
+#define FILESETTING_SORT_BY_AOS "sort by aos = "
+
+//config prefix for max ele sort option
+#define FILESETTING_SORT_BY_MAX_ELEVATION "sort by max elevation = "
+
+//config prefix for max elevation threshold
+#define FILESETTING_MAX_ELEVATION_THRESHOLD "max elevation threshold = "
+
+void multitrack_settings_from_file(multitrack_listing_t *listing)
+{
+	char *settings_filepath = multitrack_settings_filepath();
+
+	FILE *read_file = fopen(settings_filepath, "r");
+
+	if (read_file != NULL) {
+		char line[MAX_NUM_CHARS];
+
+		//set to sort by max elevation if this is set and in order in file, default to sorting by aos otherwise
+		int sort_by_max_elevation = 0;
+		fgets(line, MAX_NUM_CHARS, read_file);
+		sscanf(line, FILESETTING_SORT_BY_MAX_ELEVATION "%d", &sort_by_max_elevation);
+		if (sort_by_max_elevation == 1) {
+			listing->sort_option = SORT_BY_MAX_ELEVATION;
+		} else {
+			listing->sort_option = SORT_BY_AOS;
+		}
+
+		//skip over sort by aos option since this is covered by above
+		fgets(line, MAX_NUM_CHARS, read_file);
+
+		//read max elevation threshold
+		float threshold = 0;
+		fgets(line, MAX_NUM_CHARS, read_file);
+		sscanf(line, FILESETTING_MAX_ELEVATION_THRESHOLD "%f", &threshold);
+		fprintf(stderr, "%f\n", threshold);
+		if ((threshold >= 0) && (threshold < 90)) {
+			listing->max_elevation_threshold = threshold;
+		}
+		fclose(read_file);
+	}
+
+	free(settings_filepath);
+}
+
+void multitrack_settings_to_file(multitrack_listing_t *listing)
+{
+	char *settings_filepath = multitrack_settings_filepath();
+
+	FILE *write_file = fopen(settings_filepath, "w");
+	fprintf(write_file, "%s%d\n", FILESETTING_SORT_BY_MAX_ELEVATION, listing->sort_option == SORT_BY_MAX_ELEVATION);
+	fprintf(write_file, "%s%d\n", FILESETTING_SORT_BY_AOS, listing->sort_option == SORT_BY_AOS);
+	fprintf(write_file, "%s%f\n", FILESETTING_MAX_ELEVATION_THRESHOLD, listing->max_elevation_threshold);
+	fclose(write_file);
+
+	free(settings_filepath);
 }
