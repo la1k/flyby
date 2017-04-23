@@ -566,13 +566,9 @@ void multitrack_update_entry(double max_elevation_threshold, predict_observer_t 
 		if (obs.elevation < 0) {
 			entry->next_aos = predict_next_aos(qth, entry->orbital_elements, time);
 		}
-		predict_julian_date_t max_ele_time = predict_max_elevation(qth, entry->orbital_elements, time);
 
-		struct predict_orbit orbit;
-		struct predict_observation observation;
-		predict_orbit(entry->orbital_elements, &orbit, max_ele_time);
-		predict_observe_orbit(qth, &orbit, &observation);
-		entry->max_elevation = observation.elevation*180.0/M_PI;
+		struct predict_observation max_elevation_obs = predict_at_max_elevation(qth, entry->orbital_elements, time);
+		entry->max_elevation = max_elevation_obs.elevation*180.0/M_PI;
 	}
 
 	//use current elevation as max elevation if satellite is above horizon and geostationary
