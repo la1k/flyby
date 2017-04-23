@@ -1299,7 +1299,6 @@ void SingleTrack(int orbit_ind, predict_observer_t *qth, struct transponder_db *
 
 				//max elevation of current or next pass
 				max_elevation = predict_at_max_elevation(qth, orbital_elements, daynum);
-				predict_observe_orbit(qth, &temp_orbit, &max_elevation);
 			}
 
 			//display current time
