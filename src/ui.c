@@ -1644,7 +1644,7 @@ void SingleTrack(int orbit_ind, predict_observer_t *qth, struct transponder_db *
 			ans!=KEY_LEFT && ans!=KEY_RIGHT && ans!=SINGLETRACK_HELP_KEY);
 
 		predict_destroy_orbital_elements(orbital_elements);
-	} while (ans!='q' && ans!=17);
+	} while (ans!='q' && ans!=17 && ans!=27);
 
 	cbreak();
 }
