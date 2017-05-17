@@ -7,7 +7,7 @@
 #include <string.h>
 
 /**
- * Get next enabled entry within the TLE database. Used for navigating between enabled satellites within SingleTrack().
+ * Get next enabled entry within the TLE database. Used for navigating between enabled satellites within singletrack().
  *
  * \param curr_index Current index
  * \param step Step used for finding next enabled entry (-1 or +1, preferably)
@@ -146,7 +146,7 @@ double inverse_doppler_shift(enum dopp_shift_frequency_type type, const predict_
 
 #define AOSLOS_INFORMATION_ROW 20
 
-void SingleTrack(int orbit_ind, predict_observer_t *qth, struct transponder_db *sat_db, struct tle_db *tle_db, rotctld_info_t *rotctld, rigctld_info_t *downlink_info, rigctld_info_t *uplink_info)
+void singletrack(int orbit_ind, predict_observer_t *qth, struct transponder_db *sat_db, struct tle_db *tle_db, rotctld_info_t *rotctld, rigctld_info_t *downlink_info, rigctld_info_t *uplink_info)
 {
 	double horizon = rotctld->tracking_horizon;
 

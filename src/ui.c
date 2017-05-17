@@ -1804,7 +1804,7 @@ void RunFlybyUI(bool new_user, const char *qthfile, predict_observer_t *observer
 				const char *sat_name = tle_db->tles[satellite_index].name;
 				switch (option) {
 					case OPTION_SINGLETRACK:
-						SingleTrack(satellite_index, observer, sat_db, tle_db, rotctld, downlink, uplink);
+						singletrack(satellite_index, observer, sat_db, tle_db, rotctld, downlink, uplink);
 						break;
 					case OPTION_PREDICT_VISIBLE:
 						Predict(sat_name, orbital_elements, observer, 'v');

@@ -17,6 +17,6 @@
  * \param downlink_info rigctld connection instance for downlink
  * \param uplink_info rigctld connection instance for uplink
  **/
-void SingleTrack(int orbit_ind, predict_observer_t *qth, struct transponder_db *transponder_db, struct tle_db *tle_db, rotctld_info_t *rotctld, rigctld_info_t *downlink_info, rigctld_info_t *uplink_info);
+void singletrack(int orbit_ind, predict_observer_t *qth, struct transponder_db *transponder_db, struct tle_db *tle_db, rotctld_info_t *rotctld, rigctld_info_t *downlink_info, rigctld_info_t *uplink_info);
 
 #endif
