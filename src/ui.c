@@ -72,7 +72,7 @@ void bailout(const char *string)
 	clear();
 	refresh();
 	endwin();
-	fprintf(stderr,"*** flyby: %s!\n",string);
+	fprintf(stderr,"*** flyby: %s\n",string);
 }
 
 void Banner()

@@ -61,7 +61,9 @@ void rotctld_connect(const char *rotctld_host, const char *rotctld_port, int upd
 		break;
 	}
 	if (servinfop == NULL) {
-		bailout("Unable to connect to rotctld");
+		char error_message[MAX_NUM_CHARS];
+		snprintf(error_message, MAX_NUM_CHARS, "Unable to connect to rotctld on %s:%s", rotctld_host, rotctld_port);
+		bailout(error_message);
 		exit(-1);
 	}
 	freeaddrinfo(servinfo);
@@ -126,7 +128,9 @@ void rigctld_connect(const char *rigctld_host, const char *rigctld_port, const c
 		break;
 	}
 	if (servinfop == NULL) {
-		bailout("Unable to connect to uplink rigctld");
+		char error_message[MAX_NUM_CHARS];
+		snprintf(error_message, MAX_NUM_CHARS, "Unable to connect to rigctld on %s:%s", rigctld_host, rigctld_port);
+		bailout(error_message);
 		exit(-1);
 	}
 	freeaddrinfo(servinfo);
