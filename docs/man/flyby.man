@@ -1,0 +1,157 @@
+.TH FLYBY 1 "8 June 2017" "LA1K" "LA1K"
+.SH NAME
+flyby \- Track and predict passes of satellites in Earth orbit
+
+.SH SYNOPSIS
+flyby [options]
+
+.SH DESCRIPTION
+Flyby is a multi-user satellite tracking and orbital prediction
+program written under the Linux operating system.
+
+See docs/usage_guide.md for detailed usage instructions.
+
+.SH COMMAND LINE OPTIONS
+
+\fB--add-tle-file=FILE\fP
+Add TLE file to flyby's TLE database. The base filename of the input file will be used for the internal file, so any existing file with this filename will be overwritten.
+
+\fB-u,--update-tle-db=FILE\fP
+Update TLE database with TLE file FILE. Multiple files can be specified using the same option multiple times (e.g. -u file1 -u file2 ...). Flyby will exit afterwards. Any new TLEs in the file will be ignored.
+
+\fB-t,--tle-file=FILE\fP
+Use FILE as TLE database file. Overrides user and system TLE database files. Multiple files can be specified using this option multiple times (e.g. -t file1 -t file2 ...).
+
+\fB-q,--qth-file=FILE\fP
+Use FILE as QTH config file. Overrides existing QTH config file.
+
+\fB-A,--rotctld-host=HOST\fP
+Connect to a rotctld server with hostname HOST and enable antenna tracking.
+
+\fB--rotctld-port=PORT\fP
+Specify rotctld server port.
+
+\fB-H,--rotctld-horizon=HORIZON\fP
+Specify elevation threshold for when flyby will start tracking an orbit.
+
+\fB--rotctld-update-interval=SECS\fP
+Send updates to rotctld other SECS seconds instead of when (azimuth,elevation) changes.
+
+\fB-U,--rigctld-uplink-host=HOST\fP
+Connect to specified rigctld server for uplink frequency steering.
+
+\fB--rigctld-uplink-port=PORT\fP
+Specify rigctld uplink port.
+
+\fB--rigctld-uplink-vfo=VFO_NAME\fP
+Specify rigctld uplink VFO.
+
+\fB-D,--rigctld-downlink-host=HOST\fP
+Connect to specified rigctld server for downlink frequency steering.
+
+\fB--rigctld-downlink-port=PORT\fP
+Specify rigctld downlink port.
+
+\fB--rigctld-downlink-vfo=VFO_NAME\fP
+Specify rigctld downlink VFO.
+
+\fB-h,--help\fP
+Show help.
+
+.SH AUTOMATIC ANTENNA TRACKING/RADIO TUNING
+
+Flyby will support any rotor controller or rig that
+is supported by hamlib. Flyby achives this by sending
+rotator or frequency commands over sockets made available
+by \fBrotctld\fP and \fBrigctld\fP. In single track mode,
+this can be used to automatically control AZ/EL antenna rotators
+and keep the antennas pointed towards the satellite being tracked,
+and automatically adjust for doppler shifts.
+
+Flyby waits for acknowledgment of
+the previous command before it sends the position.  This prevents
+queuing of commands when using a slow rotator controller.
+
+Examples:
+
+	\fIflyby -A localhost\fP
+
+will send AZ/EL tracking data to localhost on the default rotctld port (4533).
+
+	\fI flyby -D localhost\fP
+
+will send downlink frequency updates to localhost on the default rigctld port (4532) and VFO.
+
+	\fI flyby -D localhost --rigctld-downlink-vfo VFOA -U localhost --rigctld-uplink-vfo VFOB\fP
+
+will send downlink and uplink frequency updates to localhost on the default rigctld port, with downlink on VFOA and uplink on VFOB.
+
+Rotctld tracking starts when the satellite comes
+above the horizon. A negative horizon may be set using the \fI-H\fP
+command line option. If the default horizon (0.0) is used, the antenna
+will not start moving before AOS. A negative horizon will let the
+antenna rotate into position before AOS.
+
+See also command line options above and the usage guide in docs/usage_guide.md for more options.
+
+.SH FILES
+
+Flyby follows the XDG base directory specification. In the following, it is assumed that $XDG_DATA_HOME etc are unset and the default locations are used, however, flyby will support respecification of these environment variables.
+
+TLE files:
+
+Multiple TLE files are supported. TLE files will be searched for in the following locations in the listed order of precedence:
+
+- $HOME/.local/share/flyby/tles
+
+- /usr/share/flyby/tles
+
+- /usr/local/share/flyby/tles
+
+All TLEs are merged into a single database within the program. The most recent TLE for multiply defined TLEs at the same level of precedence is selected, while the TLE at the higher order of precedence is selected over a lower order regardless of the epoch date.
+
+Using \fI--add-tle-file\fP to add a TLE file will put the file in $HOME/.local/share/flyby/tles. Using \fI-u\fP to provide updated TLEs will only update TLEs that are already present in flyby's database.
+
+Configuration files and transponder database files are either set from within flyby or by using external tools, but are in any case listed below:
+
+Configuration files:
+
+- flyby.qth: QTH information. Assumed to be within /etc/xdg/flyby/ or $HOME/.config/flyby/, with the latter taking precedence. Flyby will ask for ground station coordinates if unspecified.
+
+- flyby.whitelist: List over enabled satellites. Assumed to be within $HOME/.config/flyby/. Changed by enabling/disabling satellites.
+
+- multitrack_settings.conf: Specifies current multitrack sorting settings. Assumed to be within $HOME/.config/flyby/. Changed by modifying the multitrack sorting settings.
+
+Transponder database files:
+
+The transponder database file is searched for in the following locations, in the following order of precedence:
+
+- $HOME/.local/share/flyby/flyby.db
+
+- /usr/share/flyby/flyby.db
+
+- /usr/local/share/flyby/flyby.db
+
+.SH CONVENIENCE UTILITIES
+
+\fBflyby-update-tles\fP can be used to automatically fetch the most recent TLEs and update the database.
+
+\fBflyby-satnogs-fetcher\fP can be used to fetch the current SatNOGS transponder database and add it to flyby. By specifying a filename (\fIflyby-satnogs-fetcher [filename]\fP), \fBflyby-transponder-dbutil\fP can be used to add the database entries using more options, see \fBflyby-transponder-dbutil --help\fP.
+
+.SH AUTHORS
+Flyby is written by Norvald H. Ryeng (LA6YKA), Knut Magnus Kvamtrø (LA3DPA), Thomas Ingebretsen (LA9ERA)
+and Asgeir Bjorgan (LA9SSA). The flyby code is based on predict-g1yyh from the Debian Project, which
+is an extended version of PREDICT by John A. Magliacane (KD2BD) and others. For full details, see
+the AUTHORS file.
+
+This manpage is partially based on PREDICT's original manpage.
+
+Flyby is free software. You can redistribute it and/or
+modify it under the terms of the GNU General Public License as published
+by the Free Software Foundation, either version 2 of the License or any
+later version.
+
+Flyby is distributed in the hope that it will be useful, but
+WITHOUT ANY WARRANTY, without even the implied warranty of MERCHANTABILITY
+or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
+for more details.

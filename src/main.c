@@ -66,42 +66,42 @@ int main(int argc, char **argv)
 	//command line options
 	struct option_extended options[] = {
 		{{"add-tle-file",		required_argument,	0,	FLYBY_OPT_ADD_TLE},
-			"FILE", "add TLE file to flyby's TLE database. The base filename of the input file will be used for the internal file, so any existing file with this filename will be overwritten."},
+			"FILE", "Add TLE file to flyby's TLE database. The base filename of the input file will be used for the internal file, so any existing file with this filename will be overwritten."},
 		{{"update-tle-db",		required_argument,	0,	'u'},
-			"FILE", "update TLE database with TLE file FILE. Multiple files can be specified using the same option multiple times (e.g. -u file1 -u file2 ...). Flyby will exit afterwards. Any new TLEs in the file will be ignored."},
+			"FILE", "Update TLE database with TLE file FILE. Multiple files can be specified using the same option multiple times (e.g. -u file1 -u file2 ...). Flyby will exit afterwards. Any new TLEs in the file will be ignored."},
 		{{"tle-file",			required_argument,	0,	't'},
-			"FILE", "use FILE as TLE database file. Overrides user and system TLE database files. Multiple files can be specified using this option multiple times (e.g. -t file1 -t file2 ...)."},
+			"FILE", "Use FILE as TLE database file. Overrides user and system TLE database files. Multiple files can be specified using this option multiple times (e.g. -t file1 -t file2 ...)."},
 		{{"qth-file",			required_argument,	0,	'q'},
-			"FILE", "use FILE as QTH config file. Overrides existing QTH config file"},
-		{{"rotctld-host",		required_argument,	0,	'a'},
-			"HOST", "connect to a rotctld server with hostname HOST and enable antenna tracking"},
+			"FILE", "Use FILE as QTH config file. Overrides existing QTH config file."},
+		{{"rotctld-host",		required_argument,	0,	'A'},
+			"HOST", "Connect to a rotctld server with hostname HOST and enable antenna tracking."},
 		{{"rotctld-port",		required_argument,	0,	FLYBY_OPT_ROTCTLD_PORT},
-			"PORT", "specify rotctld server port"},
+			"PORT", "Specify rotctld server port."},
 		{{"rotctld-horizon",		required_argument,	0,	'H'},
-			"HORIZON", "specify elevation threshold for when flyby will start tracking an orbit"},
+			"HORIZON", "Specify elevation threshold for when flyby will start tracking an orbit."},
 		{{"rotctld-update-interval",	required_argument,	0,	FLYBY_OPT_ROTCTLD_UPDATE_INTERVAL},
-			"SECS", "Send updates to rotctld other SECS seconds instead of when (azimuth,elevation) changes"},
+			"SECS", "Send updates to rotctld other SECS seconds instead of when (azimuth,elevation) changes."},
 		{{"rigctld-uplink-host",		required_argument,	0,	'U'},
-			"HOST", "connect to specified rigctld server for uplink frequency steering"},
+			"HOST", "Connect to specified rigctld server for uplink frequency steering."},
 		{{"rigctld-uplink-port",		required_argument,	0,	FLYBY_OPT_UPLINK_PORT},
-			"PORT", "specify rigctld uplink port"},
+			"PORT", "Specify rigctld uplink port."},
 		{{"rigctld-uplink-vfo",		required_argument,	0,	FLYBY_OPT_UPLINK_VFO},
-			"VFO_NAME", "specify rigctld uplink VFO"},
+			"VFO_NAME", "Specify rigctld uplink VFO."},
 		{{"rigctld-downlink-host",	required_argument,	0,	'D'},
-			"HOST", "connect to specified rigctld server for downlink frequency steering"},
+			"HOST", "Connect to specified rigctld server for downlink frequency steering."},
 		{{"rigctld-downlink-port",	required_argument,	0,	FLYBY_OPT_DOWNLINK_PORT},
-			"PORT", "specify rigctld downlink port"},
+			"PORT", "Specify rigctld downlink port."},
 		{{"rigctld-downlink-vfo",	required_argument,	0,	FLYBY_OPT_DOWNLINK_VFO},
-			"VFO_NAME", "specify rigctld downlink VFO"},
+			"VFO_NAME", "Specify rigctld downlink VFO."},
 		{{"help",			no_argument,		0,	'h'},
-			NULL, "Show help"},
+			NULL, "Show help."},
 		{{0, 0, 0, 0}, NULL, NULL}
 	};
 	char usage_instructions[MAX_NUM_CHARS];
 	snprintf(usage_instructions, MAX_NUM_CHARS, "Flyby satellite tracking program\nUsage:\n%s [options]", argv[0]);
 
 	struct option *long_options = extended_to_longopts(options);
-	char short_options[] = "u:t:q:a:H:U:D:h";
+	char short_options[] = "u:t:q:A:H:U:D:h";
 	while (1) {
 		int option_index = 0;
 		int c = getopt_long(argc, argv, short_options, long_options, &option_index);
@@ -123,7 +123,7 @@ int main(int argc, char **argv)
 				strncpy(qth_filename, optarg, MAX_NUM_CHARS);
 				qth_cmd_filename_set = true;
 				break;
-			case 'a': //rotctl
+			case 'A': //rotctl
 				use_rotctl = true;
 				strncpy(rotctld_host, optarg, MAX_NUM_CHARS);
 				break;

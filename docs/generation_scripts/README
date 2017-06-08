@@ -1,0 +1,6 @@
+The scripts contained in this folder are for generating files related to the documentation.
+All assume that flyby has been installed to a system-wide directory/flyby is in PATH.
+
+convert-help-to-manformat.sh: Runs flyby --help and reformats the help to manpage formatting, for pasting into the manpage in ../man/flyby.man.
+
+capture-screenshots.sh: Inputs key sequences to trigger various screens and captures screenshots for the usage guide.
