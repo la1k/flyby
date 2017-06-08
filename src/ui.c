@@ -1,39 +1,3 @@
-/***************************************************************************\
-*          PREDICT: A satellite tracking/orbital prediction program         *
-*               Copyright John A. Magliacane, KD2BD 1991-2002               *
-*                      Project started: 26-May-1991                         *
-*                        Last update: 14-Oct-2002                           *
-*****************************************************************************
-*         Network sockets added by Ivan Galysh, KD4HBO  10-Jan-2000         *
-*               The network port is 1210.  Protocol is UDP.                 *
-*                    The pthreads library is required.                      *
-*         The socket server is spawned to operate in the background.        *
-*****************************************************************************
-*    Code to send live AZ/EL tracking data to the serial port for antenna   *
-*    tracking was contributed by Vittorio Benvenuti, I3VFJ : 13-Jul-2000    *
-*    (Removed in flyby fork -- Knut Magnus Kvamtrø/LA3DPA)                  *
-*****************************************************************************
-*   SGP4/SDP4 code was derived from Pascal routines originally written by   *
-*       Dr. TS Kelso, and converted to C by Neoklis Kyriazis, 5B4AZ         *
-*****************************************************************************
-*    Extended 250 satellite display capability and other cosmetic mods      *
-*     you need to add '-lmenu' to the build file to link in the menu        *
-*     handling code.                    Should work with CygWIN too...      *
-*           John Heaton, G1YYH <g1yyh@amsat.org> :  1-Oct-2005              *
-*****************************************************************************
-*                                                                           *
-* This program is free software; you can redistribute it and/or modify it   *
-* under the terms of the GNU General Public License as published by the     *
-* Free Software Foundation; either version 2 of the License or any later    *
-* version.                                                                  *
-*                                                                           *
-* This program is distributed in the hope that it will be useful,           *
-* but WITHOUT ANY WARRANTY; without even the implied warranty of            *
-* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU         *
-* General Public License for more details.                                  *
-*                                                                           *
-\***************************************************************************/
-
 #include "xdg_basedirs.h"
 #include "config.h"
 #include <math.h>

@@ -48,6 +48,10 @@ configure_file(utils/update-tle.sh.in ${UPDATE_TLE_EXECUTABLE} @ONLY)
 install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/${SATNOGS_FETCH_EXECUTABLE} DESTINATION bin/)
 install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/${UPDATE_TLE_EXECUTABLE} DESTINATION bin/)
 
+#manpage
+configure_file(docs/man/flyby.man flyby.1 @ONLY)
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/flyby.1 DESTINATION share/man/man1)
+
 if (WITH_TESTING)
 	enable_testing()
 	add_subdirectory(tests)

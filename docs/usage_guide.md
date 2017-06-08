@@ -4,6 +4,11 @@ Flyby usage guide
 An introduction to satellite tracking and an earlier iteration of this guide
 can be found at https://www.la1k.no/2017/03/03/satellite-tracking-using-flyby/.
 
+Some minor descriptions (not part of original blog post) on [orbital schedules](#orbital-predictions) and [lunar
+and solar passes](#solar-and-lunar-orbital-predictions) were inspired or copied from the original PREDICT manpage (author John A. Magliacane (KB2BD)), and could contain parts of sentences that correspond word by word to the original manpage.
+
+See also [the glossary](glossary.md).
+
 Table of Contents
 =================
 
@@ -178,9 +183,13 @@ Displaying satellite information
 
 Back in the multitrack view, this now shows a color-coded overview over all the enabled satellites. On the top, with colored backgrounds, are the satellites that currently are passing over our horizon. The times shown to the right are the minutes and seconds until the satellites finish their passes. The rest of the satellites are sorted by the time left until the next time they pass over our horizon, either displayed with the number of minutes until AOS or the absolute UTC time if too far away. At the bottom (use page down or hold in your down arrow button) you will find satellites that never will pass over your horizon.
 
+The letters 'D', 'N' or 'V' after the slant range indicate, respectively, that the satellite is in sunlight but not visible, the satellite is in eclipse and that the satellite is in sunlight and visible. The symbols '/', '=' and '\' indicate the direction the satellite is moving with respect to the observer.
+
+Pressing 'h' can be used to display a help window.
+
 ![Multitrack settings](usage_images/multitrack_options.png)
 
-The listing sorts satellites above the horizon according to the max elevation during the pass, while satellites below the horizon are sorted according to the time until the next pass. By pressing 'M' and selecting "Sort by max elevation", all satellites can be sorted by their maximum elevations. Passes can also be filtered by entering a max elevation threshold: Here, 20 means that all upcoming or current passes with max elevation below 20 degrees will be put at the bottom of the list.
+The listing sorts satellites above the horizon according to the max elevation during the pass, while satellites below the horizon are sorted according to the time until the next pass. By pressing 'M' and selecting "Sort by max elevation", all satellites can be sorted by their maximum elevations. Passes can also be filtered by entering a max elevation threshold: Here, 40 means that all upcoming or current passes with max elevation below 40 degrees will be put at the bottom of the list.
 
 ![Multitrack filtering](usage_images/multitrack_filtering.png)
 
@@ -195,6 +204,38 @@ We will try out the single track mode. Press either right arrow button or ENTER 
 ![Singletrack](usage_images/singletrack_basic.png)
 
 Now, a screen is shown containing almost exactly the same information as in the previous multitrack view. Here, however, some additional features are available for controlling antenna rotors and radio rigs.
+
+### Orbital predictions
+
+(This subsection is based on PREDICT's original manpage.)
+
+In the previous menu, selecting 'Predict passes' (or pressing P) or 'Predict visible
+passes' (or pressing V) would, respectively, show tables over the upcoming passes or
+upcoming visible passes. This can be be convenient for planning in
+advance any observations, or confirming past observations. In both cases, symbol '\*' to the right means that the satellite is in sunlight, while '+' means that the satellite is in sunlight and in the cover of darkness. Under good viewing conditions and for large satellites like ISS, the latter means that the satellite is visible to the naked eye.
+
+Selecting 'Solar illumination prediction' will show tables over how much sunlight a particular satellite wil receive during a 24 hour period.
+
+### Solar and lunar orbital predictions
+
+(This subsection is based on PREDICT's original manpage.)
+
+Selecting 'O' or 'N' in the main menu will display orbital schedules for the Sun and the Moon, respectively. Here, declination (Dec) and the greenwich hour angle (GHA) correspond to the latitude and longitude of the object's sub-satellite point above the Earth's surface. RA is the right ascension. Range corresponds to the normalized distance to the object (actual distance divided by the average distance).
+In practice,
+the normalized distance can range from about 0.945 to 1.055 for
+the Moon, and about 0.983 to 1.017 for the Sun.
+
+The radial velocity (Vel) corresponds to
+the speed and direction the object is traveling toward (+) or away
+(-) from the ground station, and is expressed in meters per second.
+When the radial distance of the Moon is close to zero, the amount of
+Doppler shift experienced in Moonbounce communications is minimal.
+
+Note that the effects of atmospherics are ignored in determining the
+elevation angles for the Sun and Moon. Furthermore, the data
+provided by flyby corresponds to the object's center, and
+not the upper or lower limb, as is sometimes done when predicting
+the rising and setting times of these celestial objects.
 
 Defining transponders
 ---------------------
