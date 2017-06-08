@@ -854,7 +854,7 @@ void QthEdit(const char *qthfile, predict_observer_t *qth)
 	//set up windows
 	int win_height = NUM_QTH_FIELDS+1;
 	int win_width = QTH_FIELD_LENGTH;
-	int win_row = 11;
+	int win_row = 8;
 	int win_col = 40;
 	WINDOW *form_win = newwin(win_height, win_width, win_row, win_col);
 	int rows, cols;
