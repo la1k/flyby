@@ -3,6 +3,7 @@
 
 #include "defines.h"
 #include <stdbool.h>
+#include <time.h>
 
 #define ROTCTLD_DEFAULT_HOST "localhost"
 #define ROTCTLD_DEFAULT_PORT "4533\0\0"
@@ -20,10 +21,18 @@ typedef struct {
 	char host[MAX_NUM_CHARS];
 	///Port
 	char port[MAX_NUM_CHARS];
-	///Time interval for rotctld update. 0 means that commands will be sent only when angles change
+	///Time interval for rotctld update. Zero means that commands will be sent only when angles change. Defaults to 0.
 	int update_time_interval;
-	///Horizon above which we start tracking
+	///Horizon above which we start tracking. Defaults to 0.
 	double tracking_horizon;
+	///Previous time at which command was sent
+	time_t prev_cmd_time;
+	///Whether first command has been sent, and whether we can guarantee that prev_cmd_azimuth/elevation contain correct values
+	bool first_cmd_sent;
+	///Previous sent azimuth
+	double prev_cmd_azimuth;
+	///Previous sent elevation
+	double prev_cmd_elevation;
 } rotctld_info_t;
 
 typedef struct {
@@ -44,11 +53,9 @@ typedef struct {
  *
  * \param hostname Hostname/IP address
  * \param port Port
- * \param update_interval Time interval for rotctld updates. Set to 0 if rotctld should be updated only when (azimuth, elevation) changes. NOTE: Not used internally in rotctld_functions, used externally in SingleTrack
- * \param tracking_horizon Tracking horizon in degrees. NOTE: Not used internally in rotctld_ functions, used externally in SingleTrack
  * \param ret_info Returned rotctld connection instance
  **/
-void rotctld_connect(const char *hostname, const char *port, int update_interval, double tracking_horizon, rotctld_info_t *ret_info);
+void rotctld_connect(const char *hostname, const char *port, rotctld_info_t *ret_info);
 
 /**
  * Disconnect from rotctld.
@@ -57,13 +64,33 @@ void rotctld_connect(const char *hostname, const char *port, int update_interval
 void rotctld_disconnect(rotctld_info_t *info);
 
 /**
- * Send track data to rotctld. 
+ * Send track data to rotctld.
+ *
+ * Data is sent only when:
+ *  - Input azi/ele differs from previously sent azi/ele
+ *  OR
+ *  - Difference from previous time for the commands differs more than the time interval for updates
  *
  * \param info rotctld connection instance
  * \param azimuth Azimuth in degrees
  * \param elevation Elevation in degrees
  **/
-void rotctld_track(const rotctld_info_t *info, double azimuth, double elevation);
+void rotctld_track(rotctld_info_t *info, double azimuth, double elevation);
+
+/**
+ * Set current tracking horizon.
+ **/
+void rotctld_set_tracking_horizon(rotctld_info_t *info, double horizon);
+
+/**
+ * Set current update interval.
+ **/
+void rotctld_set_update_interval(rotctld_info_t *info, int time_interval);
+
+/**
+ * Set current rotor precision in degrees.
+ **/
+void rotctld_set_precision(rotctld_info_t *info, double precision);
 
 /**
  * Connect to rigctld. 
