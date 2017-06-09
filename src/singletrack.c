@@ -1,3 +1,13 @@
+/**
+ * Functions related to singletrack/real-time tracking of a single satellite.
+ * Entry point is the function singletrack(), while
+ * singletrack_track_satellite() does the bulk of the work. The rest of the
+ * functions are mainly for separating tedious parts/separatable details into
+ * separate and probably more readable units.
+ *
+ * Evolved from PREDICT's SingleTrack().
+ **/
+
 #include "singletrack.h"
 #include <curses.h>
 
