@@ -268,6 +268,8 @@ void singletrack_help()
 	singletrack_help_print_keyhint(help_window, &row, "m/M", "Turns on/off a continuous version of the above");
 	singletrack_help_print_keyhint(help_window, &row, "x", "Reverse downlink and uplink VFO names");
 	row++;
+	singletrack_help_print_keyhint(help_window, &row, "A", "Turn antenna towards azimuth at the next AOS (disabled during a pass)");
+	row++;
 	mvwprintw(help_window, row++, 1, "Press any key to continue");
 	wresize(help_window, row+1, SINGLETRACK_HELP_WIDTH);
 	wattrset(help_window, COLOR_PAIR(4));
@@ -870,6 +872,11 @@ int singletrack_track_satellite(const char *satellite_name, predict_observer_t *
 
 		//handle keyboard input
 		input_key=getch();
+
+		//move antenna towards AOS position
+		if ((input_key == 'A') && (obs.elevation*180.0/M_PI < rotctld->tracking_horizon) && rotctld->connected) {
+			rotctld_track(rotctld, aos.azimuth*180.0/M_PI, 0);
+		}
 
 		if (comsat && (input_key != ERR)) {
 			//get next transponder
