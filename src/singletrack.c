@@ -483,24 +483,29 @@ const char *sat_status_string(enum satellite_status satellite_status)
 #define TRANSPONDER_UPLINK_ROW (TRANSPONDER_START_ROW+1)
 #define TRANSPONDER_DOWNLINK_ROW (TRANSPONDER_UPLINK_ROW+1)
 #define TRANSPONDER_GENERAL_ROW (TRANSPONDER_DOWNLINK_ROW+1)
-#define TRANSPONDER_FREQ_COL 11
+
+#define TRANSPONDER_TXRX_DESC_COL 29
+#define TRANSPONDER_PATHLOSS_DESC_COL 57
+#define TRANSPONDER_START_COL 1
+
+#define TRANSPONDER_FREQ_COL (TRANSPONDER_START_COL+10)
 #define TRANSPONDER_DELAY_COL TRANSPONDER_FREQ_COL
-#define TRANSPONDER_DOPP_COL 32
-#define TRANSPONDER_LOSS_COL 67
+#define TRANSPONDER_DOPP_COL (TRANSPONDER_TXRX_DESC_COL + 3)
+#define TRANSPONDER_LOSS_COL (TRANSPONDER_PATHLOSS_DESC_COL + 12)
 #define TRANSPONDER_ECHO_COL TRANSPONDER_LOSS_COL
 #define TRANSPONDER_STATUS_COL 34
 
 void singletrack_print_transponder_headers()
 {
 	attrset(COLOR_PAIR(4)|A_BOLD);
-	mvprintw(TRANSPONDER_UPLINK_ROW,1,"Uplink   :");
-	mvprintw(TRANSPONDER_DOWNLINK_ROW,1,"Downlink :");
-	mvprintw(TRANSPONDER_GENERAL_ROW,1,"Delay    :");
-	mvprintw(TRANSPONDER_GENERAL_ROW,55,"Echo      :");
-	mvprintw(TRANSPONDER_DOWNLINK_ROW,29,"RX:");
-	mvprintw(TRANSPONDER_DOWNLINK_ROW,55,"Path loss :");
-	mvprintw(TRANSPONDER_UPLINK_ROW,29,"TX:");
-	mvprintw(TRANSPONDER_UPLINK_ROW,55,"Path loss :");
+	mvprintw(TRANSPONDER_UPLINK_ROW,TRANSPONDER_START_COL,"Uplink   :");
+	mvprintw(TRANSPONDER_DOWNLINK_ROW,TRANSPONDER_START_COL,"Downlink :");
+	mvprintw(TRANSPONDER_GENERAL_ROW,TRANSPONDER_START_COL,"Delay    :");
+	mvprintw(TRANSPONDER_GENERAL_ROW,TRANSPONDER_PATHLOSS_DESC_COL,"Echo      :");
+	mvprintw(TRANSPONDER_DOWNLINK_ROW,TRANSPONDER_TXRX_DESC_COL,"RX:");
+	mvprintw(TRANSPONDER_DOWNLINK_ROW,TRANSPONDER_PATHLOSS_DESC_COL,"Path loss :");
+	mvprintw(TRANSPONDER_UPLINK_ROW,TRANSPONDER_TXRX_DESC_COL,"TX:");
+	mvprintw(TRANSPONDER_UPLINK_ROW,TRANSPONDER_PATHLOSS_DESC_COL,"Path loss :");
 }
 
 
@@ -837,19 +842,24 @@ int singletrack_track_satellite(const char *satellite_name, predict_observer_t *
 
 		//display downlink/uplink information
 		if (comsat) {
+			//set downlink/uplink from rig on readfreq option
 			if (downlink_info->connected && link_status.readfreq) {
 				link_status.downlink = inverse_doppler_shift(DOPP_DOWNLINK, &obs, rigctld_read_frequency(downlink_info));
 			}
 			if (uplink_info->connected && link_status.readfreq) {
 				link_status.uplink = inverse_doppler_shift(DOPP_UPLINK, &obs, rigctld_read_frequency(uplink_info));
 			}
+
+			//update link information from current satellite data
 			singletrack_update_link_information(&obs, &link_status);
+
+			//print link information to screen
 			singletrack_print_link_information(&link_status);
 
+			//set doppler-shifted downlink/uplink to rig
 			if (link_status.in_range && downlink_info->connected && link_status.downlink_update && (link_status.downlink != 0.0)) {
 				rigctld_set_frequency(downlink_info, link_status.downlink_doppler);
 			}
-
 			if (link_status.in_range && uplink_info->connected && link_status.uplink_update && (link_status.uplink != 0.0)) {
 				rigctld_set_frequency(uplink_info, link_status.uplink_doppler);
 			}
