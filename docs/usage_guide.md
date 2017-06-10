@@ -26,6 +26,8 @@ Table of Contents
 	* [Manual approach](#manual-approach)
 	* [Automatic approach](#automatic-approach)
 * [Enabling hamlib in flyby](#enabling-hamlib-in-flyby)
+	* [Antenna adjustment](#antenna-adjustment)
+	* [Rig frequency adjustment](#rig-frequency-adjustment)
 * [Troubleshooting](#troubleshooting)
 
 
@@ -240,15 +242,12 @@ the rising and setting times of these celestial objects.
 Defining transponders
 ---------------------
 
-Some transponders will be first be defined for the satellite that will be tracked. This
-is not strictly necessary for antenna rotor control, but it is nice to show
-this in relation with the frequency information.
-
+Satellite transponders can be defined for doppler shift calculations
+and automatic radio frequency adjustment in singletrack mode.
 
 ### Manual approach
 
-Transponders can be defined using
-the transponder editor:
+Flyby has a transponder editor interface which can be used for manual transponder definition.
 
 ![Multitrack, transponder option](usage_images/multitrack_submenu_2.png)
 
@@ -284,12 +283,15 @@ Going back to the single track mode, more information on the transponders and th
 Enabling hamlib in flyby
 ------------------------
 
-Flyby is hamlib-enabled though a socket against rotctld and rigctld. Flyby can separatedly control a downlink and uplink VFO of a rigctld-controlled rig. To demonstrate this, rotctld and rigctld sessions will be started using dummy devices by applying these commands on two separate terminals:
+Flyby is hamlib-enabled though a socket against rotctld and rigctld. Flyby can separatedly control a downlink and uplink VFO of a rigctld-controlled rig, and
+adjust the antenna directions of a rotctld-controlled antenna rotor. To demonstrate this, rotctld and rigctld sessions will be started using dummy devices by applying these commands on two separate terminals:
 ```
 rotctld -m 1 -vvvvvv 
 rigctld -m 1 -vvvvvv
 ```
 The verbose output of each command can be followed to verify that the dummy antenna is rotated and that the dummy rig has its frequency changed. In a production situation, the number 1 would be replaced by the corresponding model numbers of your rig or antenna. For example, for an IC9100 rig and a SPID rotor controller, this would typically be `rotctld -m 901 -r /dev/ttyS0 -C az_resolution=2 -C el_resolution=2` and `rigctld -m 368 -r /dev/ttyUSB0`.
+
+### Antenna adjustment
 
 To enable rotctld support, flyby is restarted using
 ```
@@ -299,11 +301,15 @@ Other hostnames can also be defined if rotctld is running on a separate host. Th
 
 ![Program information](usage_images/program_info.png)
 
-In the main menu, 'i' can be typed to show the screen above, which verifies whether flyby has connected to rotctld. When flyby was started, a number could have been defined for `--rotctld-tracking-horizon`. This can be useful for making flyby start tracking the satellite and prepare the rotor array in the correct direction in advance of the actual AOS of the satellite. This is the "Tracking horizon" shown above.
+In the main menu, 'i' can be typed to show the screen above, which verifies whether flyby has connected to rotctld. When flyby was started, a number could have been defined for `--rotctld-tracking-horizon`. This can be useful for automatically making flyby start tracking the satellite and prepare the rotor array in the correct direction in advance of the actual AOS of the satellite. This is the "Tracking horizon" shown above. Alternatively, in singletrack mode, pressing 'A' can also be used to manually rotate the antenna towards the AOS azimuth position regardless of the artificial horizon option.
 
 ![Autotracking](usage_images/singletrack_autotracking.png)
 
 We can also notice that "Autotracking disabled" has now changed to, in this case, "Active" in single track mode. If the satellite had been below the horizon, it would have shown the text "Standing by". The output of rotctld should now show position changes as the satellite is passing over the horizon.
+
+Antenna adjustment will be activated regardless of whether any transponders are defined or not.
+
+### Rig frequency adjustment
 
 If flyby is restarted using
 ```
