@@ -314,6 +314,9 @@ void singletrack_print_sun_moon(predict_observer_t *qth, double daynum)
 	mvprintw(SUN_MOON_ROW+2,MOON_COLUMN,"%+-6.2f El",moon.elevation*180.0/M_PI);
 }
 
+#define SATELLITE_GENERAL_DESC_ROW 17
+#define SATELLITE_GENERAL_PROPS_ROW 18
+
 void singletrack_print_headers(const char *satellite_name, long satellite_number)
 {
 	curs_set(0);
@@ -333,7 +336,7 @@ void singletrack_print_headers(const char *satellite_name, long satellite_number
 	mvprintw(5,1,"       N.            Az           mi            mi          mi              mi");
 	mvprintw(6,1,"       E.            El           km            km          km              km");
 
-	mvprintw(17,1,"Eclipse Depth   Orbital Phase   Orbital Model   Squint Angle      AutoTracking");
+	mvprintw(SATELLITE_GENERAL_DESC_ROW,1,"Eclipse Depth   Orbital Phase   Orbital Model   Squint Angle      AutoTracking");
 }
 
 #define SUNLIGHT_BASESTRING "Spacecraft is currently "
@@ -371,8 +374,8 @@ void singletrack_print_satellite_properties(const struct predict_orbit *orbit, c
 	mvprintw(6,14,"%+-6.2f",obs->elevation*180.0/M_PI);
 	mvprintw(5,29,"%0.f ",(3600.0*sat_vel)*KM_TO_MI);
 	mvprintw(6,29,"%0.f ",3600.0*sat_vel);
-	mvprintw(18,3,"%+6.2f deg",orbit->eclipse_depth*180.0/M_PI);
-	mvprintw(18,20,"%5.1f",256.0*(orbit->phase/(2*M_PI)));
+	mvprintw(SATELLITE_GENERAL_PROPS_ROW,3,"%+6.2f deg",orbit->eclipse_depth*180.0/M_PI);
+	mvprintw(SATELLITE_GENERAL_PROPS_ROW,20,"%5.1f",256.0*(orbit->phase/(2*M_PI)));
 	mvprintw(5,42,"%0.f ",orbit->footprint*KM_TO_MI);
 	mvprintw(6,42,"%0.f ",orbit->footprint);
 
@@ -803,11 +806,11 @@ int singletrack_track_satellite(const char *satellite_name, predict_observer_t *
 		//display satellite data
 		singletrack_print_satellite_properties(&orbit, &obs);
 		attrset(COLOR_PAIR(2)|A_BOLD);
-		mvprintw(18,37,"%s",ephemeris_string);
+		mvprintw(SATELLITE_GENERAL_PROPS_ROW,37,"%s",ephemeris_string);
 		if (satellite_transponders.squintflag) {
-			mvprintw(18,52,"%+6.2f",squint);
+			mvprintw(SATELLITE_GENERAL_PROPS_ROW,52,"%+6.2f",squint);
 		} else {
-			mvprintw(18,52,"N/A");
+			mvprintw(SATELLITE_GENERAL_PROPS_ROW,52,"N/A");
 		}
 
 		//display AOS/LOS times
@@ -868,11 +871,11 @@ int singletrack_track_satellite(const char *satellite_name, predict_observer_t *
 		//display rotation information
 		if (rotctld->connected) {
 			if (obs.elevation>=rotctld->tracking_horizon)
-				mvprintw(18,67,"   Active   ");
+				mvprintw(SATELLITE_GENERAL_PROPS_ROW,67,"   Active   ");
 			else
-				mvprintw(18,67,"Standing  By");
+				mvprintw(SATELLITE_GENERAL_PROPS_ROW,67,"Standing  By");
 		} else
-			mvprintw(18,67,"Not  Enabled");
+			mvprintw(SATELLITE_GENERAL_PROPS_ROW,67,"Not  Enabled");
 
 
 		//send data to rotctld
