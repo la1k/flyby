@@ -15,6 +15,7 @@
 #include <math.h>
 #include <stdlib.h>
 #include <string.h>
+#include "ui.h"
 
 /**
  * Get next enabled entry within the TLE database. Used for navigating between enabled satellites within singletrack().
@@ -30,14 +31,6 @@ int singletrack_get_next_enabled_satellite(int curr_index, int step, struct tle_
  * Display singletrack help window.
  **/
 void singletrack_help();
-
-/**
- * Print sun and moon properties.
- *
- * \param qth Ground station
- * \param daynum Current day number
- **/
-void singletrack_print_sun_moon(predict_observer_t *qth, double daynum);
 
 /**
  * Print general singletrack headers.
@@ -285,34 +278,6 @@ void singletrack_help()
 #define SUN_MOON_ROW 20
 #define SUN_COLUMN 55
 #define MOON_COLUMN 70
-
-void singletrack_print_sun_moon(predict_observer_t *qth, double daynum)
-{
-	struct predict_observation sun;
-	predict_observe_sun(qth, daynum, &sun);
-
-	struct predict_observation moon;
-	predict_observe_moon(qth, daynum, &moon);
-
-	//display sun and moon
-	attrset(COLOR_PAIR(4)|A_REVERSE|A_BOLD);
-	mvprintw(SUN_MOON_ROW,SUN_COLUMN,"   Sun   ");
-	mvprintw(SUN_MOON_ROW,MOON_COLUMN,"   Moon  ");
-	if (sun.elevation > 0.0)
-		attrset(COLOR_PAIR(3)|A_BOLD);
-	else
-		attrset(COLOR_PAIR(2));
-	mvprintw(SUN_MOON_ROW+1,SUN_COLUMN,"%-7.2fAz",sun.azimuth*180.0/M_PI);
-	mvprintw(SUN_MOON_ROW+2,SUN_COLUMN,"%+-6.2f El",sun.elevation*180.0/M_PI);
-
-	attrset(COLOR_PAIR(3)|A_BOLD);
-	if (moon.elevation > 0.0)
-		attrset(COLOR_PAIR(1)|A_BOLD);
-	else
-		attrset(COLOR_PAIR(1));
-	mvprintw(SUN_MOON_ROW+1,MOON_COLUMN,"%-7.2fAz",moon.azimuth*180.0/M_PI);
-	mvprintw(SUN_MOON_ROW+2,MOON_COLUMN,"%+-6.2f El",moon.elevation*180.0/M_PI);
-}
 
 #define SATELLITE_GENERAL_DESC_ROW 17
 #define SATELLITE_GENERAL_PROPS_ROW 18
@@ -841,7 +806,8 @@ int singletrack_track_satellite(const char *satellite_name, predict_observer_t *
 		}
 
 		//predict and observe sun and moon
-		singletrack_print_sun_moon(qth, daynum);
+		print_sun_box(SUN_MOON_ROW, SUN_COLUMN, qth, daynum);
+		print_moon_box(SUN_MOON_ROW, MOON_COLUMN, qth, daynum);
 
 		//display downlink/uplink information
 		if (comsat) {

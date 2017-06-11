@@ -8,6 +8,36 @@
 #include <curses.h>
 
 /**
+ * Print sun azimuth/elevation to infobox on the standard screen.
+ *
+ * \param row Start row for printing
+ * \param col Start column for printing
+ * \param qth QTH coordinates
+ * \param daynum Time for calculation
+ **/
+void print_sun_box(int row, int col, predict_observer_t *qth, predict_julian_date_t daynum);
+
+/**
+ * Print moon azimuth/elevation to infobox on the standard screen.
+ *
+ * \param row Start row for printing
+ * \param col Start column for printing
+ * \param qth QTH coordinates
+ * \param daynum Time for calculation
+ **/
+void print_moon_box(int row, int col, predict_observer_t *qth, predict_julian_date_t daynum);
+
+/**
+ * Print QTH coordinates in infobox on standard screen. Uses 9 columns and 3 rows.
+ *
+ * \param row Start row for printing
+ * \param col Start column for printing
+ * \param qth QTH coordinates
+
+ **/
+void print_qth_box(int row, int col, predict_observer_t *qth);
+
+/**
  * Trim whitespaces in string from end. Used for massaging output from FIELD/FORMs.
  *
  * \param string String to modify. Is modified in place

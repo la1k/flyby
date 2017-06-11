@@ -1667,14 +1667,6 @@ void EditTransponderDatabase(int start_index, struct tle_db *tle_db, struct tran
 	delwin(editor_win);
 }
 
-/**
- * Print sun azimuth/elevation to infobox on the standard screen.
- *
- * \param row Start row for printing
- * \param col Start column for printing
- * \param qth QTH coordinates
- * \param daynum Time for calculation
- **/
 void print_sun_box(int row, int col, predict_observer_t *qth, predict_julian_date_t daynum)
 {
 	struct predict_observation sun;
@@ -1690,14 +1682,6 @@ void print_sun_box(int row, int col, predict_observer_t *qth, predict_julian_dat
 	mvprintw(row++,col,"%+-6.2f El",sun.elevation*180.0/M_PI);
 }
 
-/**
- * Print moon azimuth/elevation to infobox on the standard screen.
- *
- * \param row Start row for printing
- * \param col Start column for printing
- * \param qth QTH coordinates
- * \param daynum Time for calculation
- **/
 void print_moon_box(int row, int col, predict_observer_t *qth, predict_julian_date_t daynum)
 {
 	struct predict_observation moon;
@@ -1714,13 +1698,6 @@ void print_moon_box(int row, int col, predict_observer_t *qth, predict_julian_da
 	mvprintw(row++,col,"%+-6.2f El",moon.elevation*180.0/M_PI);
 }
 
-/**
- * Print QTH coordinates in infobox on standard screen. Uses 9 columns and 3 rows.
- *
- * \param row Start row for printing
- * \param col Start column for printing
- * \param qth QTH coordinates
- **/
 void print_qth_box(int row, int col, predict_observer_t *qth)
 {
 	attrset(COLOR_PAIR(4)|A_REVERSE|A_BOLD);
