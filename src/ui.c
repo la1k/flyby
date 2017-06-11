@@ -781,7 +781,7 @@ void ShowOrbitData(const char *name, predict_orbital_elements_t *orbital_element
 	}
 }
 
-void update_latlon_fields_from_locator(FIELD *locator, FIELD *longitude, FIELD *latitude)
+void qth_editor_update_latlon_fields_from_locator(FIELD *locator, FIELD *longitude, FIELD *latitude)
 {
 	double longitude_new = 0, latitude_new = 0;
 	maidenhead_to_latlon(field_buffer(locator, 0), &longitude_new, &latitude_new);
@@ -792,7 +792,7 @@ void update_latlon_fields_from_locator(FIELD *locator, FIELD *longitude, FIELD *
 	set_field_buffer(latitude, 0, temp);
 }
 
-void update_locator_field_from_latlon(FIELD *longitude, FIELD *latitude, FIELD *locator)
+void qth_editor_update_locator_field_from_latlon(FIELD *longitude, FIELD *latitude, FIELD *locator)
 {
 	double curr_longitude = strtod(field_buffer(longitude, 0), NULL);
 	double curr_latitude = strtod(field_buffer(latitude, 0), NULL);
@@ -804,7 +804,7 @@ void update_locator_field_from_latlon(FIELD *longitude, FIELD *latitude, FIELD *
 #define QTH_FIELD_LENGTH 10
 #define NUM_QTH_FIELDS 5
 #define INPUT_NUM_CHARS 128
-void QthEdit(const char *qthfile, predict_observer_t *qth)
+void qth_editor(const char *qthfile, predict_observer_t *qth)
 {
 	//display current QTH information
 	bkgdset(COLOR_PAIR(3)|A_BOLD);
@@ -878,7 +878,7 @@ void QthEdit(const char *qthfile, predict_observer_t *qth)
 	set_field_buffer(longitude, 0, temp);
 	snprintf(temp, MAX_NUM_CHARS, "%f", qth->altitude);
 	set_field_buffer(altitude, 0, temp);
-	update_locator_field_from_latlon(longitude, latitude, locator);
+	qth_editor_update_locator_field_from_latlon(longitude, latitude, locator);
 
 	refresh();
 	wrefresh(form_win);
@@ -912,9 +912,9 @@ void QthEdit(const char *qthfile, predict_observer_t *qth)
 				form_driver(form, REQ_DEL_PREV);
 				form_driver(form, REQ_VALIDATION);
 				if (current_field(form) == locator) {
-					update_latlon_fields_from_locator(locator, longitude, latitude);
+					qth_editor_update_latlon_fields_from_locator(locator, longitude, latitude);
 				} else {
-					update_locator_field_from_latlon(longitude, latitude, locator);
+					qth_editor_update_locator_field_from_latlon(longitude, latitude, locator);
 				}
 				break;
 			case KEY_DC:
@@ -927,9 +927,9 @@ void QthEdit(const char *qthfile, predict_observer_t *qth)
 				form_driver(form, key);
 				form_driver(form, REQ_VALIDATION); //update buffer with field contents
 				if (current_field(form) == locator) {
-					update_latlon_fields_from_locator(locator, longitude, latitude);
+					qth_editor_update_latlon_fields_from_locator(locator, longitude, latitude);
 				} else {
-					update_locator_field_from_latlon(longitude, latitude, locator);
+					qth_editor_update_locator_field_from_latlon(longitude, latitude, locator);
 				}
 
 				break;
@@ -1730,7 +1730,7 @@ void RunFlybyUI(bool new_user, const char *qthfile, predict_observer_t *observer
 	init_pair(8,COLOR_RED,COLOR_YELLOW);
 
 	if (new_user) {
-		QthEdit(qthfile, observer);
+		qth_editor(qthfile, observer);
 		clear();
 	}
 
@@ -1848,7 +1848,7 @@ void RunFlybyUI(bool new_user, const char *qthfile, predict_observer_t *observer
 
 						case 'G':
 						case 'g':
-							QthEdit(qthfile, observer);
+							qth_editor(qthfile, observer);
 							multitrack_refresh_tles(listing, tle_db);
 							break;
 
