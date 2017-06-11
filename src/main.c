@@ -25,15 +25,6 @@
 #define FLYBY_OPT_ROTCTLD_UPDATE_INTERVAL 206
 #define FLYBY_OPT_ADD_TLE 207
 
-/**
- * Print flyby program usage to stdout.
- *
- * \param program_name Name of program, use argv[0]
- * \param long_options List of long options used in getopts_long
- * \param short_options List of short options used in getopts_long
- **/
-void show_help(const char *program_name, struct option long_options[], const char *short_options);
-
 int main(int argc, char **argv)
 {
 	//rotctl options
