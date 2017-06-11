@@ -7,6 +7,8 @@
 #include "transponder_db.h"
 #include <curses.h>
 
+void any_key();
+
 /**
  * Print sun azimuth/elevation to infobox on the standard screen.
  *
