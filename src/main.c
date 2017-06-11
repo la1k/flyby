@@ -216,7 +216,7 @@ int main(int argc, char **argv)
 	if (num_update_files > 0) {
 		for (int i=0; i < num_update_files; i++) {
 			printf("Updating TLE database using %s:\n\n", string_array_get(&tle_update_filenames, i));
-			AutoUpdate(string_array_get(&tle_update_filenames, i), tle_db);
+			update_tle_database(string_array_get(&tle_update_filenames, i), tle_db);
 			printf("\n");
 		}
 		string_array_free(&tle_update_filenames);
@@ -274,7 +274,7 @@ int main(int argc, char **argv)
 	struct transponder_db *transponder_db = transponder_db_create(tle_db);
 	transponder_db_from_search_paths(tle_db, transponder_db);
 
-	RunFlybyUI(is_new_user, qth_filename, observer, tle_db, transponder_db, &rotctld, &downlink, &uplink);
+	run_flyby_curses_ui(is_new_user, qth_filename, observer, tle_db, transponder_db, &rotctld, &downlink, &uplink);
 
 	//disconnect from rigctl and rotctl
 	rigctld_disconnect(&downlink);
