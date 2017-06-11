@@ -141,37 +141,6 @@ void Illumination(const char *name, predict_orbital_elements_t *orbital_elements
 void ProgramInfo(const char *qthfile, struct tle_db *tle_db, struct transponder_db *transponder_db, rotctld_info_t *rotctld, rigctld_info_t *downlink, rigctld_info_t *uplink);
 
 /**
- * Display transponder editor form and edit the transponder entry.
- *
- * - Transponder entry is not changed: Nothing happens. Entries from XDG_DATA_HOME remain in the user database, nothing happens to entries defined in XDG_DATA_DIRS.
- * - Transponder entry is changed: Mark with LOCATION_TRANSIENT, will be written to user database.
- * - Transponder entry is restored to system default: Is marked with LOCATION_DATA_DIRS, will not be written to user database in order to not override the system database.
- *
- * \param sat_info TLE database entry, used for getting satellite name and satellite number for later lookup for entry defined in XDG_DATA_DIRS
- * \param form_win Window to put the editor in
- * \param sat_entry Satellite database entry to edit
- **/
-void EditTransponderDatabaseField(const struct tle_db_entry *sat_info, WINDOW *form_win, struct sat_db_entry *sat_entry);
-
-/**
- * Display transponder database entry.
- *
- * \param name Satellite name
- * \param entry Transponder database entry to display
- * \param display_window Display window to display the entry in
- **/
-void DisplayTransponderEntry(const char *name, struct sat_db_entry *entry, WINDOW *display_window);
-
-/**
- * Edit entries in transponder database. Updates user database defined in XDG_DATA_HOME on exit.
- *
- * \param start_index Selected index in the menu
- * \param tle_db TLE database, used for satellite names and numbers
- * \param sat_db Satellite database to edit
- **/
-void EditTransponderDatabase(int start_index, struct tle_db *tle_db, struct transponder_db *sat_db);
-
-/**
  * Run flyby UI.
  *
  * \param new_user Whether NewUser() should be run
