@@ -1668,38 +1668,50 @@ void EditTransponderDatabase(int start_index, struct tle_db *tle_db, struct tran
 }
 
 /**
- * Print sun/moon azimuth/elevation to infoboxes on the standard screen. Uses 9 columns and 7 rows.
+ * Print sun azimuth/elevation to infobox on the standard screen.
  *
  * \param row Start row for printing
  * \param col Start column for printing
  * \param qth QTH coordinates
  * \param daynum Time for calculation
  **/
-void PrintSunMoon(int row, int col, predict_observer_t *qth, predict_julian_date_t daynum)
+void print_sun_box(int row, int col, predict_observer_t *qth, predict_julian_date_t daynum)
 {
 	struct predict_observation sun;
 	predict_observe_sun(qth, daynum, &sun);
 
-	struct predict_observation moon;
-	predict_observe_moon(qth, daynum, &moon);
-
 	attrset(COLOR_PAIR(4)|A_REVERSE|A_BOLD);
-	mvprintw(row,col,"   Sun   ");
-	mvprintw(row+4,col,"   Moon  ");
+	mvprintw(row++,col,"   Sun   ");
 	if (sun.elevation > 0.0)
 		attrset(COLOR_PAIR(3)|A_BOLD);
 	else
 		attrset(COLOR_PAIR(2));
-	mvprintw(row+1,col,"%-7.2fAz",sun.azimuth*180.0/M_PI);
-	mvprintw(row+2,col,"%+-6.2f El",sun.elevation*180.0/M_PI);
+	mvprintw(row++,col,"%-7.2fAz",sun.azimuth*180.0/M_PI);
+	mvprintw(row++,col,"%+-6.2f El",sun.elevation*180.0/M_PI);
+}
 
+/**
+ * Print moon azimuth/elevation to infobox on the standard screen.
+ *
+ * \param row Start row for printing
+ * \param col Start column for printing
+ * \param qth QTH coordinates
+ * \param daynum Time for calculation
+ **/
+void print_moon_box(int row, int col, predict_observer_t *qth, predict_julian_date_t daynum)
+{
+	struct predict_observation moon;
+	predict_observe_moon(qth, daynum, &moon);
+
+	attrset(COLOR_PAIR(4)|A_REVERSE|A_BOLD);
+	mvprintw(row++,col,"   Moon  ");
 	attrset(COLOR_PAIR(3)|A_BOLD);
 	if (moon.elevation > 0.0)
 		attrset(COLOR_PAIR(1)|A_BOLD);
 	else
 		attrset(COLOR_PAIR(1));
-	mvprintw(row+5,col,"%-7.2fAz",moon.azimuth*180.0/M_PI);
-	mvprintw(row+6,col,"%+-6.2f El",moon.elevation*180.0/M_PI);
+	mvprintw(row++,col,"%-7.2fAz",moon.azimuth*180.0/M_PI);
+	mvprintw(row++,col,"%+-6.2f El",moon.elevation*180.0/M_PI);
 }
 
 /**
@@ -1709,7 +1721,7 @@ void PrintSunMoon(int row, int col, predict_observer_t *qth, predict_julian_date
  * \param col Start column for printing
  * \param qth QTH coordinates
  **/
-void PrintQth(int row, int col, predict_observer_t *qth)
+void print_qth_box(int row, int col, predict_observer_t *qth)
 {
 	attrset(COLOR_PAIR(4)|A_REVERSE|A_BOLD);
 	mvprintw(row++,col,"   QTH   ");
@@ -1779,12 +1791,13 @@ void RunFlybyUI(bool new_user, const char *qthfile, predict_observer_t *observer
 		//refresh satellite list
 		multitrack_update_listing_data(listing, curr_time);
 		multitrack_display_listing(listing);
-		
+
 		if (!multitrack_search_field_visible(listing->search_field)) {
 			PrintMainMenu(main_menu_win);
 		}
-		PrintSunMoon(listing->window_height + listing->window_row - 7, listing->window_width+1, observer, curr_time);
-		PrintQth(listing->window_row, listing->window_width+1, observer);
+		print_sun_box(listing->window_height + listing->window_row - 7, listing->window_width+1, observer, curr_time);
+		print_moon_box(listing->window_height + listing->window_row - 7 + 4, listing->window_width+1, observer, curr_time);
+		print_qth_box(listing->window_row, listing->window_width+1, observer);
 
 		//get input character
 		refresh();
