@@ -1093,7 +1093,7 @@ void prepare_pattern(char *string)
 //row at which to print info whether only entries with transponders are displayed
 #define WHITELIST_TRANSPONDER_TOGGLE_INFO_ROW 24
 
-void EditWhitelist(struct tle_db *tle_db, const struct transponder_db *transponder_db)
+void whitelist_editor(struct tle_db *tle_db, const struct transponder_db *transponder_db)
 {
 	/* Print header */
 	attrset(COLOR_PAIR(6)|A_REVERSE|A_BOLD);
@@ -1611,7 +1611,7 @@ void RunFlybyUI(bool new_user, const char *qthfile, predict_observer_t *observer
 
 						case 'w':
 						case 'W':
-							EditWhitelist(tle_db, sat_db);
+							whitelist_editor(tle_db, sat_db);
 							multitrack_refresh_tles(listing, tle_db);
 							break;
 						case 'E':
