@@ -275,10 +275,6 @@ void singletrack_help()
 	delwin(help_window);
 }
 
-#define SUN_MOON_ROW 20
-#define SUN_COLUMN 55
-#define MOON_COLUMN 70
-
 #define SATELLITE_GENERAL_DESC_ROW 17
 #define SATELLITE_GENERAL_PROPS_ROW 18
 
@@ -684,6 +680,24 @@ void singletrack_handle_transponder_key(struct singletrack_link *link_status, in
 //Row at which max elevation information is printed
 #define MAXELE_INFORMATION_ROW (AOSLOS_INFORMATION_ROW+1)
 
+//distance between moon, sun and qth boxes
+#define SUN_MOON_COLUMN_DIFF 12
+
+//row at which to print sun and moon boxes
+#define SUN_MOON_ROW 20
+
+//column for sun
+#define SUN_COLUMN 46
+
+//column for moon
+#define MOON_COLUMN (SUN_COLUMN + SUN_MOON_COLUMN_DIFF)
+
+//row for QTH box
+#define QTH_ROW SUN_MOON_ROW
+
+//column for QTH box
+#define QTH_COLUMN (MOON_COLUMN + SUN_MOON_COLUMN_DIFF)
+
 int singletrack_track_satellite(const char *satellite_name, predict_observer_t *qth, const predict_orbital_elements_t *orbital_elements, struct sat_db_entry satellite_transponders, rotctld_info_t *rotctld, rigctld_info_t *downlink_info, rigctld_info_t *uplink_info)
 {
 	int input_key;
@@ -732,7 +746,12 @@ int singletrack_track_satellite(const char *satellite_name, predict_observer_t *
 	bool decayed = orbit.decayed;
 
 	halfdelay(HALF_DELAY_TIME);
+
+	//print static description fields
 	singletrack_print_headers(satellite_name, orbital_elements->satellite_number);
+
+	//print QTH box
+	print_qth_box(QTH_ROW, QTH_COLUMN, qth);
 
 	if (comsat) {
 		singletrack_print_transponder_headers();
