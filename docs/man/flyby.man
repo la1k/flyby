@@ -61,7 +61,7 @@ Show help.
 .SH AUTOMATIC ANTENNA TRACKING/RADIO TUNING
 
 Flyby will support any rotor controller or rig that
-is supported by hamlib. Flyby achives this by sending
+is supported by hamlib. Flyby achieves this by sending
 rotator or frequency commands over sockets made available
 by \fBrotctld\fP and \fBrigctld\fP. In single track mode,
 this can be used to automatically control AZ/EL antenna rotators
@@ -96,7 +96,7 @@ See also command line options above and the usage guide in docs/usage_guide.md f
 
 .SH FILES
 
-Flyby follows the XDG base directory specification. In the following, it is assumed that $XDG_DATA_HOME etc are unset and the default locations are used, however, flyby will support respecification of these environment variables.
+Flyby follows the XDG base directory specification. In the following, it is assumed that $XDG_DATA_HOME and other XDG environment variables are unset and the default locations are used, however, flyby will support respecification of these environment variables.
 
 TLE files:
 
