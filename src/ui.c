@@ -16,19 +16,23 @@
 #include "locator.h"
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Leftovers from old predict.c-function not sorted elsewhere. Mainly contains run_flyby_curses_ui(), which           //
+// Leftovers from old predict.c-file not sorted elsewhere. Mainly contains run_flyby_curses_ui(), which               //
 // handles the multitrack listing and user input choices and calls the correct functions. The file                    //
 // also contains functionality like the whitelist editor, the QTH editor, TLE updater and orbital elements displayer. //
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void bailout(const char *string)
+void curses_shutdown()
 {
-	beep();
 	curs_set(1);
 	bkgdset(COLOR_PAIR(1));
 	clear();
 	refresh();
 	endwin();
+}
+
+void bailout(const char *string)
+{
+	curses_shutdown();
 	fprintf(stderr,"*** flyby: %s\n",string);
 }
 
@@ -1059,11 +1063,7 @@ void run_flyby_curses_ui(bool new_user, const char *qthfile, predict_observer_t 
 		}
 	}
 
-	curs_set(1);
-	bkgdset(COLOR_PAIR(1));
-	clear();
-	refresh();
-	endwin();
+	curses_shutdown();
 
 	delwin(main_menu_win);
 	multitrack_destroy_listing(&listing);
