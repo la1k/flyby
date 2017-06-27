@@ -151,6 +151,8 @@ int main(int argc, char **argv)
 				getopt_long_show_help(usage_instructions, options, short_options);
 				return 0;
 				break;
+			default:
+				exit(1);
 		}
 	}
 
