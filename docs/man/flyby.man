@@ -25,31 +25,22 @@ Use FILE as TLE database file. Overrides user and system TLE database files. Mul
 \fB-q,--qth-file=FILE\fP
 Use FILE as QTH config file. Overrides existing QTH config file.
 
-\fB-A,--rotctld-host=HOST\fP
-Connect to a rotctld server with hostname HOST and enable antenna tracking.
+\fB-A,--rotctld-tracking[=HOST[:PORT]\fP
+Connect to a rotctld server and enable antenna tracking. Optionally specify host and port, otherwise use localhost:4533.
 
-\fB--rotctld-port=PORT\fP
-Specify rotctld server port.
-
-\fB-H,--rotctld-horizon=HORIZON\fP
+\fB-H,--tracking-horizon=HORIZON\fP
 Specify elevation threshold for when flyby will start tracking an orbit.
 
-\fB-U,--rigctld-uplink-host=HOST\fP
-Connect to specified rigctld server for uplink frequency steering.
+\fB-U,--rigctld-uplink[=HOST[:PORT]]\fP
+Connect to rigctld and enable uplink frequency control. Optionally specify host and port, otherwise use localhost:4532.
 
-\fB--rigctld-uplink-port=PORT\fP
-Specify rigctld uplink port.
-
-\fB--rigctld-uplink-vfo=VFO_NAME\fP
+\fB--uplink-vfo=VFO_NAME\fP
 Specify rigctld uplink VFO.
 
-\fB-D,--rigctld-downlink-host=HOST\fP
-Connect to specified rigctld server for downlink frequency steering.
+\fB-D,--rigctld-downlink[=HOST[:PORT]\fP
+Connect to rigctld and enable downlink frequency control. Optionally specify host and port, otherwise use localhost:4532.
 
-\fB--rigctld-downlink-port=PORT\fP
-Specify rigctld downlink port.
-
-\fB--rigctld-downlink-vfo=VFO_NAME\fP
+\fB--downlink-vfo=VFO_NAME\fP
 Specify rigctld downlink VFO.
 
 \fB-h,--help\fP
@@ -71,15 +62,15 @@ queuing of commands when using a slow rotator controller.
 
 Examples:
 
-	\fIflyby -A localhost\fP
+	\fIflyby -Alocalhost\fP
 
 will send AZ/EL tracking data to localhost on the default rotctld port (4533).
 
-	\fI flyby -D localhost\fP
+	\fI flyby -Dlocalhost\fP
 
 will send downlink frequency updates to localhost on the default rigctld port (4532) and VFO.
 
-	\fI flyby -D localhost --rigctld-downlink-vfo VFOA -U localhost --rigctld-uplink-vfo VFOB\fP
+	\fI flyby -Dlocalhost --downlink-vfo VFOA -Ulocalhost --uplink-vfo VFOB\fP
 
 will send downlink and uplink frequency updates to localhost on the default rigctld port, with downlink on VFOA and uplink on VFOB.
 

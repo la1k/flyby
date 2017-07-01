@@ -295,13 +295,13 @@ The verbose output of each command can be followed to verify that the dummy ante
 
 To enable rotctld support, flyby is restarted using
 ```
-flyby --rotctld-host=localhost
+flyby --rotctld-tracking
 ```
-Other hostnames can also be defined if rotctld is running on a separate host. The default port 4533 is assumed, but can be changed using the `--rotctld-port` option.
+Host and/or port can be defined using `--rotctld-tracking=HOST` or `--rotctld-tracking=HOST:PORT`.
 
 ![Program information](usage_images/program_info.png)
 
-In the main menu, 'i' can be typed to show the screen above, which verifies whether flyby has connected to rotctld. When flyby was started, a number could have been defined for `--rotctld-tracking-horizon`. This can be useful for automatically making flyby start tracking the satellite and prepare the rotor array in the correct direction in advance of the actual AOS of the satellite. This is the "Tracking horizon" shown above. Alternatively, in singletrack mode, pressing 'A' can also be used to manually rotate the antenna towards the AOS azimuth position regardless of the artificial horizon option.
+In the main menu, 'i' can be typed to show the screen above, which verifies whether flyby has connected to rotctld. When flyby was started, a number could have been defined for `--tracking-horizon`. This can be useful for automatically making flyby start tracking the satellite and prepare the rotor array in the correct direction in advance of the actual AOS of the satellite. This is the "Tracking horizon" shown above. Alternatively, in singletrack mode, pressing 'A' can also be used to manually rotate the antenna towards the AOS azimuth position regardless of the artificial horizon option.
 
 ![Autotracking](usage_images/singletrack_autotracking.png)
 
@@ -313,7 +313,7 @@ Antenna adjustment will be activated regardless of whether any transponders are 
 
 If flyby is restarted using
 ```
-flyby --rotctld-host=localhost --rigctld-downlink-host=localhost
+flyby --rotctld-tracking --rigctld-downlink
 ```
 it should be possible to see that the frequency in rigctl also is changing according to the calculated doppler shift of the transponder. Some keyboard shortcuts for frequency operation are available in single track mode:
 
@@ -331,7 +331,7 @@ More options for rotctld and rigctld operation can be reviewed using
 ```
 flyby --help
 ```
-A uplink VFO can e.g. be added using `--rigctld-uplink-host=localhost`.
+A uplink VFO can e.g. be added using `--rigctld-uplink`.
 
 Troubleshooting
 ---------------

@@ -7,11 +7,9 @@
 #include "string_array.h"
 
 #define ROTCTLD_DEFAULT_HOST "localhost"
-#define ROTCTLD_DEFAULT_PORT "4533\0\0"
-#define RIGCTLD_UPLINK_DEFAULT_HOST "localhost"
-#define RIGCTLD_UPLINK_DEFAULT_PORT "4532\0\0"
-#define RIGCTLD_DOWNLINK_DEFAULT_HOST "localhost"
-#define RIGCTLD_DOWNLINK_DEFAULT_PORT "4532\0\0"
+#define ROTCTLD_DEFAULT_PORT "4533"
+#define RIGCTLD_DEFAULT_HOST "localhost"
+#define RIGCTLD_DEFAULT_PORT "4532"
 
 typedef struct {
 	///Whether we are connected to a rotctld instance

@@ -17,12 +17,47 @@
 #include <libgen.h>
 
 //longopt value identificators for command line options without shorthand
-#define FLYBY_OPT_ROTCTLD_PORT 201
 #define FLYBY_OPT_UPLINK_PORT 202
 #define FLYBY_OPT_UPLINK_VFO 203
 #define FLYBY_OPT_DOWNLINK_PORT 204
 #define FLYBY_OPT_DOWNLINK_VFO 205
 #define FLYBY_OPT_ADD_TLE 207
+
+/**
+ * Parse input argument on format host:port to each separate argument.
+ *
+ * \param argument Input argument
+ * \param host Output host
+ * \param port Output port (left untouched if :port is missing from input argument
+ **/
+void parse_to_host_and_port(const char *argument, char *host, char *port)
+{
+	char *trimmed_argument = strdup(argument);
+
+	//remove preceding '=', in case argument was input using a short options flag (e.g. -A=localhost, in which case
+	//'=' would be kept since getopt assumes -Aoptional_argument, not -A=optional_argument).
+	if (argument[0] == '=') {
+		strncpy(trimmed_argument, argument+1, strlen(argument)-1);
+		trimmed_argument[strlen(argument)-1] = '\0';
+	}
+
+	//split input argument localhost:port into localhost and port
+	string_array_t arguments = {0};
+	stringsplit(trimmed_argument, &arguments);
+	int num_arguments = string_array_size(&arguments);
+	if (num_arguments >= 1) {
+		strncpy(host, string_array_get(&arguments, 0), MAX_NUM_CHARS);
+	}
+	if (num_arguments == 2) {
+		strncpy(port, string_array_get(&arguments, 1), MAX_NUM_CHARS);
+	}
+	if ((num_arguments == 0) || (num_arguments > 2)) {
+		fprintf(stderr, "Error in format of argument: expected HOST or HOST:PORT, got %s.\n", argument);
+		exit(1);
+	}
+
+	free(trimmed_argument);
+}
 
 int main(int argc, char **argv)
 {
@@ -34,14 +69,14 @@ int main(int argc, char **argv)
 
 	//rigctl uplink options
 	bool use_rigctld_uplink = false;
-	char rigctld_uplink_host[MAX_NUM_CHARS] = RIGCTLD_UPLINK_DEFAULT_HOST;
-	char rigctld_uplink_port[MAX_NUM_CHARS] = RIGCTLD_UPLINK_DEFAULT_PORT;
+	char rigctld_uplink_host[MAX_NUM_CHARS] = RIGCTLD_DEFAULT_HOST;
+	char rigctld_uplink_port[MAX_NUM_CHARS] = RIGCTLD_DEFAULT_PORT;
 	char rigctld_uplink_vfo[MAX_NUM_CHARS] = {0};
 
 	//rigctl downlink options
 	bool use_rigctld_downlink = false;
-	char rigctld_downlink_host[MAX_NUM_CHARS] = RIGCTLD_DOWNLINK_DEFAULT_HOST;
-	char rigctld_downlink_port[MAX_NUM_CHARS] = RIGCTLD_DOWNLINK_DEFAULT_PORT;
+	char rigctld_downlink_host[MAX_NUM_CHARS] = RIGCTLD_DEFAULT_HOST;
+	char rigctld_downlink_port[MAX_NUM_CHARS] = RIGCTLD_DEFAULT_PORT;
 	char rigctld_downlink_vfo[MAX_NUM_CHARS] = {0};
 
 	//config files
@@ -55,40 +90,56 @@ int main(int argc, char **argv)
 	//command line options
 	struct option_extended options[] = {
 		{{"add-tle-file",		required_argument,	0,	FLYBY_OPT_ADD_TLE},
-			"FILE", "Add TLE file to flyby's TLE database. The base filename of the input file will be used for the internal file, so any existing file with this filename will be overwritten."},
+			"FILE",
+			"Add TLE file to flyby's TLE database. The base filename of the input file will be used for the internal file, so any existing file with this filename will be overwritten."
+		},
 		{{"update-tle-db",		required_argument,	0,	'u'},
-			"FILE", "Update TLE database with TLE file FILE. Multiple files can be specified using the same option multiple times (e.g. -u file1 -u file2 ...). Flyby will exit afterwards. Any new TLEs in the file will be ignored."},
+			"FILE",
+			"Update TLE database with TLE file FILE. Multiple files can be specified using the same option multiple times (e.g. -u file1 -u file2 ...). Flyby will exit afterwards. Any new TLEs in the file will be ignored."
+		},
 		{{"tle-file",			required_argument,	0,	't'},
-			"FILE", "Use FILE as TLE database file. Overrides user and system TLE database files. Multiple files can be specified using this option multiple times (e.g. -t file1 -t file2 ...)."},
+			"FILE",
+			"Use FILE as TLE database file. Overrides user and system TLE database files. Multiple files can be specified using this option multiple times (e.g. -t file1 -t file2 ...)."
+		},
 		{{"qth-file",			required_argument,	0,	'q'},
-			"FILE", "Use FILE as QTH config file. Overrides existing QTH config file."},
-		{{"rotctld-host",		required_argument,	0,	'A'},
-			"HOST", "Connect to a rotctld server with hostname HOST and enable antenna tracking."},
-		{{"rotctld-port",		required_argument,	0,	FLYBY_OPT_ROTCTLD_PORT},
-			"PORT", "Specify rotctld server port."},
-		{{"rotctld-horizon",		required_argument,	0,	'H'},
-			"HORIZON", "Specify elevation threshold for when flyby will start tracking an orbit."},
-		{{"rigctld-uplink-host",		required_argument,	0,	'U'},
-			"HOST", "Connect to specified rigctld server for uplink frequency steering."},
-		{{"rigctld-uplink-port",		required_argument,	0,	FLYBY_OPT_UPLINK_PORT},
-			"PORT", "Specify rigctld uplink port."},
-		{{"rigctld-uplink-vfo",		required_argument,	0,	FLYBY_OPT_UPLINK_VFO},
-			"VFO_NAME", "Specify rigctld uplink VFO."},
-		{{"rigctld-downlink-host",	required_argument,	0,	'D'},
-			"HOST", "Connect to specified rigctld server for downlink frequency steering."},
-		{{"rigctld-downlink-port",	required_argument,	0,	FLYBY_OPT_DOWNLINK_PORT},
-			"PORT", "Specify rigctld downlink port."},
-		{{"rigctld-downlink-vfo",	required_argument,	0,	FLYBY_OPT_DOWNLINK_VFO},
-			"VFO_NAME", "Specify rigctld downlink VFO."},
+			"FILE",
+			"Use FILE as QTH config file. Overrides existing QTH config file."
+		},
+		{{"rotctld-tracking",		optional_argument,	0,	'A'},
+			"HOST[:PORT]",
+			"Connect to a rotctld server and enable antenna tracking. Optionally specify host and port, otherwise use " ROTCTLD_DEFAULT_HOST ":" ROTCTLD_DEFAULT_PORT "."
+		},
+		{{"tracking-horizon",		required_argument,	0,	'H'},
+			"HORIZON",
+			"Specify elevation threshold for when flyby will start tracking an orbit."
+		},
+		{{"rigctld-uplink",		optional_argument,	0,	'U'},
+			"HOST[:PORT]",
+			"Connect to rigctld and enable uplink frequency control. Optionally specify host and port, otherwise use " RIGCTLD_DEFAULT_HOST ":" RIGCTLD_DEFAULT_PORT "."
+		},
+		{{"uplink-vfo",			required_argument,	0,	FLYBY_OPT_UPLINK_VFO},
+			"VFO_NAME",
+			"Specify rigctld uplink VFO."
+		},
+		{{"rigctld-downlink",		optional_argument,	0,	'D'},
+			"HOST[:PORT]",
+			"Connect to rigctld and enable downlink frequency control. Optionally specify host and port, otherwise use " RIGCTLD_DEFAULT_HOST ":" RIGCTLD_DEFAULT_PORT "."
+		},
+		{{"downlink-vfo",		required_argument,	0,	FLYBY_OPT_DOWNLINK_VFO},
+			"VFO_NAME",
+			"Specify rigctld downlink VFO."
+		},
 		{{"help",			no_argument,		0,	'h'},
-			NULL, "Show help."},
+			NULL,
+			"Show help."
+		},
 		{{0, 0, 0, 0}, NULL, NULL}
 	};
 	char usage_instructions[MAX_NUM_CHARS];
 	snprintf(usage_instructions, MAX_NUM_CHARS, "Flyby satellite tracking program\nUsage:\n%s [options]", argv[0]);
 
 	struct option *long_options = extended_to_longopts(options);
-	char short_options[] = "u:t:q:A:H:U:D:h";
+	char short_options[] = "u:t:q:A::H:U::D::h";
 	while (1) {
 		int option_index = 0;
 		int c = getopt_long(argc, argv, short_options, long_options, &option_index);
@@ -112,30 +163,27 @@ int main(int argc, char **argv)
 				break;
 			case 'A': //rotctl
 				use_rotctl = true;
-				strncpy(rotctld_host, optarg, MAX_NUM_CHARS);
-				break;
-			case FLYBY_OPT_ROTCTLD_PORT: //rotctl port
-				strncpy(rotctld_port, optarg, MAX_NUM_CHARS);
+				if (optarg) {
+					parse_to_host_and_port(optarg, rotctld_host, rotctld_port);
+				}
 				break;
 			case 'H': //horizon
 				tracking_horizon = strtod(optarg, NULL);
 				break;
 			case 'U': //uplink
 				use_rigctld_uplink = true;
-				strncpy(rigctld_uplink_host, optarg, MAX_NUM_CHARS);
-				break;
-			case FLYBY_OPT_UPLINK_PORT: //uplink port
-				strncpy(rigctld_uplink_port, optarg, MAX_NUM_CHARS);
+				if (optarg) {
+					parse_to_host_and_port(optarg, rigctld_uplink_host, rigctld_uplink_port);
+				}
 				break;
 			case FLYBY_OPT_UPLINK_VFO: //uplink vfo
 				strncpy(rigctld_uplink_vfo, optarg, MAX_NUM_CHARS);
 				break;
 			case 'D': //downlink
 				use_rigctld_downlink = true;
-				strncpy(rigctld_downlink_host, optarg, MAX_NUM_CHARS);
-				break;
-			case FLYBY_OPT_DOWNLINK_PORT: //downlink port
-				strncpy(rigctld_downlink_port, optarg, MAX_NUM_CHARS);
+				if (optarg) {
+					parse_to_host_and_port(optarg, rigctld_downlink_host, rigctld_downlink_port);
+				}
 				break;
 			case FLYBY_OPT_DOWNLINK_VFO: //downlink vfo
 				strncpy(rigctld_downlink_vfo, optarg, MAX_NUM_CHARS);
@@ -147,6 +195,15 @@ int main(int argc, char **argv)
 			default:
 				exit(1);
 		}
+	}
+
+	if (optind < argc) {
+		fprintf(stderr, "Unparsed arguments:");
+		for (int i=optind; i < argc; i++) {
+			fprintf(stderr, " %s", argv[i]);
+		}
+		fprintf(stderr, "\nMissing '=' between flag and optional argument?\n");
+		exit(1);
 	}
 
 	//add TLE files to XDG data home and exit
@@ -210,7 +267,7 @@ int main(int argc, char **argv)
 	}
 
 	//connect to rotctld
-	rotctld_info_t rotctld = {0};
+	rotctld_info_t rotctld = {.host = ROTCTLD_DEFAULT_HOST, .port = ROTCTLD_DEFAULT_PORT};
 	if (use_rotctl) {
 		rotctld_fail_on_errors(rotctld_connect(rotctld_host, rotctld_port, &rotctld));
 		rotctld_set_tracking_horizon(&rotctld, tracking_horizon);
@@ -230,7 +287,7 @@ int main(int argc, char **argv)
 	}
 
 	//connect to rigctld
-	rigctld_info_t uplink = {0};
+	rigctld_info_t uplink = {.host = RIGCTLD_DEFAULT_HOST, .port = RIGCTLD_DEFAULT_PORT};
 	if (use_rigctld_uplink) {
 		rigctld_fail_on_errors(rigctld_connect(rigctld_uplink_host, rigctld_uplink_port, &uplink));
 
@@ -243,7 +300,7 @@ int main(int argc, char **argv)
 			exit(-1);
 		}
 	}
-	rigctld_info_t downlink = {0};
+	rigctld_info_t downlink = {.host = RIGCTLD_DEFAULT_HOST, .port = RIGCTLD_DEFAULT_PORT};
 	if (use_rigctld_downlink) {
 		rigctld_fail_on_errors(rigctld_connect(rigctld_downlink_host, rigctld_downlink_port, &downlink));
 
