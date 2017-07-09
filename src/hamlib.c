@@ -360,7 +360,6 @@ const char *rigctld_error_message(rigctld_error errorcode)
 rigctld_error rigctld_read_frequency(rigctld_info_t *info, double *ret_frequency)
 {
 	char message[256];
-	double freq;
 
 	//read pending return message
 	sock_readline(info->socket, message, sizeof(message));

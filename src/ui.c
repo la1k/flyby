@@ -14,6 +14,7 @@
 #include "transponder_editor.h"
 #include "multitrack.h"
 #include "locator.h"
+#include "hamlib_settings.h"
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Leftovers from old predict.c-file not sorted elsewhere. Mainly contains run_flyby_curses_ui(), which               //
@@ -768,7 +769,7 @@ void print_main_menu(WINDOW *window)
 
 	column = print_main_menu_option(window, row, column, 'W', "Enable/Disable Satellites");
 	column = print_main_menu_option(window, row, column, 'G', "Edit Ground Station      ");
-	column = print_main_menu_option(window, row, column, 'E', "Edit Transponder Database");
+	column = print_main_menu_option(window, row, column, 'H', "Hamlib settings          ");
 	column = 0;
 	row++;
 	column = print_main_menu_option(window, row, column, 'I', "Program Information      ");
@@ -913,6 +914,8 @@ void run_flyby_curses_ui(bool new_user, const char *qthfile, predict_observer_t 
 	init_pair(6,COLOR_RED,COLOR_WHITE);
 	init_pair(7,COLOR_CYAN,COLOR_RED);
 	init_pair(8,COLOR_RED,COLOR_YELLOW);
+	init_pair(9,COLOR_BLACK,COLOR_GREEN);
+	init_pair(10,COLOR_BLACK,COLOR_YELLOW);
 
 	if (new_user) {
 		qth_editor(qthfile, observer);
@@ -1028,6 +1031,10 @@ void run_flyby_curses_ui(bool new_user, const char *qthfile, predict_observer_t 
 
 						case 'H':
 						case 'h':
+							hamlib_settings(rotctld, downlink, uplink);
+							break;
+
+						case KEY_F(1):
 							multitrack_show_help();
 							break;
 
