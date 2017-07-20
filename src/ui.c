@@ -385,10 +385,15 @@ void qth_editor(const char *qthfile, predict_observer_t *qth)
 	mvprintw(win_row+2,info_col,"Station Latitude  : ");
 	mvprintw(win_row+3,info_col,"Station Longitude : ");
 	mvprintw(win_row+4,info_col,"Station Altitude  : ");
-	mvprintw(win_row+6,info_col-5," Only decimal notation (e.g. 74.2467) allowed");
-	mvprintw(win_row+7,info_col-5," for longitude and latitude.");
-	mvprintw(win_row+9,info_col-5," Navigate using keypad or ENTER. Press ENTER");
-	mvprintw(win_row+10,info_col-5," on last field or ESC to save and exit.");
+
+	mvprintw(win_row-3,info_col-4,"Enter station location using a locator or");
+	mvprintw(win_row-2,info_col-4,"latitude and longitude (decimal notation).");
+
+	mvprintw(win_row+6,info_col-4,"For high accuracy tracking, entering a precise");
+	mvprintw(win_row+7,info_col-4,"longitude and latitude is recommended.");
+
+	mvprintw(win_row+9,info_col-4,"Navigate using keypad or ENTER. Press ENTER");
+	mvprintw(win_row+10,info_col-4,"on last field or ESC to save and exit.");
 
 	//print units
 	attrset(COLOR_PAIR(2)|A_BOLD);
@@ -437,9 +442,10 @@ void qth_editor(const char *qthfile, predict_observer_t *qth)
 				}
 				break;
 			case KEY_BACKSPACE:
+				prev_field = current_field(form);
 				form_driver(form, REQ_DEL_PREV);
 				form_driver(form, REQ_VALIDATION);
-				if (current_field(form) == locator) {
+				if ((prev_field == current_field(form)) && (current_field(form) == locator)) {
 					qth_editor_update_latlon_fields_from_locator(locator, longitude, latitude);
 					qth_editor_update_locator_message(locator, longitude, latitude, locator_message);
 				} else {
