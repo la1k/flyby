@@ -55,7 +55,7 @@ void latlon_to_maidenhead(double mLtd, double mLng, char* mStr)
 void maidenhead_to_latlon(const char *locator, double *ret_longitude, double *ret_latitude)
 {
 	//using the same setup as in getMaidenhead defined above, and applying the algorithm in reverse
-	int i, j, k, l, m, n;
+	int i = 0, j = 0, k = 0, l = 0, m = 0, n = 0;
 
 	double mLng = 0, mLtd = 0;
 	int pos = 0;
