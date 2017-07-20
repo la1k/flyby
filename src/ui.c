@@ -262,25 +262,56 @@ void orbital_elements_display(const char *name, predict_orbital_elements_t *orbi
 void qth_editor_update_latlon_fields_from_locator(FIELD *locator, FIELD *longitude, FIELD *latitude)
 {
 	double longitude_new = 0, latitude_new = 0;
-	maidenhead_to_latlon(field_buffer(locator, 0), &longitude_new, &latitude_new);
+	char *locator_str = strdup(field_buffer(locator, 0));
+	trim_whitespaces_from_end(locator_str);
+	maidenhead_to_latlon(locator_str, &longitude_new, &latitude_new);
+
 	char temp[MAX_NUM_CHARS];
 	snprintf(temp, MAX_NUM_CHARS, "%f", longitude_new);
 	set_field_buffer(longitude, 0, temp);
 	snprintf(temp, MAX_NUM_CHARS, "%f", latitude_new);
 	set_field_buffer(latitude, 0, temp);
+
+	free(locator_str);
 }
 
-void qth_editor_update_locator_field_from_latlon(FIELD *longitude, FIELD *latitude, FIELD *locator)
+char *qth_editor_locator_from_latlon(FIELD *longitude, FIELD *latitude)
 {
 	double curr_longitude = strtod(field_buffer(longitude, 0), NULL);
 	double curr_latitude = strtod(field_buffer(latitude, 0), NULL);
 	char locator_str[MAX_NUM_CHARS];
 	latlon_to_maidenhead(curr_latitude, curr_longitude, locator_str);
-	set_field_buffer(locator, 0, locator_str);
+	return strdup(locator_str);
 }
 
-#define QTH_FIELD_LENGTH 10
-#define NUM_QTH_FIELDS 5
+void qth_editor_update_locator_field_from_latlon(FIELD *longitude, FIELD *latitude, FIELD *locator)
+{
+	char *locator_str = qth_editor_locator_from_latlon(longitude, latitude);
+	set_field_buffer(locator, 0, locator_str);
+	free(locator_str);
+}
+
+void qth_editor_update_locator_message(FIELD *locator, FIELD *longitude, FIELD *latitude, FIELD *locator_message)
+{
+	char *locator_str_in_field = strdup(field_buffer(locator, 0));
+	trim_whitespaces_from_end(locator_str_in_field);
+	char *locator_str_assumed = qth_editor_locator_from_latlon(longitude, latitude);
+
+	if (strcmp(locator_str_in_field, locator_str_assumed) != 0) {
+		char locator_message_str[MAX_NUM_CHARS];
+		snprintf(locator_message_str, MAX_NUM_CHARS, "(%s assumed)", locator_str_assumed);
+		set_field_buffer(locator_message, 0, locator_message_str);
+	} else {
+		set_field_buffer(locator_message, 0, "");
+	}
+	free(locator_str_in_field);
+	free(locator_str_assumed);
+	refresh();
+}
+
+#define QTH_ENTRY_FIELD_LENGTH 10
+#define QTH_DESCRIPTION_FIELD_LENGTH 20
+#define NUM_QTH_FIELDS 9
 #define INPUT_NUM_CHARS 128
 
 /**
@@ -304,17 +335,25 @@ void qth_editor(const char *qthfile, predict_observer_t *qth)
 
 	//set up form for QTH editing
 	FIELD *fields[NUM_QTH_FIELDS+1] = {
-		new_field(1, QTH_FIELD_LENGTH, 0, 0, 0, 0),
-		new_field(1, QTH_FIELD_LENGTH, 1, 0, 0, 0),
-		new_field(1, QTH_FIELD_LENGTH, 2, 0, 0, 0),
-		new_field(1, QTH_FIELD_LENGTH, 3, 0, 0, 0),
-		new_field(1, QTH_FIELD_LENGTH, 4, 0, 0, 0),
+		new_field(1, QTH_ENTRY_FIELD_LENGTH, 0, 0, 0, 0),
+		new_field(1, QTH_ENTRY_FIELD_LENGTH, 1, 0, 0, 0),
+		new_field(1, QTH_DESCRIPTION_FIELD_LENGTH, 1, QTH_ENTRY_FIELD_LENGTH+1, 0, 0),
+		new_field(1, QTH_ENTRY_FIELD_LENGTH, 2, 0, 0, 0),
+		new_field(1, QTH_DESCRIPTION_FIELD_LENGTH, 2, QTH_ENTRY_FIELD_LENGTH+1, 0, 0),
+		new_field(1, QTH_ENTRY_FIELD_LENGTH, 3, 0, 0, 0),
+		new_field(1, QTH_DESCRIPTION_FIELD_LENGTH, 3, QTH_ENTRY_FIELD_LENGTH+1, 0, 0),
+		new_field(1, QTH_ENTRY_FIELD_LENGTH, 4, 0, 0, 0),
+		new_field(1, QTH_DESCRIPTION_FIELD_LENGTH, 4, QTH_ENTRY_FIELD_LENGTH+1, 0, 0),
 		NULL};
 	FIELD *name = fields[0];
 	FIELD *locator = fields[1];
-	FIELD *latitude = fields[2];
-	FIELD *longitude = fields[3];
-	FIELD *altitude = fields[4];
+	FIELD *locator_message = fields[2];
+	FIELD *latitude = fields[3];
+	FIELD *latitude_description = fields[4];
+	FIELD *longitude = fields[5];
+	FIELD *longitude_description = fields[6];
+	FIELD *altitude = fields[7];
+	FIELD *altitude_description = fields[8];
 	FORM *form = new_form(fields);
 	for (int i=0; i < NUM_QTH_FIELDS; i++) {
 		set_field_fore(fields[i], COLOR_PAIR(2)|A_BOLD);
@@ -322,16 +361,19 @@ void qth_editor(const char *qthfile, predict_observer_t *qth)
 		set_max_field(fields[i], INPUT_NUM_CHARS);
 	}
 
+	field_opts_off(locator_message, O_ACTIVE);
+	field_opts_off(latitude_description, O_ACTIVE);
+	field_opts_off(longitude_description, O_ACTIVE);
+	field_opts_off(altitude_description, O_ACTIVE);
+
 	//set up windows
-	int win_height = NUM_QTH_FIELDS+1;
-	int win_width = QTH_FIELD_LENGTH;
 	int win_row = 8;
 	int win_col = 40;
+	int win_height, win_width;
+	scale_form(form, &win_height, &win_width);
 	WINDOW *form_win = newwin(win_height, win_width, win_row, win_col);
-	int rows, cols;
-	scale_form(form, &rows, &cols);
 	set_form_win(form, form_win);
-	set_form_sub(form, derwin(form_win, rows, cols, 0, 0));
+	set_form_sub(form, derwin(form_win, win_height, win_width, 0, 0));
 	keypad(form_win, TRUE);
 	post_form(form);
 
@@ -350,9 +392,9 @@ void qth_editor(const char *qthfile, predict_observer_t *qth)
 
 	//print units
 	attrset(COLOR_PAIR(2)|A_BOLD);
-	mvprintw(win_row+2,win_col+win_width+1,"[DegN]",qth->latitude*180.0/M_PI);
-	mvprintw(win_row+3,win_col+win_width+1,"[DegE]",qth->longitude*180.0/M_PI);
-	mvprintw(win_row+4,win_col+win_width+1,"[m]",qth->altitude);
+	set_field_buffer(latitude_description, 0, "[DegN]");
+	set_field_buffer(longitude_description, 0, "[DegE]");
+	set_field_buffer(altitude_description, 0, "[m]");
 
 	//fill form with QTH contents
 	set_field_buffer(name, 0, qth->name);
@@ -370,6 +412,7 @@ void qth_editor(const char *qthfile, predict_observer_t *qth)
 
 	//handle input characters to QTH form
 	bool run_form = true;
+	FIELD *prev_field = current_field(form);
 	while (run_form) {
 		int key = wgetch(form_win);
 
@@ -387,7 +430,7 @@ void qth_editor(const char *qthfile, predict_observer_t *qth)
 				form_driver(form, REQ_NEXT_CHAR);
 				break;
 			case 10:
-				if (current_field(form) == fields[NUM_QTH_FIELDS-1]) {
+				if (current_field(form) == altitude) {
 					run_form = false;
 				} else {
 					form_driver(form, REQ_NEXT_FIELD);
@@ -398,6 +441,7 @@ void qth_editor(const char *qthfile, predict_observer_t *qth)
 				form_driver(form, REQ_VALIDATION);
 				if (current_field(form) == locator) {
 					qth_editor_update_latlon_fields_from_locator(locator, longitude, latitude);
+					qth_editor_update_locator_message(locator, longitude, latitude, locator_message);
 				} else {
 					qth_editor_update_locator_field_from_latlon(longitude, latitude, locator);
 				}
@@ -413,6 +457,7 @@ void qth_editor(const char *qthfile, predict_observer_t *qth)
 				form_driver(form, REQ_VALIDATION); //update buffer with field contents
 				if (current_field(form) == locator) {
 					qth_editor_update_latlon_fields_from_locator(locator, longitude, latitude);
+					qth_editor_update_locator_message(locator, longitude, latitude, locator_message);
 				} else {
 					qth_editor_update_locator_field_from_latlon(longitude, latitude, locator);
 				}
