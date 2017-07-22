@@ -116,13 +116,20 @@ char *xdg_config_home()
 
 void create_xdg_dirs()
 {
-	//create ~/.config/flyby
+
+	//create ~/.config
 	char *config_home = xdg_config_home();
+	struct stat s;
+	int err = stat(config_home, &s);
+	if ((err == -1) && (errno == ENOENT)) {
+		mkdir(config_home, 0700);
+	}
+
+	//create ~/.config/flyby
 	char config_path[MAX_NUM_CHARS] = {0};
 	snprintf(config_path, MAX_NUM_CHARS, "%s%s", config_home, FLYBY_RELATIVE_ROOT_PATH);
 	free(config_home);
-	struct stat s;
-	int err = stat(config_path, &s);
+	err = stat(config_path, &s);
 	if ((err == -1) && (errno == ENOENT)) {
 		mkdir(config_path, 0777);
 	}
