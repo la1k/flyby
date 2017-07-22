@@ -55,7 +55,7 @@ char* qth_default_writepath()
 
 void qth_to_file(const char *qth_path, predict_observer_t *qth)
 {
-    create_xdg_dirs();
+  create_xdg_dirs();
 
 	FILE *fd;
 
