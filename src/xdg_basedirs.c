@@ -21,6 +21,8 @@
 #define XDG_CONFIG_HOME "XDG_CONFIG_HOME"
 #define XDG_CONFIG_HOME_DEFAULT ".config/"
 
+#define XDG_DATA_BASE ".local/"
+
 /**
  * Check if dirpath contains a backslash at the end, and append one if not.
  *
@@ -135,6 +137,14 @@ void create_xdg_dirs()
 	}
 
 	//create ~/.local
+	char *data_base = xdg_home(XDG_DATA_BASE, XDG_DATA_BASE);
+	err = stat(data_base, &s);
+	if ((err == -1) && (errno == ENOENT)) {
+		mkdir(data_base, 0700);
+	}
+	free(data_base);
+
+	//create ~/.local/share
 	char *data_home = xdg_data_home();
 	err = stat(data_home, &s);
 	if ((err == -1) && (errno == ENOENT)) {
