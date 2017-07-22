@@ -134,8 +134,14 @@ void create_xdg_dirs()
 		mkdir(config_path, 0777);
 	}
 
-	//create ~/.local/share/flyby
+	//create ~/.local
 	char *data_home = xdg_data_home();
+	err = stat(data_home, &s);
+	if ((err == -1) && (errno == ENOENT)) {
+		mkdir(data_home, 0700);
+	}
+
+	//create ~/.local/share/flyby
 	char data_path[MAX_NUM_CHARS] = {};
 	snprintf(data_path, MAX_NUM_CHARS, "%s%s", data_home, FLYBY_RELATIVE_ROOT_PATH);
 	err = stat(data_path, &s);
