@@ -21,6 +21,8 @@
 #define XDG_CONFIG_HOME "XDG_CONFIG_HOME"
 #define XDG_CONFIG_HOME_DEFAULT ".config/"
 
+#define XDG_DATA_BASE ".local/"
+
 /**
  * Check if dirpath contains a backslash at the end, and append one if not.
  *
@@ -116,19 +118,40 @@ char *xdg_config_home()
 
 void create_xdg_dirs()
 {
-	//create ~/.config/flyby
+
+	//create ~/.config
 	char *config_home = xdg_config_home();
+	struct stat s;
+	int err = stat(config_home, &s);
+	if ((err == -1) && (errno == ENOENT)) {
+		mkdir(config_home, 0700);
+	}
+
+	//create ~/.config/flyby
 	char config_path[MAX_NUM_CHARS] = {0};
 	snprintf(config_path, MAX_NUM_CHARS, "%s%s", config_home, FLYBY_RELATIVE_ROOT_PATH);
 	free(config_home);
-	struct stat s;
-	int err = stat(config_path, &s);
+	err = stat(config_path, &s);
 	if ((err == -1) && (errno == ENOENT)) {
 		mkdir(config_path, 0777);
 	}
 
-	//create ~/.local/share/flyby
+	//create ~/.local
+	char *data_base = xdg_home(XDG_DATA_BASE, XDG_DATA_BASE);
+	err = stat(data_base, &s);
+	if ((err == -1) && (errno == ENOENT)) {
+		mkdir(data_base, 0700);
+	}
+	free(data_base);
+
+	//create ~/.local/share
 	char *data_home = xdg_data_home();
+	err = stat(data_home, &s);
+	if ((err == -1) && (errno == ENOENT)) {
+		mkdir(data_home, 0700);
+	}
+
+	//create ~/.local/share/flyby
 	char data_path[MAX_NUM_CHARS] = {};
 	snprintf(data_path, MAX_NUM_CHARS, "%s%s", data_home, FLYBY_RELATIVE_ROOT_PATH);
 	err = stat(data_path, &s);
