@@ -243,7 +243,7 @@ void whitelist_from_file(const char *file, struct tle_db *db);
 void whitelist_to_file(const char *filename, struct tle_db *db);
 
 /**
- * Write enabled/disabled flags for each TLE entry to default writepath (XDG_CONFIG_HOME/flyby/flyby.whitelist).
+ * Write enabled/disabled flags for each TLE entry to default writepath (XDG_CONFIG_HOME/flyby/flyby.whitelist). Creates the directory if missing.
  *
  * \param db TLE database
  **/

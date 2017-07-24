@@ -38,7 +38,7 @@ int qth_from_file(const char *qth_file, predict_observer_t *ret_observer);
 void qth_to_file(const char *qth_path, predict_observer_t *qth);
 
 /**
- * Get local user qth filepath (XDG_CONFIG_HOME/flyby/flyby.qth, AKA ~/.config/flyby/flyby.qth).
+ * Get local user qth filepath (XDG_CONFIG_HOME/flyby/flyby.qth, AKA ~/.config/flyby/flyby.qth). Creates the directory if missing.
  **/
 char* qth_default_writepath();
 

@@ -300,7 +300,7 @@ int tle_db_to_file(const char *filename, struct tle_db *tle_db)
 /**
  * Get filename to put TLE updates in when the TLE to update are located within system-wide, non-writable locations.
  * Uses XDG_DATA_HOME/flyby/tle/tle-updatefile-[DATE]-[TIME]-[NUMBER].tle, and loops through [NUMBER] until a non-existing
- * file is found.
+ * file is found. Creates the directory if missing.
  **/
 char *tle_db_updatefile_writepath()
 {

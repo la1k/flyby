@@ -123,8 +123,9 @@ int transponder_db_from_file(const char *db_file, const struct tle_db *tle_db, s
 void transponder_db_to_file(const char *filename, struct tle_db *tle_db, struct transponder_db *transponder_db, bool *should_write);
 
 /**
- * Write transponder database to $XDG_DATA_HOME/flyby/flyby.db. Writes only entries
- * that are marked with LOCATION_DATA_HOME or LOCATION_TRANSIENT in the `location` field.
+ * Write transponder database to $XDG_DATA_HOME/flyby/flyby.db. Creates the
+ * directory if missing. Writes only entries that are marked with
+ * LOCATION_DATA_HOME or LOCATION_TRANSIENT in the `location` field.
  *
  * Entries that were not originally loaded from XDG_CONFIG_HOME, but should
  * be used to update the user database, should be marked with LOCATION_TRANSIENT or LOCATION_DATA_HOME.
