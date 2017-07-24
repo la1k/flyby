@@ -98,31 +98,35 @@ void test_xdg_config_home(void **param)
 	assert_string_equal(xdg_config_home(), "./" DEFAULT_XDG_CONFIG_HOME);
 }
 
-void test_create_xdg_dirs(void **param)
+/**
+ * Add extra tailing directory to a path string.
+ *
+ * \param basepath Base path
+ * \param newdir Tailing directory
+ * \return basepath/newdir
+ **/
+char *add_to_path(const char *basepath, const char *newdir)
 {
-	//create temporary directory for XDG_DATA_HOME and XDG_CONFIG_HOME
-	char temp_xdg_data_home[] = "/tmp/flybyXXXXXXXX";
-	mkdtemp(temp_xdg_data_home);
-	setenv("XDG_DATA_HOME", temp_xdg_data_home, 1);
-	assert_true(directory_exists(temp_xdg_data_home));
+	int length = strlen(basepath) + strlen(newdir) + 1;
+	char *ret_string = malloc(length*sizeof(char));
+	snprintf(ret_string, length, "%s/%s", basepath, newdir);
+	return ret_string;
+}
 
-	char temp_xdg_config_home[] = "/tmp/flybyXXXXXXXX";
-	mkdtemp(temp_xdg_config_home);
-	setenv("XDG_CONFIG_HOME", temp_xdg_config_home, 1);
-	assert_true(directory_exists(temp_xdg_config_home));
-
-	//create full path strings for full flyby config path, full flyby data path and full flyby tle path
-	int config_length = strlen(temp_xdg_config_home) + strlen(FLYBY_RELATIVE_ROOT_PATH) + 1;
-	char *flyby_config_dir = malloc(config_length*sizeof(char));
-	snprintf(flyby_config_dir, config_length, "%s/%s", temp_xdg_config_home, FLYBY_RELATIVE_ROOT_PATH);
-
-	int data_length = strlen(temp_xdg_data_home) + strlen(FLYBY_RELATIVE_ROOT_PATH) + 1;
-	char *flyby_data_dir = malloc(data_length*sizeof(char));
-	snprintf(flyby_data_dir, data_length, "%s/%s", temp_xdg_data_home, FLYBY_RELATIVE_ROOT_PATH);
-
-	int tle_length = data_length + strlen(TLE_RELATIVE_DIR_PATH);
-	char *flyby_tle_dir = malloc(tle_length*sizeof(char));
-	snprintf(flyby_tle_dir, tle_length, "%s/%s", temp_xdg_data_home, TLE_RELATIVE_DIR_PATH);
+/**
+ * Check that full flyby config/data directories (XDG_DATA_HOME/flyby/tles,
+ * XDG_CONFIG_HOME/flyby) can be created given the current definitions of
+ * XDG_DATA_HOME and XDG_CONFIG_HOME and remove the directories again. Called
+ * from the test_create_xdg_dirs_when_*-functions.
+ **/
+void test_create_xdg_dirs()
+{
+	//construct expected paths
+	char *xdg_data_home_basepath = xdg_data_home();
+	char *xdg_config_home_basepath = xdg_config_home();
+	char *flyby_config_dir = add_to_path(xdg_config_home_basepath, FLYBY_RELATIVE_ROOT_PATH);
+	char *flyby_data_dir = add_to_path(xdg_data_home_basepath, FLYBY_RELATIVE_ROOT_PATH);
+	char *flyby_tle_dir = add_to_path(xdg_data_home_basepath, TLE_RELATIVE_DIR_PATH);
 
 	//check that paths do not exist yet
 	assert_false(directory_exists(flyby_config_dir));
@@ -140,12 +144,41 @@ void test_create_xdg_dirs(void **param)
 	rmdir(flyby_tle_dir);
 	rmdir(flyby_data_dir);
 	rmdir(flyby_config_dir);
-	rmdir(temp_xdg_data_home);
-	rmdir(temp_xdg_config_home);
+	
+	assert_false(directory_exists(flyby_config_dir));
+	assert_false(directory_exists(flyby_data_dir));
+	assert_false(directory_exists(flyby_tle_dir));
 
 	free(flyby_config_dir);
 	free(flyby_data_dir);
 	free(flyby_tle_dir);
+
+	free(xdg_data_home_basepath);
+	free(xdg_config_home_basepath);
+}
+
+void test_create_xdg_dirs_when_xdg_directories_are_welldefined(void **param)
+{
+	//create temporary directory for XDG_DATA_HOME and XDG_CONFIG_HOME
+	char temp_xdg_data_home[] = "/tmp/flybyXXXXXXXX";
+	mkdtemp(temp_xdg_data_home);
+	setenv("XDG_DATA_HOME", temp_xdg_data_home, 1);
+	assert_true(directory_exists(temp_xdg_data_home));
+
+	char temp_xdg_config_home[] = "/tmp/flybyXXXXXXXX";
+	mkdtemp(temp_xdg_config_home);
+	setenv("XDG_CONFIG_HOME", temp_xdg_config_home, 1);
+	assert_true(directory_exists(temp_xdg_config_home));
+
+	//check that directories can be created correctly
+	test_create_xdg_dirs();
+
+	//cleanup
+	rmdir(temp_xdg_data_home);
+	rmdir(temp_xdg_config_home);
+
+	assert_false(directory_exists(temp_xdg_data_home));
+	assert_false(directory_exists(temp_xdg_config_home));
 }
 
 int main()
@@ -155,7 +188,7 @@ int main()
 		cmocka_unit_test(test_xdg_config_dirs),
 		cmocka_unit_test(test_xdg_config_home),
 		cmocka_unit_test(test_xdg_data_home),
-		cmocka_unit_test(test_create_xdg_dirs)};
+		cmocka_unit_test(test_create_xdg_dirs_when_xdg_directories_are_welldefined)};
 
 	int rc = cmocka_run_group_tests(tests, NULL, NULL);
 	return rc;
