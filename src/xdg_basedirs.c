@@ -116,54 +116,82 @@ char *xdg_config_home()
 	return xdg_home(XDG_CONFIG_HOME, XDG_CONFIG_HOME_DEFAULT);
 }
 
+bool directory_exists(const char *dirpath)
+{
+	struct stat s;
+	int err = stat(dirpath, &s);
+	if ((err == -1) && (errno == ENOENT)) {
+		return false;
+	}
+	return true;
+}
+
+#include <libgen.h>
+
+/**
+ * Creates all missing directories that are a part of the input path.  Exits
+ * the application ungracefully if it is not possible to create the given
+ * directories or if the full deconstructed path back to the root directory
+ * somehow should not exist.
+ *
+ * \param full_path Input path to decompose and create
+ **/
+void create_path_if_missing(const char *full_path)
+{
+	char *current_path = strdup(full_path);
+	char *previous_path = strdup("");
+
+	string_array_t paths_to_create = {0};
+
+	//find non-existing parts of the input path
+	while (true) {
+		//reached part of the path that already exists
+		if (directory_exists(current_path)) {
+			break;
+		}
+
+		//unable to decompose further, but failed above check.
+		if (strcmp(previous_path, current_path) == 0) {
+			fprintf(stderr, "Fatal: Failed to track path '%s' back to a well-defined directory root. Path '%s' does not exist. Exiting.\n", full_path, current_path);
+			exit(1);
+		}
+
+		//add to list over directories to create
+		string_array_add(&paths_to_create, current_path);
+		free(previous_path);
+		previous_path = strdup(current_path);
+
+		//decompose path further
+		char *current_dirname = strdup(dirname(current_path));
+		free(current_path);
+		current_path = current_dirname;
+	}
+	free(current_path);
+	free(previous_path);
+
+	//create non-existing directories along full path
+	for (int i = string_array_size(&paths_to_create)-1; i >= 0; i--) {
+		int retcode = mkdir(string_array_get(&paths_to_create, i), 0700);
+		if (retcode != 0) {
+			fprintf(stderr, "Fatal: failed to create directory %s. Exiting.\n", string_array_get(&paths_to_create, i));
+			exit(1);
+		}
+	}
+}
+
 void create_xdg_dirs()
 {
-
-	//create ~/.config
+	//create XDG_CONFIG_HOME/flyby
 	char *config_home = xdg_config_home();
-	struct stat s;
-	int err = stat(config_home, &s);
-	if ((err == -1) && (errno == ENOENT)) {
-		mkdir(config_home, 0700);
-	}
-
-	//create ~/.config/flyby
 	char config_path[MAX_NUM_CHARS] = {0};
 	snprintf(config_path, MAX_NUM_CHARS, "%s%s", config_home, FLYBY_RELATIVE_ROOT_PATH);
+	create_path_if_missing(config_path);
 	free(config_home);
-	err = stat(config_path, &s);
-	if ((err == -1) && (errno == ENOENT)) {
-		mkdir(config_path, 0700);
-	}
 
-	//create ~/.local
-	char *data_base = xdg_home(XDG_DATA_BASE, XDG_DATA_BASE);
-	err = stat(data_base, &s);
-	if ((err == -1) && (errno == ENOENT)) {
-		mkdir(data_base, 0700);
-	}
-	free(data_base);
-
-	//create ~/.local/share
+	//create XDG_DATA_HOME/flyby/tles
 	char *data_home = xdg_data_home();
-	err = stat(data_home, &s);
-	if ((err == -1) && (errno == ENOENT)) {
-		mkdir(data_home, 0700);
-	}
-
-	//create ~/.local/share/flyby
 	char data_path[MAX_NUM_CHARS] = {};
-	snprintf(data_path, MAX_NUM_CHARS, "%s%s", data_home, FLYBY_RELATIVE_ROOT_PATH);
-	err = stat(data_path, &s);
-	if ((err == -1) && (errno == ENOENT)) {
-		mkdir(data_path, 0700);
-	}
-
-	//create ~/.local/share/flyby/tles
 	snprintf(data_path, MAX_NUM_CHARS, "%s%s", data_home, TLE_RELATIVE_DIR_PATH);
-	err = stat(data_path, &s);
-	if ((err == -1) && (errno == ENOENT)) {
-		mkdir(data_path, 0700);
-	}
+	create_path_if_missing(data_path);
 	free(data_home);
 }

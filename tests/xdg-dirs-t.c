@@ -13,15 +13,7 @@
 #include <stddef.h>
 #include <cmocka.h>
 
-bool directory_exists(const char *dirpath)
-{
-	struct stat s;
-	int err = stat(dirpath, &s);
-	if ((err == -1) && (errno == ENOENT)) {
-		return false;
-	}
-	return true;
-}
+bool directory_exists(const char *dirpath);
 
 void test_directory_exists(void **param)
 {
@@ -108,7 +100,7 @@ void test_xdg_config_home(void **param)
  **/
 char *add_to_path(const char *basepath, const char *newdir)
 {
-	int length = strlen(basepath) + strlen(newdir) + 1;
+	int length = strlen(basepath) + strlen(newdir) + 2;
 	char *ret_string = malloc(length*sizeof(char));
 	snprintf(ret_string, length, "%s/%s", basepath, newdir);
 	return ret_string;
@@ -201,8 +193,8 @@ void test_create_xdg_dirs_when_dotlocal_and_dotconfig_have_not_been_created(void
 	assert_false(directory_exists(config_home_path));
 
 	//ensure that XDG_DATA_HOME and XDG_CONFIG_HOME are as expected
-	char *expected_data_home_path = add_to_path(temp_home_dir, DEFAULT_XDG_DATA_HOME "/");
-	char *expected_config_home_path = add_to_path(temp_home_dir, DEFAULT_XDG_CONFIG_HOME "/");
+	char *expected_data_home_path = add_to_path(temp_home_dir, DEFAULT_XDG_DATA_HOME);
+	char *expected_config_home_path = add_to_path(temp_home_dir, DEFAULT_XDG_CONFIG_HOME);
 	assert_string_equal(data_home_path, expected_data_home_path);
 	assert_string_equal(config_home_path, expected_config_home_path);
 
