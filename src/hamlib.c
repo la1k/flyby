@@ -79,8 +79,6 @@ void rotctld_connect(const char *rotctld_host, const char *rotctld_port, rotctld
 	strncpy(ret_info->port, rotctld_port, MAX_NUM_CHARS);
 	ret_info->tracking_horizon = 0;
 
-	ret_info->update_time_interval = 0;
-	ret_info->prev_cmd_time = 0;
 	ret_info->prev_cmd_azimuth = 0;
 	ret_info->prev_cmd_elevation = 0;
 	ret_info->first_cmd_sent = false;
@@ -89,13 +87,6 @@ void rotctld_connect(const char *rotctld_host, const char *rotctld_port, rotctld
 void rotctld_set_tracking_horizon(rotctld_info_t *info, double horizon)
 {
 	info->tracking_horizon = horizon;
-}
-
-void rotctld_set_update_interval(rotctld_info_t *info, int time_interval)
-{
-	if (time_interval >= 0) {
-		info->update_time_interval = time_interval;
-	}
 }
 
 bool angles_differ(double prev_angle, double angle)
@@ -112,8 +103,6 @@ bool rotctld_directions_differ(rotctld_info_t *info, double azimuth, double elev
 
 void rotctld_track(rotctld_info_t *info, double azimuth, double elevation)
 {
-	time_t curr_time = time(NULL);
-	bool use_update_interval = (info->update_time_interval > 0);
 	bool coordinates_differ = rotctld_directions_differ(info, azimuth, elevation);
 
 	if (!info->first_cmd_sent) {
@@ -121,11 +110,9 @@ void rotctld_track(rotctld_info_t *info, double azimuth, double elevation)
 		info->first_cmd_sent = true;
 	}
 
-	//send when coordinates differ or when a update interval has been specified
-	if ((coordinates_differ && !use_update_interval) || (use_update_interval && ((curr_time - info->update_time_interval) >= info->prev_cmd_time))) {
+	if (coordinates_differ) {
 		info->prev_cmd_azimuth = azimuth;
 		info->prev_cmd_elevation = elevation;
-		info->prev_cmd_time = curr_time;
 
 		char message[30];
 

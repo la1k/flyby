@@ -21,12 +21,8 @@ typedef struct {
 	char host[MAX_NUM_CHARS];
 	///Port
 	char port[MAX_NUM_CHARS];
-	///Time interval for rotctld update. Zero means that commands will be sent only when angles change. Defaults to 0.
-	int update_time_interval;
 	///Horizon above which we start tracking. Defaults to 0.
 	double tracking_horizon;
-	///Previous time at which command was sent
-	time_t prev_cmd_time;
 	///Whether first command has been sent, and whether we can guarantee that prev_cmd_azimuth/elevation contain correct values
 	bool first_cmd_sent;
 	///Previous sent azimuth
@@ -81,16 +77,6 @@ void rotctld_track(rotctld_info_t *info, double azimuth, double elevation);
  * Set current tracking horizon.
  **/
 void rotctld_set_tracking_horizon(rotctld_info_t *info, double horizon);
-
-/**
- * Set current update interval.
- **/
-void rotctld_set_update_interval(rotctld_info_t *info, int time_interval);
-
-/**
- * Set current rotor precision in degrees.
- **/
-void rotctld_set_precision(rotctld_info_t *info, double precision);
 
 /**
  * Connect to rigctld. 

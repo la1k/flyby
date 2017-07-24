@@ -835,9 +835,6 @@ void general_program_info(const char *qthfile, struct tle_db *tle_db, struct tra
 
 		printw("\t\t - Tracking horizon: %.2f degrees. ", rotctld->tracking_horizon);
 
-		if (rotctld->update_time_interval > 0)
-			printw("Update every %d seconds", rotctld->update_time_interval);
-
 		printw("\n");
 	} else {
 		printw("\t\tAutoTracking    : Not enabled\n");
