@@ -34,9 +34,6 @@ Specify rotctld server port.
 \fB-H,--rotctld-horizon=HORIZON\fP
 Specify elevation threshold for when flyby will start tracking an orbit.
 
-\fB--rotctld-update-interval=SECS\fP
-Send updates to rotctld other SECS seconds instead of when (azimuth,elevation) changes.
-
 \fB-U,--rigctld-uplink-host=HOST\fP
 Connect to specified rigctld server for uplink frequency steering.
 
