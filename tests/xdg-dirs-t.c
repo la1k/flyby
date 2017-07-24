@@ -13,15 +13,7 @@
 #include <stddef.h>
 #include <cmocka.h>
 
-bool directory_exists(const char *dirpath)
-{
-	struct stat s;
-	int err = stat(dirpath, &s);
-	if ((err == -1) && (errno == ENOENT)) {
-		return false;
-	}
-	return true;
-}
+bool directory_exists(const char *dirpath);
 
 void test_directory_exists(void **param)
 {
@@ -108,7 +100,7 @@ void test_xdg_config_home(void **param)
  **/
 char *add_to_path(const char *basepath, const char *newdir)
 {
-	int length = strlen(basepath) + strlen(newdir) + 1;
+	int length = strlen(basepath) + strlen(newdir) + 2;
 	char *ret_string = malloc(length*sizeof(char));
 	snprintf(ret_string, length, "%s/%s", basepath, newdir);
 	return ret_string;
@@ -189,11 +181,11 @@ void test_create_xdg_dirs_when_dotlocal_and_dotconfig_have_not_been_created(void
 	char temp_home_dir[] = "/tmp/flybyXXXXXXXX";
 	mkdtemp(temp_home_dir);
 	setenv("HOME", temp_home_dir, 1);
+	assert_true(directory_exists(temp_home_dir));
 
 	//ensure XDG_*_HOME are empty
 	setenv("XDG_DATA_HOME", "", 1);
 	setenv("XDG_CONFIG_HOME", "", 1);
-	assert_true(directory_exists(temp_home_dir));
 
 	char *data_home_path = xdg_data_home();
 	char *config_home_path = xdg_config_home();
@@ -201,8 +193,8 @@ void test_create_xdg_dirs_when_dotlocal_and_dotconfig_have_not_been_created(void
 	assert_false(directory_exists(config_home_path));
 
 	//ensure that XDG_DATA_HOME and XDG_CONFIG_HOME are as expected
-	char *expected_data_home_path = add_to_path(temp_home_dir, DEFAULT_XDG_DATA_HOME "/");
-	char *expected_config_home_path = add_to_path(temp_home_dir, DEFAULT_XDG_CONFIG_HOME "/");
+	char *expected_data_home_path = add_to_path(temp_home_dir, DEFAULT_XDG_DATA_HOME);
+	char *expected_config_home_path = add_to_path(temp_home_dir, DEFAULT_XDG_CONFIG_HOME);
 	assert_string_equal(data_home_path, expected_data_home_path);
 	assert_string_equal(config_home_path, expected_config_home_path);
 
@@ -229,6 +221,41 @@ void test_create_xdg_dirs_when_dotlocal_and_dotconfig_have_not_been_created(void
 	free(config_home_path);
 }
 
+void test_create_xdg_dirs_when_xdg_directories_are_arbitrary_and_missing(void **param)
+{
+	//create temporary base directory
+	char temp_base[] = "/tmp/flybyXXXXXXXX";
+	mkdtemp(temp_base);
+	assert_true(directory_exists(temp_base));
+
+	//specify XDG directories to something arbitrary in the base directory
+	char *expected_data_home = add_to_path(temp_base, "arbitrarydata/data/directory");
+	char *expected_config_home = add_to_path(temp_base, "arbitraryconf/config/directory");
+	setenv("XDG_DATA_HOME", expected_data_home, 1);
+	setenv("XDG_CONFIG_HOME", expected_config_home, 1);
+	assert_false(directory_exists(expected_data_home));
+	assert_false(directory_exists(expected_config_home));
+
+	//test directory creation
+	test_create_xdg_dirs();
+	
+	assert_true(directory_exists(expected_data_home));
+	assert_true(directory_exists(expected_config_home));
+	free(expected_data_home);
+	free(expected_config_home);
+
+	//cleanup
+	char *dir;
+	dir = add_to_path(temp_base, "arbitrarydata/data/directory"); rmdir(dir); free(dir);
+	dir = add_to_path(temp_base, "arbitrarydata/data"); rmdir(dir); free(dir);
+	dir = add_to_path(temp_base, "arbitrarydata"); rmdir(dir); free(dir);
+	dir = add_to_path(temp_base, "arbitraryconf/config/directory"); rmdir(dir); free(dir);
+	dir = add_to_path(temp_base, "arbitraryconf/config"); rmdir(dir); free(dir);
+	dir = add_to_path(temp_base, "arbitraryconf"); rmdir(dir); free(dir);
+	rmdir(temp_base);
+	assert_false(directory_exists(temp_base));
+}
+
 int main()
 {
 	struct CMUnitTest tests[] = {cmocka_unit_test(test_directory_exists),
@@ -237,7 +264,8 @@ int main()
 		cmocka_unit_test(test_xdg_config_home),
 		cmocka_unit_test(test_xdg_data_home),
 		cmocka_unit_test(test_create_xdg_dirs_when_xdg_directories_are_welldefined),
-		cmocka_unit_test(test_create_xdg_dirs_when_dotlocal_and_dotconfig_have_not_been_created)
+		cmocka_unit_test(test_create_xdg_dirs_when_dotlocal_and_dotconfig_have_not_been_created),
+		cmocka_unit_test(test_create_xdg_dirs_when_xdg_directories_are_arbitrary_and_missing)
 	};
 
 	int rc = cmocka_run_group_tests(tests, NULL, NULL);
