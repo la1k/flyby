@@ -31,7 +31,8 @@ void test_directory_exists(void **param)
 
 #define DEFAULT_XDG_DATA_DIRS "/usr/local/share/:/usr/share/"
 #define DEFAULT_XDG_CONFIG_DIRS "/etc/xdg/"
-#define DEFAULT_XDG_DATA_HOME ".local/share/"
+#define DEFAULT_XDG_DATA_HOME_BASE ".local/"
+#define DEFAULT_XDG_DATA_HOME DEFAULT_XDG_DATA_HOME_BASE "share/"
 #define DEFAULT_XDG_CONFIG_HOME ".config/"
 #define TMP_DIR "/tmp/"
 
@@ -181,6 +182,53 @@ void test_create_xdg_dirs_when_xdg_directories_are_welldefined(void **param)
 	assert_false(directory_exists(temp_xdg_config_home));
 }
 
+void test_create_xdg_dirs_when_dotlocal_and_dotconfig_have_not_been_created(void **param)
+{
+	//set temporary directory as HOME in order to ensure that .local and .config do not exist
+	char *previous_home_dir = strdup(getenv("HOME"));
+	char temp_home_dir[] = "/tmp/flybyXXXXXXXX";
+	mkdtemp(temp_home_dir);
+	setenv("HOME", temp_home_dir, 1);
+
+	//ensure XDG_*_HOME are empty
+	setenv("XDG_DATA_HOME", "", 1);
+	setenv("XDG_CONFIG_HOME", "", 1);
+	assert_true(directory_exists(temp_home_dir));
+
+	char *data_home_path = xdg_data_home();
+	char *config_home_path = xdg_config_home();
+	assert_false(directory_exists(data_home_path));
+	assert_false(directory_exists(config_home_path));
+
+	//ensure that XDG_DATA_HOME and XDG_CONFIG_HOME are as expected
+	char *expected_data_home_path = add_to_path(temp_home_dir, DEFAULT_XDG_DATA_HOME "/");
+	char *expected_config_home_path = add_to_path(temp_home_dir, DEFAULT_XDG_CONFIG_HOME "/");
+	assert_string_equal(data_home_path, expected_data_home_path);
+	assert_string_equal(config_home_path, expected_config_home_path);
+
+	free(expected_data_home_path);
+	free(expected_config_home_path);
+
+	//test directory creation
+	test_create_xdg_dirs();
+
+	//revert HOME variable
+	setenv("HOME", previous_home_dir, 1);
+	free(previous_home_dir);
+
+	//clean up directories
+	char *data_home_base_path = add_to_path(temp_home_dir, DEFAULT_XDG_DATA_HOME_BASE); //corresponds to (...)/.local
+	rmdir(data_home_path);
+	rmdir(data_home_base_path);
+	rmdir(config_home_path);
+	rmdir(temp_home_dir);
+	assert_false(directory_exists(temp_home_dir));
+
+	free(data_home_base_path);
+	free(data_home_path);
+	free(config_home_path);
+}
+
 int main()
 {
 	struct CMUnitTest tests[] = {cmocka_unit_test(test_directory_exists),
@@ -188,7 +236,9 @@ int main()
 		cmocka_unit_test(test_xdg_config_dirs),
 		cmocka_unit_test(test_xdg_config_home),
 		cmocka_unit_test(test_xdg_data_home),
-		cmocka_unit_test(test_create_xdg_dirs_when_xdg_directories_are_welldefined)};
+		cmocka_unit_test(test_create_xdg_dirs_when_xdg_directories_are_welldefined),
+		cmocka_unit_test(test_create_xdg_dirs_when_dotlocal_and_dotconfig_have_not_been_created)
+	};
 
 	int rc = cmocka_run_group_tests(tests, NULL, NULL);
 	return rc;
