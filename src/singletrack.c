@@ -451,6 +451,7 @@ const char *sat_status_string(enum satellite_status satellite_status)
 #define TRANSPONDER_TXRX_DESC_COL 29
 #define TRANSPONDER_PATHLOSS_DESC_COL 57
 #define TRANSPONDER_START_COL 1
+#define TRANSPONDER_VFO_COL (TRANSPONDER_PATHLOSS_DESC_COL - 8)
 
 #define TRANSPONDER_FREQ_COL (TRANSPONDER_START_COL+10)
 #define TRANSPONDER_DELAY_COL TRANSPONDER_FREQ_COL
@@ -481,6 +482,7 @@ void singletrack_clear_downlink_dynamic_fields()
 {
 	mvprintw(TRANSPONDER_DOWNLINK_ROW,TRANSPONDER_DOPP_COL,"                ");
 	mvprintw(TRANSPONDER_DOWNLINK_ROW,TRANSPONDER_LOSS_COL,"          ");
+	mvprintw(TRANSPONDER_DOWNLINK_ROW,TRANSPONDER_VFO_COL,"       ");
 }
 
 void singletrack_clear_downlink_fields()
@@ -493,6 +495,7 @@ void singletrack_clear_uplink_dynamic_fields()
 {
 	mvprintw(TRANSPONDER_UPLINK_ROW,TRANSPONDER_DOPP_COL,"                ");
 	mvprintw(TRANSPONDER_UPLINK_ROW,TRANSPONDER_LOSS_COL,"          ");
+	mvprintw(TRANSPONDER_UPLINK_ROW,TRANSPONDER_VFO_COL,"       ");
 }
 
 void singletrack_clear_uplink_fields()
@@ -832,10 +835,14 @@ int singletrack_track_satellite(const char *satellite_name, predict_observer_t *
 		if (comsat) {
 			//set downlink/uplink from rig on readfreq option
 			if (downlink_info->connected && link_status.readfreq) {
-				link_status.downlink = inverse_doppler_shift(DOPP_DOWNLINK, &obs, rigctld_read_frequency(downlink_info));
+				double frequency;
+				rigctld_fail_on_errors(rigctld_read_frequency(downlink_info, &frequency));
+				link_status.downlink = inverse_doppler_shift(DOPP_DOWNLINK, &obs, frequency);
 			}
 			if (uplink_info->connected && link_status.readfreq) {
-				link_status.uplink = inverse_doppler_shift(DOPP_UPLINK, &obs, rigctld_read_frequency(uplink_info));
+				double frequency;
+				rigctld_fail_on_errors(rigctld_read_frequency(uplink_info, &frequency));
+				link_status.uplink = inverse_doppler_shift(DOPP_UPLINK, &obs, frequency);
 			}
 
 			//update link information from current satellite data
@@ -844,12 +851,20 @@ int singletrack_track_satellite(const char *satellite_name, predict_observer_t *
 			//print link information to screen
 			singletrack_print_link_information(&link_status);
 
+			//print VFO names
+			if (downlink_info->connected && (link_status.downlink != 0.0) && (link_status.in_range) && (strlen(downlink_info->vfo_name) > 0)) {
+				mvprintw(TRANSPONDER_DOWNLINK_ROW, TRANSPONDER_VFO_COL, "(%s)", downlink_info->vfo_name);
+			}
+			if (uplink_info->connected && (link_status.uplink != 0.0) && (link_status.in_range) && (strlen(uplink_info->vfo_name) > 0)) {
+				mvprintw(TRANSPONDER_UPLINK_ROW, TRANSPONDER_VFO_COL, "(%s)", uplink_info->vfo_name);
+			}
+
 			//set doppler-shifted downlink/uplink to rig
 			if (link_status.in_range && downlink_info->connected && link_status.downlink_update && (link_status.downlink != 0.0)) {
-				rigctld_set_frequency(downlink_info, link_status.downlink_doppler);
+				rigctld_fail_on_errors(rigctld_set_frequency(downlink_info, link_status.downlink_doppler));
 			}
 			if (link_status.in_range && uplink_info->connected && link_status.uplink_update && (link_status.uplink != 0.0)) {
-				rigctld_set_frequency(uplink_info, link_status.uplink_doppler);
+				rigctld_fail_on_errors(rigctld_set_frequency(uplink_info, link_status.uplink_doppler));
 			}
 		}
 
@@ -865,7 +880,7 @@ int singletrack_track_satellite(const char *satellite_name, predict_observer_t *
 
 		//send data to rotctld
 		if ((obs.elevation*180.0/M_PI >= rotctld->tracking_horizon) && rotctld->connected) {
-			rotctld_track(rotctld, obs.azimuth*180.0/M_PI, obs.elevation*180.0/M_PI);
+			rotctld_fail_on_errors(rotctld_track(rotctld, obs.azimuth*180.0/M_PI, obs.elevation*180.0/M_PI));
 		}
 
 		//handle keyboard input
@@ -873,7 +888,7 @@ int singletrack_track_satellite(const char *satellite_name, predict_observer_t *
 
 		//move antenna towards AOS position
 		if ((input_key == 'A') && (obs.elevation*180.0/M_PI < rotctld->tracking_horizon) && rotctld->connected) {
-			rotctld_track(rotctld, aos.azimuth*180.0/M_PI, 0);
+			rotctld_fail_on_errors(rotctld_track(rotctld, aos.azimuth*180.0/M_PI, 0));
 		}
 
 		if (comsat && (input_key != ERR)) {
@@ -894,10 +909,16 @@ int singletrack_track_satellite(const char *satellite_name, predict_observer_t *
 		//read frequency once from rig
 		if (input_key=='f' || input_key=='F')
 		{
-			if (downlink_info->connected)
-				link_status.downlink = inverse_doppler_shift(DOPP_DOWNLINK, &obs, rigctld_read_frequency(downlink_info));
-			if (uplink_info->connected)
-				link_status.uplink = inverse_doppler_shift(DOPP_UPLINK, &obs, rigctld_read_frequency(uplink_info));
+			if (downlink_info->connected) {
+				double frequency;
+				rigctld_fail_on_errors(rigctld_read_frequency(downlink_info, &frequency));
+				link_status.downlink = inverse_doppler_shift(DOPP_DOWNLINK, &obs, frequency);
+			}
+			if (uplink_info->connected) {
+				double frequency;
+				rigctld_fail_on_errors(rigctld_read_frequency(uplink_info, &frequency));
+				link_status.uplink = inverse_doppler_shift(DOPP_UPLINK, &obs, frequency);
+			}
 		}
 
 		//reverse VFO uplink and downlink names

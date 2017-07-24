@@ -35,8 +35,26 @@ int sock_readline(int sockd, char *message, size_t bufsize)
 	return pos;
 }
 
-void rotctld_connect(const char *rotctld_host, const char *rotctld_port, rotctld_info_t *ret_info)
+/**
+ * Make rotctld produce a response which will be ready for reading
+ * on the next command to be sent to rotctld.
+ *
+ * \param socket Socket fid
+ **/
+void rotctld_bootstrap_response(int socket)
 {
+	//send request for position
+	send(socket, "p\n", 2, MSG_NOSIGNAL);
+
+	//will return azimuth\nelevation\n, so read back first part of this message
+	sock_readline(socket, NULL, 256);
+}
+
+rotctld_error rotctld_connect(const char *rotctld_host, const char *rotctld_port, rotctld_info_t *ret_info)
+{
+	strncpy(ret_info->host, rotctld_host, MAX_NUM_CHARS);
+	strncpy(ret_info->port, rotctld_port, MAX_NUM_CHARS);
+
 	struct addrinfo hints, *servinfo, *servinfop;
 	memset(&hints, 0, sizeof(hints));
 	hints.ai_family = AF_UNSPEC;
@@ -45,8 +63,8 @@ void rotctld_connect(const char *rotctld_host, const char *rotctld_port, rotctld
 	int rotctld_socket = 0;
 	int retval = getaddrinfo(rotctld_host, rotctld_port, &hints, &servinfo);
 	if (retval != 0) {
-		bailout("getaddrinfo error");
-		exit(-1);
+		ret_info->connected = false;
+		return ROTCTLD_GETADDRINFO_ERR;
 	}
 
 	for(servinfop = servinfo; servinfop != NULL; servinfop = servinfop->ai_next) {
@@ -62,26 +80,46 @@ void rotctld_connect(const char *rotctld_host, const char *rotctld_port, rotctld
 		break;
 	}
 	if (servinfop == NULL) {
-		char error_message[MAX_NUM_CHARS];
-		snprintf(error_message, MAX_NUM_CHARS, "Unable to connect to rotctld on %s:%s", rotctld_host, rotctld_port);
-		bailout(error_message);
-		exit(-1);
+		return ROTCTLD_CONNECTION_FAILED;
 	}
 	freeaddrinfo(servinfo);
+
 	/* TrackDataNet() will wait for confirmation of a command before sending
 	   the next so we bootstrap this by asking for the current position */
-	send(rotctld_socket, "p\n", 2, 0);
-	sock_readline(rotctld_socket, NULL, 256);
+	rotctld_bootstrap_response(rotctld_socket);
 
 	ret_info->socket = rotctld_socket;
 	ret_info->connected = true;
-	strncpy(ret_info->host, rotctld_host, MAX_NUM_CHARS);
-	strncpy(ret_info->port, rotctld_port, MAX_NUM_CHARS);
 	ret_info->tracking_horizon = 0;
 
 	ret_info->prev_cmd_azimuth = 0;
 	ret_info->prev_cmd_elevation = 0;
 	ret_info->first_cmd_sent = false;
+
+	return ROTCTLD_NO_ERR;
+}
+
+const char *rotctld_error_message(rotctld_error errorcode)
+{
+	switch (errorcode) {
+		case ROTCTLD_NO_ERR:
+			return "No error.";
+		case ROTCTLD_GETADDRINFO_ERR:
+			return "getaddrinfo error.";
+		case ROTCTLD_CONNECTION_FAILED:
+			return "Unable to connect to rotctld.";
+		case ROTCTLD_SEND_FAILED:
+			return "Unable to send to rotctld/rotctld disconnected.";
+	}
+	return "Unsupported error code.";
+}
+
+void rotctld_fail_on_errors(rotctld_error errorcode)
+{
+	if (errorcode != ROTCTLD_NO_ERR) {
+		bailout(rotctld_error_message(errorcode));
+		exit(-1);
+	}
 }
 
 void rotctld_set_tracking_horizon(rotctld_info_t *info, double horizon)
@@ -101,7 +139,7 @@ bool rotctld_directions_differ(rotctld_info_t *info, double azimuth, double elev
 	return azimuth_differs || elevation_differs;
 }
 
-void rotctld_track(rotctld_info_t *info, double azimuth, double elevation)
+rotctld_error rotctld_track(rotctld_info_t *info, double azimuth, double elevation)
 {
 	bool coordinates_differ = rotctld_directions_differ(info, azimuth, elevation);
 
@@ -124,15 +162,94 @@ void rotctld_track(rotctld_info_t *info, double azimuth, double elevation)
 
 		sprintf(message, "P %.2f %.2f\n", azimuth, elevation);
 		int len = strlen(message);
-		if (send(info->socket, message, len, 0) != len) {
-			bailout("Failed to send to rotctld");
-			exit(-1);
+		if (send(info->socket, message, len, MSG_NOSIGNAL) != len) {
+			info->connected = false;
+			return ROTCTLD_SEND_FAILED;
 		}
 	}
+
+	return ROTCTLD_NO_ERR;
 }
 
-void rigctld_connect(const char *rigctld_host, const char *rigctld_port, const char *vfo_name, rigctld_info_t *ret_info)
+/**
+ * Send request to rotctld for current position.
+ *
+ * \param socket Socket
+ * \return ROTCTLD_NO_ERR on success
+ **/
+rotctld_error rotctld_send_position_request(int socket)
 {
+	char message[256];
+	sprintf(message, "p\n");
+	int len = strlen(message);
+	if (send(socket, message, len, MSG_NOSIGNAL) != len) {
+		return ROTCTLD_SEND_FAILED;
+	}
+
+	return ROTCTLD_NO_ERR;
+}
+
+rotctld_error rotctld_read_position(rotctld_info_t *info, float *azimuth, float *elevation)
+{
+	char message[256];
+
+	//read pending return message
+	sock_readline(info->socket, message, sizeof(message));
+
+	//send position request
+	rotctld_error ret_err = rotctld_send_position_request(info->socket);
+	if (ret_err != ROTCTLD_NO_ERR) {
+		info->connected = false;
+		return ret_err;
+	}
+
+	//get response
+	sock_readline(info->socket, message, sizeof(message));
+	sscanf(message, "%f\n", azimuth);
+	sock_readline(info->socket, message, sizeof(message));
+	sscanf(message, "%f\n", elevation);
+
+	//prepare new pending reply
+	rotctld_bootstrap_response(info->socket);
+
+	return ROTCTLD_NO_ERR;
+}
+
+/**
+ * Convenience function for sending messages to rigctld.
+ *
+ * \param socket Socket fid
+ * \param message Message
+ * \return RIGCTLD_NO_ERR on success
+ **/
+rigctld_error rigctld_send_message(int socket, char *message)
+{
+	int len;
+	len = strlen(message);
+	if (send(socket, message, len, MSG_NOSIGNAL) != len) {
+		return RIGCTLD_SEND_FAILED;
+	}
+	return RIGCTLD_NO_ERR;
+}
+
+/**
+ * Make rigctld produce a response which will be ready
+ * for reading on the next command.
+ *
+ * \param socket Socket
+ **/
+rigctld_error rigctld_bootstrap_response(int socket)
+{
+	char message[256];
+	sprintf(message, "f\n");
+	return rigctld_send_message(socket, message);
+}
+
+rigctld_error rigctld_connect(const char *rigctld_host, const char *rigctld_port, rigctld_info_t *ret_info)
+{
+	strncpy(ret_info->host, rigctld_host, MAX_NUM_CHARS);
+	strncpy(ret_info->port, rigctld_port, MAX_NUM_CHARS);
+
 	struct addrinfo hints, *servinfo, *servinfop;
 	memset(&hints, 0, sizeof(hints));
 	hints.ai_family = AF_UNSPEC;
@@ -140,8 +257,8 @@ void rigctld_connect(const char *rigctld_host, const char *rigctld_port, const c
 	int rigctld_socket = 0;
 	int retval = getaddrinfo(rigctld_host, rigctld_port, &hints, &servinfo);
 	if (retval != 0) {
-		bailout("getaddrinfo error");
-		exit(-1);
+		ret_info->connected = false;
+		return RIGCTLD_GETADDRINFO_ERR;
 	}
 
 	for(servinfop = servinfo; servinfop != NULL; servinfop = servinfop->ai_next) {
@@ -157,27 +274,49 @@ void rigctld_connect(const char *rigctld_host, const char *rigctld_port, const c
 		break;
 	}
 	if (servinfop == NULL) {
-		char error_message[MAX_NUM_CHARS];
-		snprintf(error_message, MAX_NUM_CHARS, "Unable to connect to rigctld on %s:%s", rigctld_host, rigctld_port);
-		bailout(error_message);
-		exit(-1);
+		return RIGCTLD_CONNECTION_FAILED;
 	}
 	freeaddrinfo(servinfo);
 	/* FreqDataNet() will wait for confirmation of a command before sending
 	   the next so we bootstrap this by asking for the current frequency */
-	send(rigctld_socket, "f\n", 2, 0);
+	rigctld_error ret_err = rigctld_bootstrap_response(rigctld_socket);
+	if (ret_err != RIGCTLD_NO_ERR) {
+		ret_info->connected = false;
+		return ret_err;
+	}
 
 	ret_info->socket = rigctld_socket;
-	strncpy(ret_info->vfo_name, vfo_name, MAX_NUM_CHARS);
 	ret_info->connected = true;
-	strncpy(ret_info->host, rigctld_host, MAX_NUM_CHARS);
-	strncpy(ret_info->port, rigctld_port, MAX_NUM_CHARS);
+
+	return RIGCTLD_NO_ERR;
 }
 
-void rigctld_set_frequency(const rigctld_info_t *info, double frequency)
+/**
+ * Set VFO in rigctld daemon.
+ *
+ * \param socket rigctld socket
+ * \param vfo_name VFO name
+ * \return RIGCTLD_NO_ERR on success
+ **/
+rigctld_error rigctld_send_vfo_command(int socket, const char *vfo_name)
+{
+	if (strlen(vfo_name) > 0)	{
+		char message[256];
+		sprintf(message, "V %s\n", vfo_name);
+		usleep(100); // hack: avoid VFO selection racing
+
+		rigctld_error ret_err = rigctld_send_message(socket, message);
+		if (ret_err != RIGCTLD_NO_ERR) {
+			return ret_err;
+		}
+		sock_readline(socket, message, sizeof(message));
+	}
+	return RIGCTLD_NO_ERR;
+}
+
+rigctld_error rigctld_set_frequency(rigctld_info_t *info, double frequency)
 {
 	char message[256];
-	int len;
 
 	/* If frequencies is sent too often, rigctld will queue
 	   them and the radio will lag behind. Therefore, we wait
@@ -185,69 +324,82 @@ void rigctld_set_frequency(const rigctld_info_t *info, double frequency)
 	   next. */
 	sock_readline(info->socket, message, sizeof(message));
 
-	if (strlen(info->vfo_name) > 0)	{
-		sprintf(message, "V %s\n", info->vfo_name);
-		len = strlen(message);
-		usleep(100); // hack: avoid VFO selection racing
-		if (send(info->socket, message, len, 0) != len)	{
-			bailout("Failed to send to rigctld");
-			exit(-1);
-		}
-		sock_readline(info->socket, message, sizeof(message));
+	rigctld_error ret_err = rigctld_send_vfo_command(info->socket, info->vfo_name);
+	if (ret_err != RIGCTLD_NO_ERR) {
+		info->connected = false;
+		return ret_err;
 	}
 
 	sprintf(message, "F %.0f\n", frequency*1000000);
-	len = strlen(message);
-	if (send(info->socket, message, len, 0) != len)	{
-		bailout("Failed to send to rigctld");
+	return rigctld_send_message(info->socket, message);
+}
+
+void rigctld_fail_on_errors(rigctld_error errorcode)
+{
+	if (errorcode != RIGCTLD_NO_ERR) {
+		bailout(rigctld_error_message(errorcode));
 		exit(-1);
 	}
 }
 
-double rigctld_read_frequency(const rigctld_info_t *info)
+const char *rigctld_error_message(rigctld_error errorcode)
+{
+	switch (errorcode) {
+		case RIGCTLD_NO_ERR:
+			return "No error.";
+		case RIGCTLD_GETADDRINFO_ERR:
+			return "getaddrinfo error.";
+		case RIGCTLD_CONNECTION_FAILED:
+			return "Unable to connect to rigctld.";
+		case RIGCTLD_SEND_FAILED:
+			return "Unable to send to rigctld/rigctld disconnected.";
+	}
+	return "Unsupported error code.";
+}
+
+rigctld_error rigctld_read_frequency(rigctld_info_t *info, double *ret_frequency)
 {
 	char message[256];
-	int len;
-	double freq;
 
-	/* Read pending return message */
+	//read pending return message
 	sock_readline(info->socket, message, sizeof(message));
 
-	if (strlen(info->vfo_name) > 0)	{
-		sprintf(message, "V %s\n", info->vfo_name);
-		len = strlen(message);
-		usleep(100); // hack: avoid VFO selection racing
-		if (send(info->socket, message, len, 0) != len)	{
-			bailout("Failed to send to rigctld");
-			exit(-1);
-		}
-		sock_readline(info->socket, message, sizeof(message));
+	rigctld_error ret_err = rigctld_send_vfo_command(info->socket, info->vfo_name);
+	if (ret_err != RIGCTLD_NO_ERR) {
+		info->connected = false;
+		return ret_err;
 	}
 
 	sprintf(message, "f\n");
-	len = strlen(message);
-	if (send(info->socket, message, len, 0) != len)	{
-		bailout("Failed to send to rigctld");
-		exit(-1);
+	ret_err = rigctld_send_message(info->socket, message);
+	if (ret_err != RIGCTLD_NO_ERR) {
+		info->connected = false;
+		return ret_err;
 	}
 
 	sock_readline(info->socket, message, sizeof(message));
-	freq=atof(message)/1.0e6;
+	*ret_frequency = atof(message)/1.0e6;
 
-	sprintf(message, "f\n");
-	len = strlen(message);
-	if (send(info->socket, message, len, 0) != len)	{
-		bailout("Failed to send to rigctld");
-		exit(-1);
+	//prepare new pending reply
+	ret_err = rigctld_bootstrap_response(info->socket);
+	if (ret_err != RIGCTLD_NO_ERR) {
+		info->connected = false;
+		return ret_err;
 	}
 
-	return freq;
+	return RIGCTLD_NO_ERR;
+}
+
+rigctld_error rigctld_set_vfo(rigctld_info_t *ret_info, const char *vfo_name)
+{
+	strncpy(ret_info->vfo_name, vfo_name, MAX_NUM_CHARS);
+	return RIGCTLD_NO_ERR;
 }
 
 void rigctld_disconnect(rigctld_info_t *info)
 {
 	if (info->connected) {
-		send(info->socket, "q\n", 2, 0);
+		send(info->socket, "q\n", 2, MSG_NOSIGNAL);
 		close(info->socket);
 		info->connected = false;
 	}
@@ -256,7 +408,7 @@ void rigctld_disconnect(rigctld_info_t *info)
 void rotctld_disconnect(rotctld_info_t *info)
 {
 	if (info->connected) {
-		send(info->socket, "q\n", 2, 0);
+		send(info->socket, "q\n", 2, MSG_NOSIGNAL);
 		close(info->socket);
 		info->connected = false;
 	}

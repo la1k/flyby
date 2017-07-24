@@ -1446,7 +1446,7 @@ void checklist_free(struct checklist **checklist);
 #define CHECKMARK_STRING_LENGTH 4
 
 //active menu item style
-#define CHECKLIST_STYLE_ACTIVE COLOR_PAIR(5)
+#define CHECKLIST_STYLE_ACTIVE FIELDSTYLE_ACTIVE
 
 //inactive menu item style
 #define CHECKLIST_STYLE_INACTIVE COLOR_PAIR(1)
@@ -1566,12 +1566,6 @@ void checklist_free(struct checklist **input_checklist)
 
 	free(checklist);
 }
-
-//inactive/deselected color style for settings field
-#define FIELDSTYLE_INACTIVE COLOR_PAIR(1)|A_UNDERLINE
-
-//active/selected color style for settings field
-#define FIELDSTYLE_ACTIVE CHECKLIST_STYLE_ACTIVE
 
 //number of sorting settings
 #define NUM_SORT_SETTINGS 2

@@ -134,10 +134,10 @@ void transponder_database_entry_displayer(const char *name, struct sat_db_entry 
 
 
 //default style for field
-#define TRANSPONDER_ENTRY_DEFAULT_STYLE COLOR_PAIR(1)|A_UNDERLINE
+#define TRANSPONDER_ENTRY_DEFAULT_STYLE FIELDSTYLE_INACTIVE
 
 //style of field when the cursor marker is in it
-#define TRANSPONDER_ACTIVE_FIELDSTYLE COLOR_PAIR(5)
+#define TRANSPONDER_ACTIVE_FIELDSTYLE FIELDSTYLE_ACTIVE
 
 /**
  * Helper function for creating a FIELD in the transponder form with the correct default style.
@@ -379,7 +379,7 @@ struct transponder_form* transponder_form_create(const struct tle_db_entry *sat_
 	new_editor->squint_description = new_field(FIELD_HEIGHT, SQUINT_DESCRIPTION_LENGTH, row++, 1, 0, 0);
 	set_field_buffer(new_editor->squint_description, 0, "Alon        Alat");
 	field_opts_off(new_editor->squint_description, O_ACTIVE);
-	set_field_back(new_editor->squint_description, COLOR_PAIR(4)|A_BOLD);
+	set_field_back(new_editor->squint_description, FIELDSTYLE_DESCRIPTION);
 
 	new_editor->alon = create_transponder_form_field(FIELD_HEIGHT, SQUINT_LENGTH, row, 1);
 	new_editor->alat = create_transponder_form_field(FIELD_HEIGHT, SQUINT_LENGTH, row++, 1 + SQUINT_LENGTH + SPACING);
@@ -388,7 +388,7 @@ struct transponder_form* transponder_form_create(const struct tle_db_entry *sat_
 	//create FIELDs for each editable field
 	new_editor->transponder_description = new_field(DESCRIPTION_FIELD_HEIGHT, TRANSPONDER_DESCRIPTION_LENGTH, row, 1, 0, 0);
 	row += DESCRIPTION_FIELD_HEIGHT;
-	set_field_back(new_editor->transponder_description, COLOR_PAIR(4)|A_BOLD);
+	set_field_back(new_editor->transponder_description, FIELDSTYLE_DESCRIPTION);
 	set_field_buffer(new_editor->transponder_description, 0, "Transponder name      Uplink      Downlink"
 								 "                      (MHz)       (Mhz)   ");
 	field_opts_off(new_editor->transponder_description, O_ACTIVE);
@@ -752,7 +752,7 @@ void transponder_database_entry_displayer(const char *name, struct sat_db_entry 
 	int row = start_row;
 
 	//file location information
-	wattrset(display_window, COLOR_PAIR(4)|A_BOLD);
+	wattrset(display_window, FIELDSTYLE_DESCRIPTION);
 	if (entry->location & LOCATION_TRANSIENT) {
 		mvwprintw(display_window, row++, info_col, "To be written to user database.");
 	} else if (entry->location & LOCATION_DATA_HOME) {
@@ -768,14 +768,14 @@ void transponder_database_entry_displayer(const char *name, struct sat_db_entry 
 	row = start_row+3;
 
 	//display squint angle information
-	wattrset(display_window, COLOR_PAIR(4)|A_BOLD);
+	wattrset(display_window, FIELDSTYLE_DESCRIPTION);
 	mvwprintw(display_window, row, info_col, "Squint angle:");
 
 	wattrset(display_window, COLOR_PAIR(2)|A_BOLD);
 	if (entry->squintflag) {
 		mvwprintw(display_window, row++, data_col, "Enabled.");
 
-		wattrset(display_window, COLOR_PAIR(4)|A_BOLD);
+		wattrset(display_window, FIELDSTYLE_DESCRIPTION);
 		mvwprintw(display_window, row++, info_col, "alat: ");
 		mvwprintw(display_window, row, info_col, "alon: ");
 
@@ -808,7 +808,7 @@ void transponder_database_entry_displayer(const char *name, struct sat_db_entry 
 
 			//uplink
 			if (transponder.uplink_start != 0.0) {
-				wattrset(display_window, COLOR_PAIR(4)|A_BOLD);
+				wattrset(display_window, FIELDSTYLE_DESCRIPTION);
 				mvwprintw(display_window, ++display_row, info_col, "U:");
 
 				wattrset(display_window, COLOR_PAIR(2)|A_BOLD);
@@ -817,7 +817,7 @@ void transponder_database_entry_displayer(const char *name, struct sat_db_entry 
 
 			//downlink
 			if (transponder.downlink_start != 0.0) {
-				wattrset(display_window, COLOR_PAIR(4)|A_BOLD);
+				wattrset(display_window, FIELDSTYLE_DESCRIPTION);
 				mvwprintw(display_window, ++display_row, info_col, "D:");
 
 				wattrset(display_window, COLOR_PAIR(2)|A_BOLD);
@@ -843,7 +843,7 @@ void transponder_database_entry_displayer(const char *name, struct sat_db_entry 
 				prev_row_diff = diff;
 			}
 		} else {
-			wattrset(display_window, COLOR_PAIR(4)|A_BOLD);
+			wattrset(display_window, FIELDSTYLE_DESCRIPTION);
 			mvwprintw(display_window, ++display_row, info_col, "Truncated to %d of %d transponder entries.", i, entry->num_transponders);
 			break;
 		}
@@ -851,7 +851,7 @@ void transponder_database_entry_displayer(const char *name, struct sat_db_entry 
 
 	//default text when no transponders are defined
 	if (entry->num_transponders <= 0) {
-		wattrset(display_window, COLOR_PAIR(4)|A_BOLD);
+		wattrset(display_window, FIELDSTYLE_DESCRIPTION);
 		mvwprintw(display_window, ++row, info_col, "No transponders defined.");
 	}
 }
