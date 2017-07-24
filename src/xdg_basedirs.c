@@ -21,8 +21,6 @@
 #define XDG_CONFIG_HOME "XDG_CONFIG_HOME"
 #define XDG_CONFIG_HOME_DEFAULT ".config/"
 
-#define XDG_DATA_BASE ".local/"
-
 /**
  * Check if dirpath contains a backslash at the end, and append one if not.
  *
