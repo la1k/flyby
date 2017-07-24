@@ -40,7 +40,7 @@ char *xdg_config_dirs();
 char *xdg_config_home();
 
 /**
- * Create ~/.config/flyby and ./local/share/flyby/tles/ if these do not exist.
+ * Create XDG_CONFIG_HOME/flyby (normally .config/flyby) and XDG_DATA_HOME/flyby/tles/ (normally .local/share/flyby/tles) if these do not exist.
  **/
 void create_xdg_dirs();
 
