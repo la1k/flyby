@@ -175,6 +175,8 @@ void create_path_if_missing(const char *full_path)
 			exit(1);
 		}
 	}
+
+	string_array_free(&paths_to_create);
 }
 
 void create_xdg_dirs()
