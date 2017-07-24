@@ -133,7 +133,7 @@ void create_xdg_dirs()
 	free(config_home);
 	err = stat(config_path, &s);
 	if ((err == -1) && (errno == ENOENT)) {
-		mkdir(config_path, 0777);
+		mkdir(config_path, 0700);
 	}
 
 	//create ~/.local
@@ -156,14 +156,14 @@ void create_xdg_dirs()
 	snprintf(data_path, MAX_NUM_CHARS, "%s%s", data_home, FLYBY_RELATIVE_ROOT_PATH);
 	err = stat(data_path, &s);
 	if ((err == -1) && (errno == ENOENT)) {
-		mkdir(data_path, 0777);
+		mkdir(data_path, 0700);
 	}
 
 	//create ~/.local/share/flyby/tles
 	snprintf(data_path, MAX_NUM_CHARS, "%s%s", data_home, TLE_RELATIVE_DIR_PATH);
 	err = stat(data_path, &s);
 	if ((err == -1) && (errno == ENOENT)) {
-		mkdir(data_path, 0777);
+		mkdir(data_path, 0700);
 	}
 	free(data_home);
 }
