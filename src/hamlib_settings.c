@@ -5,15 +5,6 @@
 #include "defines.h"
 #include <form.h>
 
-//TODO:
-//* Better code reuse across rigctl and rotctl forms
-//* Cleanup hamlib.c/.h: Common error codes? Position reading makes bootstrapping redundant, but still need it, rethink this.
-//* Handle hamlib errors in singletrack
-//* Smaller quickaccess windows elsewhere?
-//* Access to settings from singletrack
-//* Read/write convenient settings from/to files
-//* Reshuffle functions and structs and general code
-
 /**
  * Field type, deciding attributes to use for field returned in field().
  **/
