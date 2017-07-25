@@ -187,11 +187,13 @@ Back in the multitrack view, this now shows a color-coded overview over all the 
 
 The letters 'D', 'N' or 'V' after the slant range indicate, respectively, that the satellite is in sunlight but not visible, the satellite is in eclipse and that the satellite is in sunlight and visible. The symbols '/', '=' and '\' indicate the direction the satellite is moving with respect to the observer.
 
-Pressing 'h' can be used to display a help window.
+Pressing 'F1' can be used to display a help window.
+
+The listing sorts satellites above the horizon according to the max elevation during the pass, while satellites below the horizon are sorted according to the time until the next pass. By pressing 'M' and selecting "Sort by max elevation", all satellites can be sorted by their maximum elevations.
 
 ![Multitrack settings](usage_images/multitrack_options.png)
 
-The listing sorts satellites above the horizon according to the max elevation during the pass, while satellites below the horizon are sorted according to the time until the next pass. By pressing 'M' and selecting "Sort by max elevation", all satellites can be sorted by their maximum elevations. Passes can also be filtered by entering a max elevation threshold: Here, 40 means that all upcoming or current passes with max elevation below 40 degrees will be put at the bottom of the list.
+Passes can also be filtered by entering a max elevation threshold: Here, 40 means that all upcoming or current passes with max elevation below 40 degrees will be put at the bottom of the list.
 
 ![Multitrack filtering](usage_images/multitrack_filtering.png)
 
