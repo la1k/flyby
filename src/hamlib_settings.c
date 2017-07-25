@@ -380,6 +380,8 @@ void rotctld_form_update(rotctld_info_t *rotctld, struct rotctld_form *form)
 		rotctld_error ret_err = rotctld_read_position(rotctld, &azimuth, &elevation);
 		if (ret_err == ROTCTLD_NO_ERR) {
 			snprintf(aziele_string, MAX_NUM_CHARS, "%3.0f   %3.0f", azimuth, elevation);
+		} else {
+			status_message_set(form->status_message, rotctld_error_message(ret_err));
 		}
 	}
 	set_field_buffer(form->aziele, 0, aziele_string);
@@ -562,6 +564,8 @@ void rigctld_form_update(rigctld_info_t *rigctld, struct rigctld_form *form)
 		rigctld_error ret_err = rigctld_read_frequency(rigctld, &frequency);
 		if (ret_err == RIGCTLD_NO_ERR) {
 			snprintf(frequency_string, MAX_NUM_CHARS, "%.3f MHz\n", frequency);
+		} else {
+			status_message_set(form->status_message, rigctld_error_message(ret_err));
 		}
 	}
 	set_field_buffer(form->frequency, 0, frequency_string);
