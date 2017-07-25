@@ -55,6 +55,14 @@ enum rotctld_error_e {
 typedef enum rotctld_error_e rotctld_error;
 
 /**
+ * Get error message corresponding to each error code.
+ *
+ * \param errorcode Rotctld error code
+ * \return Error message
+ **/
+const char *rotctld_error_message(rotctld_error errorcode);
+
+/**
  * Print an error message and exit if errorcode differs from ROTCTLD_NO_ERR.
  * Used for wrapping calls to the rotctld client if we want failures to make
  * flyby shut down ncurses and exit.

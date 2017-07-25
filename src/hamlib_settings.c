@@ -5,6 +5,31 @@
 #include "defines.h"
 #include <form.h>
 
+///Spacing between settings form windows
+#define VERTICAL_SPACING 4
+
+///Row for settings windows
+#define HAMLIB_SETTINGS_WINDOW_ROW 0
+
+///Column for settings window
+#define HAMLIB_SETTINGS_WINDOW_COL 0
+
+///Height of rigctld settings windows
+#define RIGCTLD_SETTINGS_WINDOW_HEIGHT 6
+
+///Height of rotctld settings windows
+#define ROTCTLD_SETTINGS_WINDOW_HEIGHT 6
+
+///Width of settings windows
+#define SETTINGS_WINDOW_WIDTH (HAMLIB_SETTINGS_FIELD_WIDTH*4 + 7)
+
+///Spacing between windows
+#define WINDOW_SPACING 1
+
+///Number of settings forms
+#define NUM_FORMS 3
+
+
 /**
  * Field type, deciding attributes to use for field returned in field().
  **/
@@ -21,8 +46,10 @@ enum field_type {
 
 ///Spacing between settings fields
 #define FIELD_SPACING 1
+
 //Width of settings fields
 #define HAMLIB_SETTINGS_FIELD_WIDTH 12
+
 //Height of settings fields
 #define HAMLIB_SETTINGS_FIELD_HEIGHT 1
 
@@ -71,6 +98,62 @@ FIELD *field(enum field_type field_type, int row, int col, const char *content)
 }
 
 /**
+ * Status message field, used for displaying transient error message that should
+ * disappear after a while.
+ **/
+struct status_message {
+	///Time for last message, used for calculating when to clear the message
+	time_t message_time;
+	///Field displaying message
+	FIELD *field;
+};
+
+/**
+ * Create status message.
+ *
+ * \param row Row in form
+ * \param column Column in form
+ * \return Status message
+ **/
+struct status_message *status_message_create(int row)
+{
+	struct status_message *status_message = (struct status_message*) malloc(sizeof(struct status_message));
+	status_message->field = new_field(HAMLIB_SETTINGS_FIELD_HEIGHT, SETTINGS_WINDOW_WIDTH-3, row, 0, 0, 0);
+	field_opts_off(status_message->field, O_ACTIVE);
+	status_message->message_time = 0;
+	return status_message;
+}
+
+/**
+ * Set status message to a message, to be cleared after a specified time.
+ *
+ * \param status_message Status message instance
+ * \param message Message to display
+ **/
+void status_message_set(struct status_message *status_message, const char *message)
+{
+	status_message->message_time = time(NULL);
+	set_field_buffer(status_message->field, 0, message);
+}
+
+///Time for status message to be cleared
+#define STATUS_MESSAGE_CLEARING_TIME 5
+
+/**
+ * Refresh status message, clears the current message after the amount
+ * of time specified in STATUS_MESSAGE_CLEARING_TIME.
+ *
+ * \param status_message Status message
+ **/
+void status_message_refresh(struct status_message *status_message)
+{
+	//clear status field after sufficient amount of time
+	if (time(NULL) > status_message->message_time + STATUS_MESSAGE_CLEARING_TIME) {
+		set_field_buffer(status_message->field, 0, "");
+	}
+}
+
+/**
  * Rotctld settings/status form.
  **/
 struct rotctld_form {
@@ -84,6 +167,8 @@ struct rotctld_form {
 	FIELD *connection_status;
 	///Field displaying current azimuth and elevation read from rotctld
 	FIELD *aziele;
+	///Field displaying last error message, if any
+	struct status_message *status_message;
 	///Array over all rotctld fields
 	FIELD **field_array;
 	///Form for fields in this struct
@@ -117,6 +202,7 @@ void rotctld_form_free(struct rotctld_form **form)
 {
 	free_field_array((*form)->field_array);
 	free_form((*form)->form);
+	free((*form)->status_message);
 	free(*form);
 }
 
@@ -135,8 +221,9 @@ double rotctld_form_horizon(struct rotctld_form *form)
 
 ///Title displayed on top of rotor form
 #define ROTOR_FORM_TITLE "Rotor"
+
 ///Number of fields in rotctld form
-#define NUM_ROTCTLD_FIELDS 10
+#define NUM_ROTCTLD_FIELDS 11
 
 /**
  * Create rotctld settings/status form struct.
@@ -179,13 +266,16 @@ struct rotctld_form * rotctld_form_prepare(rotctld_info_t *rotctld, WINDOW *wind
 
 	//azimuth/elevation
 	form->aziele = field(DEFAULT_FIELD, row, col++, NULL);
-
 	form->last_row = row;
+
+	col=0;
+	row++;
+	form->status_message = status_message_create(row);
 
 	//construct a FORM out of the FIELDs
 	form->field_array = calloc(NUM_ROTCTLD_FIELDS+1, sizeof(FIELD*));
 	FIELD *fields[NUM_ROTCTLD_FIELDS+1] = {title, form->connection_status,
-		host_description, form->host, port_description, form->port, tracking_horizon_description, form->tracking_horizon, aziele_description, form->aziele, 0};
+		host_description, form->host, port_description, form->port, tracking_horizon_description, form->tracking_horizon, aziele_description, form->aziele, form->status_message->field, 0};
 	memcpy(form->field_array, fields, sizeof(FIELD*)*NUM_ROTCTLD_FIELDS);
 	form->form = new_form(form->field_array);
 
@@ -206,6 +296,7 @@ struct rotctld_form * rotctld_form_prepare(rotctld_info_t *rotctld, WINDOW *wind
 
 ///Style (black on green) used for displaying "Connected" in connection status field
 #define CONNECTED_STYLE COLOR_PAIR(9)
+
 ///Style (white on red) used for displaying "Disconnected" in connection status field
 #define DISCONNECTED_STYLE COLOR_PAIR(5)
 
@@ -261,12 +352,16 @@ void rotctld_form_attempt_reconnection(struct rotctld_form *form, rotctld_info_t
 
 	//attempt reconnection
 	rotctld_disconnect(rotctld);
-	rotctld_connect(host_field, port_field, rotctld);
+	rotctld_error ret_err = rotctld_connect(host_field, port_field, rotctld);
 	free(host_field);
 	free(port_field);
 
 	//set status message
 	set_connection_field(form->connection_status, rotctld->connected);
+
+	if (ret_err != ROTCTLD_NO_ERR) {
+		status_message_set(form->status_message, rotctld_error_message(ret_err));
+	}
 }
 
 /**
@@ -295,6 +390,8 @@ void rotctld_form_update(rotctld_info_t *rotctld, struct rotctld_form *form)
 	//obtain currently set horizon setting from field
 	double horizon = rotctld_form_horizon(form);
 	rotctld_set_tracking_horizon(rotctld, horizon);
+
+	status_message_refresh(form->status_message);
 }
 
 /**
@@ -311,6 +408,8 @@ struct rigctld_form {
 	FIELD *vfo;
 	///Current frequency
 	FIELD *frequency;
+	///Status message
+	struct status_message *status_message;
 	///Field array containing all displayed fields
 	FIELD **field_array;
 	///Form displaying fields in the struct
@@ -322,7 +421,7 @@ struct rigctld_form {
 };
 
 ///Number of fields in rigctld form
-#define NUM_RIGCTLD_FIELDS 10
+#define NUM_RIGCTLD_FIELDS 11
 
 /**
  * Prepare rigctld form.
@@ -360,10 +459,15 @@ struct rigctld_form *rigctld_form_prepare(const char *title_string, rigctld_info
 	form->port = field(FREE_ENTRY_FIELD, row, col++, rigctld->port);
 	form->vfo = field(FREE_ENTRY_FIELD, row, col++, rigctld->vfo_name);
 	form->frequency = field(DEFAULT_FIELD, row, col++, "N/A");
+	form->last_row = row;
+
+	//status message
+	row++;
+	form->status_message = status_message_create(row);
 
 	//create FORM from FIELDs
 	form->field_array = calloc(NUM_RIGCTLD_FIELDS+1, sizeof(FIELD*));
-	FIELD *fields[NUM_RIGCTLD_FIELDS+1] = {title, form->connection_status, host_description, form->host, port_description, form->port, vfo_description, form->vfo, frequency_description, form->frequency, 0};
+	FIELD *fields[NUM_RIGCTLD_FIELDS+1] = {title, form->connection_status, host_description, form->host, port_description, form->port, vfo_description, form->vfo, frequency_description, form->frequency, form->status_message->field, 0};
 	memcpy(form->field_array, fields, sizeof(FIELD*)*NUM_RIGCTLD_FIELDS);
 	form->form = new_form(form->field_array);
 
@@ -378,7 +482,6 @@ struct rigctld_form *rigctld_form_prepare(const char *title_string, rigctld_info
 	//form styling
 	box(window, 0, 0);
 	set_field_buffer(title, 0, title_string);
-	form->last_row = row;
 
 	return form;
 }
@@ -392,6 +495,7 @@ void rigctld_form_free(struct rigctld_form **form)
 {
 	free_field_array((*form)->field_array);
 	free_form((*form)->form);
+	free((*form)->status_message);
 	free(*form);
 }
 
@@ -429,12 +533,16 @@ void rigctld_form_attempt_reconnection(struct rigctld_form *form, rigctld_info_t
 
 	//attempt reconnection
 	rigctld_disconnect(rigctld);
-	rigctld_connect(host_field, port_field, rigctld);
+	rigctld_error ret_err = rigctld_connect(host_field, port_field, rigctld);
 
 	//update status field
 	set_connection_field(form->connection_status, rigctld->connected);
 	free(host_field);
 	free(port_field);
+	
+	if (ret_err != RIGCTLD_NO_ERR) {
+		status_message_set(form->status_message, rigctld_error_message(ret_err));
+	}
 }
 
 /**
@@ -460,6 +568,7 @@ void rigctld_form_update(rigctld_info_t *rigctld, struct rigctld_form *form)
 
 	//update connection status field
 	set_connection_field(form->connection_status, rigctld->connected);
+	status_message_refresh(form->status_message);
 
 	//get current VFO from field
 	char *vfo = rigctld_form_vfo(form);
@@ -479,23 +588,6 @@ int rownumber(FIELD *field)
 	field_info(field, &rows, &cols, &frow, &fcol, &nrow, &nbuf);
 	return frow;
 }
-
-///Spacing between settings form windows
-#define VERTICAL_SPACING 4
-///Row for settings windows
-#define HAMLIB_SETTINGS_WINDOW_ROW 0
-///Column for settings window
-#define HAMLIB_SETTINGS_WINDOW_COL 0
-///Height of rigctld settings windows
-#define RIGCTLD_SETTINGS_WINDOW_HEIGHT 6
-///Height of rotctld settings windows
-#define ROTCTLD_SETTINGS_WINDOW_HEIGHT 6
-///Width of settings windows
-#define SETTINGS_WINDOW_WIDTH (HAMLIB_SETTINGS_FIELD_WIDTH*4 + 7)
-///Spacing between windows
-#define WINDOW_SPACING 1
-///Number of settings forms
-#define NUM_FORMS 3
 
 void hamlib_settings(rotctld_info_t *rotctld, rigctld_info_t *downlink, rigctld_info_t *uplink)
 {
