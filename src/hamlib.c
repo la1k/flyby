@@ -105,11 +105,11 @@ const char *rotctld_error_message(rotctld_error errorcode)
 		case ROTCTLD_NO_ERR:
 			return "No error.";
 		case ROTCTLD_GETADDRINFO_ERR:
-			return "getaddrinfo error.";
+			return "Unable to connect to rotctld: unknown host";
 		case ROTCTLD_CONNECTION_FAILED:
 			return "Unable to connect to rotctld.";
 		case ROTCTLD_SEND_FAILED:
-			return "Unable to send to rotctld/rotctld disconnected.";
+			return "Unable to send to rotctld or rotctld disconnected.";
 	}
 	return "Unsupported error code.";
 }
@@ -348,11 +348,11 @@ const char *rigctld_error_message(rigctld_error errorcode)
 		case RIGCTLD_NO_ERR:
 			return "No error.";
 		case RIGCTLD_GETADDRINFO_ERR:
-			return "getaddrinfo error.";
+			return "Unable to connect to rigctld: unknown host";
 		case RIGCTLD_CONNECTION_FAILED:
 			return "Unable to connect to rigctld.";
 		case RIGCTLD_SEND_FAILED:
-			return "Unable to send to rigctld/rigctld disconnected.";
+			return "Unable to send to rigctld or rigctld disconnected.";
 	}
 	return "Unsupported error code.";
 }
