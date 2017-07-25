@@ -769,7 +769,7 @@ void print_main_menu(WINDOW *window)
 
 	column = print_main_menu_option(window, row, column, 'W', "Enable/Disable Satellites");
 	column = print_main_menu_option(window, row, column, 'G', "Edit Ground Station      ");
-	column = print_main_menu_option(window, row, column, 'H', "Hamlib settings          ");
+	column = print_main_menu_option(window, row, column, 'E', "Edit Transponder Database");
 	column = 0;
 	row++;
 	column = print_main_menu_option(window, row, column, 'I', "Program Information      ");
