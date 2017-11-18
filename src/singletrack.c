@@ -10,6 +10,7 @@
 
 #include "singletrack.h"
 #include <curses.h>
+#include <ctype.h>
 
 #include "defines.h"
 #include <math.h>
@@ -31,6 +32,16 @@ int singletrack_get_next_enabled_satellite(int curr_index, int step, struct tle_
  * Display singletrack help window.
  **/
 void singletrack_help();
+
+///Height of main menu shown on bottom
+#define SINGLETRACK_MAIN_MENU_HEIGHT 1
+
+/**
+ * Print major keybindings at the bottom of the window, htop style.
+ *
+ * \param window Window for printing
+ **/
+void singletrack_print_main_menu(WINDOW *window);
 
 /**
  * Print general singletrack headers.
@@ -187,8 +198,20 @@ int singletrack_get_next_enabled_satellite(int curr_index, int step, struct tle_
 	return curr_index;
 }
 
+void singletrack_print_main_menu(WINDOW *window)
+{
+	int row = 0;
+	int column = 0;
+
+	column = print_main_menu_option(window, row, column, 'A', "Rotate to AOS position   ");
+	column = print_main_menu_option(window, row, column, 'H', "Other keybindings        ");
+	column = print_main_menu_option(window, row, column, 'Q', "Return                    ");
+
+	wrefresh(window);
+}
+
 //Help window width
-#define SINGLETRACK_HELP_WIDTH 80
+#define SINGLETRACK_HELP_WIDTH 79
 
 //Key used for displaying help window
 #define SINGLETRACK_HELP_KEY 'h'
@@ -245,7 +268,6 @@ void singletrack_help()
 
 	//print help information
 	int row = 1;
-	singletrack_help_print_keyhint(help_window, &row, "q/ESC", "Escape single track mode");
 	singletrack_help_print_keyhint(help_window, &row, "+/-", "Next/previous satellite");
 	singletrack_help_print_keyhint(help_window, &row, "Key left/Key right", "---------- \"\" ---------");
 	singletrack_help_print_keyhint(help_window, &row, "SPACE", "Next transponder");
@@ -257,11 +279,10 @@ void singletrack_help()
 	singletrack_help_print_keyhint(help_window, &row, "d/D", "Turn on/off downlink frequency updates to rigctld");
 	singletrack_help_print_keyhint(help_window, &row, "u/U", "Turn on/off uplink frequency updates to rigctld");
 	singletrack_help_print_keyhint(help_window, &row, "f", "Turn on downlink and uplink frequency updates to rigctld ");
-	singletrack_help_print_keyhint(help_window, &row, "f/F", "Overwrite current uplink and downlink frequencies with thecurrent frequency in the rig (inversely doppler-corrected)");
+	singletrack_help_print_keyhint(help_window, &row, "f/F", "Overwrite current uplink and downlink frequencies with   the current frequency in the rig (inversely doppler-     corrected)");
 	singletrack_help_print_keyhint(help_window, &row, "m/M", "Turns on/off a continuous version of the above");
 	singletrack_help_print_keyhint(help_window, &row, "x", "Reverse downlink and uplink VFO names");
 	row++;
-	singletrack_help_print_keyhint(help_window, &row, "A", "Turn antenna towards azimuth at the next AOS (disabled during a pass)");
 	row++;
 	mvwprintw(help_window, row++, 1, "Press any key to continue");
 	wresize(help_window, row+1, SINGLETRACK_HELP_WIDTH);
@@ -760,6 +781,11 @@ int singletrack_track_satellite(const char *satellite_name, predict_observer_t *
 		singletrack_print_transponder_headers();
 	}
 
+	//window for printing main menu options
+	WINDOW *main_menu_win = newwin(SINGLETRACK_MAIN_MENU_HEIGHT, COLS, LINES-SINGLETRACK_MAIN_MENU_HEIGHT, 0);
+	singletrack_print_main_menu(main_menu_win);
+	refresh();
+
 	while (true) {
 		//predict and observe satellite orbit
 		time_t epoch = time(NULL);
@@ -883,6 +909,8 @@ int singletrack_track_satellite(const char *satellite_name, predict_observer_t *
 			rotctld_fail_on_errors(rotctld_track(rotctld, obs.azimuth*180.0/M_PI, obs.elevation*180.0/M_PI));
 		}
 
+		singletrack_print_main_menu(main_menu_win);
+
 		//handle keyboard input
 		input_key=getch();
 
@@ -932,7 +960,7 @@ int singletrack_track_satellite(const char *satellite_name, predict_observer_t *
 		refresh();
 
 		//display help
-		if (input_key == SINGLETRACK_HELP_KEY) {
+		if (tolower(input_key) == SINGLETRACK_HELP_KEY) {
 			singletrack_help();
 		}
 
@@ -946,7 +974,7 @@ int singletrack_track_satellite(const char *satellite_name, predict_observer_t *
 			|| (input_key == '-')
 			|| (input_key == KEY_LEFT)
 			|| (input_key == KEY_RIGHT)
-			|| (input_key == SINGLETRACK_HELP_KEY)) {
+			|| (tolower(input_key) == SINGLETRACK_HELP_KEY)) {
 			break;
 		}
 	}

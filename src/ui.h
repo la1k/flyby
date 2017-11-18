@@ -80,4 +80,16 @@ void update_tle_database(const char *string, struct tle_db *tle_db);
  **/
 void run_flyby_curses_ui(bool new_user, const char *qthfile, predict_observer_t *observer, struct tle_db *tle_db, struct transponder_db *sat_db, rotctld_info_t *rotctld, rigctld_info_t *downlink, rigctld_info_t *uplink);
 
+/**
+ * Print a main menu option, htop style.
+ *
+ * \param window Window for printing
+ * \param row Row
+ * \param col Column
+ * \param key Keybinding
+ * \param description Description of keybinding
+ * \return Position for next menu option
+ **/
+int print_main_menu_option(WINDOW *window, int row, int col, char key, const char *description);
+
 #endif
