@@ -767,19 +767,21 @@ void print_main_menu(WINDOW *window)
 	int row = 0;
 	int column = 0;
 
-	column = print_main_menu_option(window, row, column, 'W', "Enable/Disable Satellites");
-	column = print_main_menu_option(window, row, column, 'G', "Edit Ground Station      ");
-	column = print_main_menu_option(window, row, column, 'E', "Edit Transponder Database");
+	column = print_main_menu_option(window, row, column, 'W', "En/Disable Satellites");
+	column = print_main_menu_option(window, row, column, 'G', "Edit Ground Station");
+	column = print_main_menu_option(window, row, column, 'E', "Edit Transponders ");
+	column = print_main_menu_option(window, row, column, 'H', "Help           ");
 	column = 0;
 	row++;
-	column = print_main_menu_option(window, row, column, 'I', "Program Information      ");
-	column = print_main_menu_option(window, row, column, 'O', "Solar Pass Predictions   ");
-	column = print_main_menu_option(window, row, column, 'N', "Lunar Pass Predictions   ");
+	column = print_main_menu_option(window, row, column, 'I', "Program Info         ");
+	column = print_main_menu_option(window, row, column, 'O', "Solar Predictions  ");
+	column = print_main_menu_option(window, row, column, 'N', "Lunar Predictions ");
+	column = print_main_menu_option(window, row, column, 'S', "Hamlib status  ");
 	column = 0;
 	row++;
-	column = print_main_menu_option(window, row, column, 'U', "Update Sat Elements      ");
-	column = print_main_menu_option(window, row, column, 'M', "Multitrack settings      ");
-	column = print_main_menu_option(window, row, column, 'Q', "Exit flyby               ");
+	column = print_main_menu_option(window, row, column, 'U', "Update Sat Elements  ");
+	column = print_main_menu_option(window, row, column, 'M', "Multitrack settings");
+	column = print_main_menu_option(window, row, column, 'Q', "Exit flyby                        ");
 
 	wrefresh(window);
 }
