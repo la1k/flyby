@@ -1,3 +1,4 @@
+#include "hamlib_status.h"
 #include <stdlib.h>
 #include <string.h>
 #include "hamlib.h"
@@ -389,7 +390,7 @@ void rigctld_form_update(rigctld_info_t *rigctld, struct rigctld_form *form)
 	set_connection_field(form->connection_status, rigctld->connected);
 }
 
-void hamlib_status(rotctld_info_t *rotctld, rigctld_info_t *downlink, rigctld_info_t *uplink)
+void hamlib_status(rotctld_info_t *rotctld, rigctld_info_t *downlink, rigctld_info_t *uplink, enum hamlib_status_background_clearing clear)
 {
 	halfdelay(HALF_DELAY_TIME);
 
@@ -400,6 +401,16 @@ void hamlib_status(rotctld_info_t *rotctld, rigctld_info_t *downlink, rigctld_in
 	WINDOW *downlink_window = newwin(RIGCTLD_SETTINGS_WINDOW_HEIGHT, SETTINGS_WINDOW_WIDTH, row, HAMLIB_SETTINGS_WINDOW_COL);
 	row += ROTCTLD_SETTINGS_WINDOW_HEIGHT + WINDOW_SPACING;
 	WINDOW *uplink_window = newwin(RIGCTLD_SETTINGS_WINDOW_HEIGHT, SETTINGS_WINDOW_WIDTH, row, HAMLIB_SETTINGS_WINDOW_COL);
+	row += ROTCTLD_SETTINGS_WINDOW_HEIGHT + WINDOW_SPACING;
+
+	//clear background
+	if (clear == HAMLIB_STATUS_CLEAR_BACKGROUND) {
+		for (int i=HAMLIB_SETTINGS_WINDOW_START_ROW-1; i < row+2; i++) {
+			move(i, 0);
+			clrtoeol();
+		}
+		refresh();
+	}
 
 	//prepare status forms
 	struct rigctld_form *downlink_form = rigctld_form_prepare("Downlink", downlink, downlink_window);

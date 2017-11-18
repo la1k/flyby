@@ -11,6 +11,7 @@
 #include "singletrack.h"
 #include <curses.h>
 #include <ctype.h>
+#include "hamlib_status.h"
 
 #include "defines.h"
 #include <math.h>
@@ -203,9 +204,10 @@ void singletrack_print_main_menu(WINDOW *window)
 	int row = 0;
 	int column = 0;
 
-	column = print_main_menu_option(window, row, column, 'A', "Rotate to AOS position   ");
+	column = print_main_menu_option(window, row, column, 'S', "Hamlib status ");
+	column = print_main_menu_option(window, row, column, 'A', "Turn to AOS   ");
 	column = print_main_menu_option(window, row, column, 'H', "Other keybindings        ");
-	column = print_main_menu_option(window, row, column, 'Q', "Return                    ");
+	column = print_main_menu_option(window, row, column, 'Q', "Return                 ");
 
 	wrefresh(window);
 }
@@ -215,6 +217,9 @@ void singletrack_print_main_menu(WINDOW *window)
 
 //Key used for displaying help window
 #define SINGLETRACK_HELP_KEY 'h'
+
+//Key used for displaying hamlib status window
+#define SINGLETRACK_HAMLIB_KEY 's'
 
 //Row position of help window
 #define SINGLETRACK_HELP_ROW 4
@@ -964,6 +969,11 @@ int singletrack_track_satellite(const char *satellite_name, predict_observer_t *
 			singletrack_help();
 		}
 
+		//display hamlib info
+		if (tolower(input_key) == SINGLETRACK_HAMLIB_KEY) {
+			hamlib_status(rotctld, downlink_info, uplink_info, HAMLIB_STATUS_CLEAR_BACKGROUND);
+		}
+
 		halfdelay(HALF_DELAY_TIME);
 
 		//quit function and return input key
@@ -974,7 +984,8 @@ int singletrack_track_satellite(const char *satellite_name, predict_observer_t *
 			|| (input_key == '-')
 			|| (input_key == KEY_LEFT)
 			|| (input_key == KEY_RIGHT)
-			|| (tolower(input_key) == SINGLETRACK_HELP_KEY)) {
+			|| (tolower(input_key) == SINGLETRACK_HELP_KEY)
+			|| (tolower(input_key) == SINGLETRACK_HAMLIB_KEY)) {
 			break;
 		}
 	}

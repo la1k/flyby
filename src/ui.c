@@ -1029,10 +1029,12 @@ void run_flyby_curses_ui(bool new_user, const char *qthfile, predict_observer_t 
 							multitrack_edit_settings(listing);
 							break;
 
-						case KEY_F(6):
-							hamlib_status(rotctld, downlink, uplink);
+						case 'S':
+						case 's':
+							hamlib_status(rotctld, downlink, uplink, HAMLIB_STATUS_KEEP_BACKGROUND);
 							break;
 
+						case 'H':
 						case 'h':
 							multitrack_show_help();
 							break;

@@ -1597,7 +1597,7 @@ void multitrack_show_help()
 	int help_row = row;
 	mvwprintw(help_window, row++, col, "Keybindings:");
 	mvwprintw(help_window, row++, col, "F3/`/`:  Search for satellite");
-	mvwprintw(help_window, row++, col, "F6    :  Hamlib connection");
+	mvwprintw(help_window, row++, col, "S     :  Hamlib connection");
 	mvwprintw(help_window, row++, col, "         status");
 	row = help_row;
 	col = 32;
