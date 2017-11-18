@@ -14,7 +14,7 @@
 #include "transponder_editor.h"
 #include "multitrack.h"
 #include "locator.h"
-#include "hamlib_settings.h"
+#include "hamlib_status.h"
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Leftovers from old predict.c-file not sorted elsewhere. Mainly contains run_flyby_curses_ui(), which               //
@@ -1029,12 +1029,11 @@ void run_flyby_curses_ui(bool new_user, const char *qthfile, predict_observer_t 
 							multitrack_edit_settings(listing);
 							break;
 
-						case 'H':
-						case 'h':
-							hamlib_settings(rotctld, downlink, uplink);
+						case KEY_F(6):
+							hamlib_status(rotctld, downlink, uplink);
 							break;
 
-						case KEY_F(1):
+						case 'h':
 							multitrack_show_help();
 							break;
 
