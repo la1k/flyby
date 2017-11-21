@@ -14,11 +14,10 @@ before_script:
   - mkdir $LIBPREDICT_FOLDER
   - cd libpredict-master && mkdir -p build; cd build; cmake -D CMAKE_INSTALL_PREFIX=$LIBPREDICT_FOLDER .. && make && make install
   - export LIBPREDICT_LIBRARY_PATH="$LIBPREDICT_FOLDER/lib/"
-  - export LIBPREDICT_INCLUDE_PATH="$LIBPREDICT_FOLDER/include"
   - export LD_LIBRARY_PATH="$LIBPREDICT_LIBRARY_PATH"
   - cd $ORIG_FOLDER
 
-script: mkdir -p build; cd build; cmake --version && cmake -D CMAKE_C_FLAGS="-I $LIBPREDICT_INCLUDE_PATH -L $LIBPREDICT_LIBRARY_PATH" .. && make
+script: mkdir -p build; cd build; cmake --version && PKG_CONFIG_PATH=$LIBPREDICT_LIBRARY_PATH/pkgconfig cmake .. && make
 
 notifications:
   email: false
