@@ -74,9 +74,25 @@ $ make
 (optional: # make install)
 ```
 
+If you get the error
+
+```
+-- Checking for one of the modules 'predict'
+CMake Error at /usr/share/cmake-3.7/Modules/FindPkgConfig.cmake:637 (message):
+None of the required 'predict' found
+```
+
+, it means that pkgconfig was unable to find libpredict. It could be a problem with your pkgconfig search directories. If you are sure libpredict is installed, you could try
+
+```
+PKG_CONFIG_PATH=[path to libpredict lib/-path]/pkgconfig cmake ..
+```
+
+, which will force pkgconfig to try to locate the libpredict pkgconfig file within that folder.
+
 ### (Alternative) Local installation
 
-It gets more messy and is not recommended, however, if you do not have access to installation to system-wide paths, or do not want to clutter up your system paths, libpredict can be installed locally for your user.
+If you do not have access to installation to system-wide paths, or do not want to clutter up your system paths, libpredict can be installed locally for your user.
 
 ```
 (Obtain libpredict and create and navigate to the build folder as outlined above)
@@ -88,19 +104,11 @@ $ make install
 For flyby, link and include paths are changed as follows:
 ```
 (Obtain flyby and create and navigate to build folder as outlined above)
-$ cmake -D CMAKE_C_FLAGS="-L $LIBPREDICT_INSTALL_PREFIX/lib -I $LIBPREDICT_INSTALL_PREFIX/include" ..
+$ PKG_CONFIG_PATH=$LIBPREDICT_INSTALL_PREFIX/lib/pkgconfig cmake ..
 $ make
 ```
-You will likely encounter `./flyby: error while loading shared libraries:
-libpredict.so.1: cannot open shared object file: No such file or directory`
-when running flyby with a local libpredict. This is because libpredict
-now is located in a non-standard path and `ld` cannot find the library. In this case, you can:
 
-* Run e.g. `export LD_LIBRARY_PATH=$LIBPREDICT_INSTALL_PREFIX/lib` before running
-flyby (or add this to your `.bashrc`-file)
-* Run flyby using `LD_PRELOAD=$LIBPREDICT_INSTALL_PREFIX/lib/libpredict.so ./flyby`
-
-If you get the same error when installing to system-wide paths, remember to run `ldconfig`, and otherwise check whether the default assumed install path in `cmake` actually is a part of your PATHs (should not be a problem on debian-derived systems).
+(Note: Above, `lib/` is assumed as the library folder, but it could end up differently on your system.)
 
 Running flyby for the first time
 --------------------------------
