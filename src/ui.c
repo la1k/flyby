@@ -710,7 +710,7 @@ void whitelist_editor(struct tle_db *tle_db, const struct transponder_db *transp
 				case KEY_BACKSPACE:
 					form_driver(form, REQ_DEL_PREV);
 				default:
-					if (isupper(c) || isdigit(c)) {
+					if (!islower(c)) {
 						form_driver(form, c);
 					}
 					if (c == 'w') {
