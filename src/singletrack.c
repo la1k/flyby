@@ -989,6 +989,7 @@ int singletrack_track_satellite(const char *satellite_name, predict_observer_t *
 			break;
 		}
 	}
+	delwin(main_menu_win);
 	return input_key;
 
 }
