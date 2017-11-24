@@ -4,7 +4,7 @@
 #include "hamlib.h"
 #include "ui.h"
 #include "defines.h"
-#include <form.h>
+#include "field_helpers.h"
 
 //Start row for settings window
 #define HAMLIB_SETTINGS_WINDOW_START_ROW 5
@@ -24,67 +24,8 @@
 ///Spacing between windows
 #define WINDOW_SPACING 0
 
-/**
- * Field type, deciding attributes to use for field returned in field().
- **/
-enum field_type {
-	///Title field with title styling, unmutable
-	TITLE_FIELD,
-	///Description field with description/header styling, unmutable
-	DESCRIPTION_FIELD,
-	///Unmutable field, normal styling
-	DEFAULT_FIELD
-};
-
 ///Spacing between settings fields
 #define FIELD_SPACING 1
-
-//Width of settings fields
-#define HAMLIB_SETTINGS_FIELD_WIDTH 12
-
-//Height of settings fields
-#define HAMLIB_SETTINGS_FIELD_HEIGHT 1
-
-/**
- * Create a field with the given position and attributes.
- *
- * \param field_type Field type (title, description, ...)
- * \param row Row index
- * \param col Column index
- * \param content Initial content to display in field
- * \return Created field
- **/
-FIELD *field(enum field_type field_type, int row, int col, const char *content)
-{
-	int field_width = HAMLIB_SETTINGS_FIELD_WIDTH;
-	if (field_type == TITLE_FIELD) {
-		field_width = strlen(content);
-	}
-
-	FIELD *field = new_field(HAMLIB_SETTINGS_FIELD_HEIGHT, field_width, row, col*(HAMLIB_SETTINGS_FIELD_WIDTH + FIELD_SPACING), 0, 0);
-
-	int field_attributes = 0;
-	switch (field_type) {
-		case TITLE_FIELD:
-			field_attributes = A_BOLD;
-			field_opts_off(field, O_ACTIVE);
-			break;
-		case DESCRIPTION_FIELD:
-			field_attributes = FIELDSTYLE_DESCRIPTION;
-			field_opts_off(field, O_ACTIVE);
-			break;
-		default:
-			field_opts_off(field, O_ACTIVE);
-			break;
-	}
-	set_field_back(field, field_attributes);
-
-	if (content != NULL) {
-		set_field_buffer(field, 0, content);
-	}
-
-	return field;
-}
 
 /**
  * Rotctld settings/status form.
@@ -100,27 +41,9 @@ struct rotctld_form {
 	FIELD *connection_status;
 	///Field displaying current azimuth and elevation read from rotctld
 	FIELD *aziele;
-	///Array over all rotctld fields
-	FIELD **field_array;
-	///Form for fields in this struct
-	FORM *form;
-	///Window used for drawing the form
-	WINDOW *window;
+	///Form for displaying the fields above
+	struct prepared_form form;
 };
-
-/**
- * Free fields in a standard field array.
- *
- * \param fields Field array
- **/
-void free_field_array(FIELD **fields)
-{
-	int i=0;
-	while (fields[i] != NULL) {
-		free_field(fields[i]);
-		i++;
-	}
-}
 
 /**
  * Free memory associated with rotctld settings form.
@@ -129,9 +52,18 @@ void free_field_array(FIELD **fields)
  **/
 void rotctld_form_free(struct rotctld_form **form)
 {
-	free_field_array((*form)->field_array);
-	free_form((*form)->form);
+	prepared_form_free_fields(&((*form)->form));
 	free(*form);
+}
+
+/**
+ * Convert column number for hamlib forms to an absolute column coordinate.
+ *
+ * \param col Column number (0, 1, ...)
+ **/
+int hamlib_form_col(int col)
+{
+	return DEFAULT_FIELD_WIDTH*col;
 }
 
 ///Title displayed on top of rotor form
@@ -144,29 +76,29 @@ void rotctld_form_free(struct rotctld_form **form)
  * Create rotctld settings/status form struct.
  *
  * \param rotctld Rotctld connection instance
- * \param window Window in which to draw the form
+ * \param window_row Window row
+ * \param window_col Window column
  * \return Rotctld settings form
  **/
-struct rotctld_form * rotctld_form_prepare(rotctld_info_t *rotctld, WINDOW *window)
+struct rotctld_form * rotctld_form_prepare(rotctld_info_t *rotctld, int window_row, int window_col)
 {
 	struct rotctld_form *form = (struct rotctld_form *) malloc(sizeof(struct rotctld_form));
-	form->window = window;
 
 	int row = 0;
 	int col = 0;
 
 	//title and connection status
-	FIELD *title = field(TITLE_FIELD, row, col++, ROTOR_FORM_TITLE);
+	FIELD *title = field(TITLE_FIELD, row, hamlib_form_col(col++), ROTOR_FORM_TITLE);
 	col += 2;
-	form->connection_status = field(DEFAULT_FIELD, row, col++, NULL);
+	form->connection_status = field(VARYING_INFORMATION_FIELD, row, hamlib_form_col(col++), NULL);
 
 	//field headers
 	row += 1;
 	col = 0;
-	FIELD *host_description = field(DESCRIPTION_FIELD, row, col++, "Host");
-	FIELD *port_description = field(DESCRIPTION_FIELD, row, col++, "Port");
-	FIELD *tracking_horizon_description = field(DESCRIPTION_FIELD, row, col++, "Horizon");
-	FIELD *aziele_description = field(DESCRIPTION_FIELD, row, col++, "Azi   Ele");
+	FIELD *host_description = field(DESCRIPTION_FIELD, row, hamlib_form_col(col++), "Host");
+	FIELD *port_description = field(DESCRIPTION_FIELD, row, hamlib_form_col(col++), "Port");
+	FIELD *tracking_horizon_description = field(DESCRIPTION_FIELD, row, hamlib_form_col(col++), "Horizon");
+	FIELD *aziele_description = field(DESCRIPTION_FIELD, row, hamlib_form_col(col++), "Azi   Ele");
 	row++;
 	col = 0;
 
@@ -179,34 +111,27 @@ struct rotctld_form * rotctld_form_prepare(rotctld_info_t *rotctld, WINDOW *wind
 		host_str = "N/A";
 		port_str = "N/A";
 	}
-	form->host = field(DEFAULT_FIELD, row, col++, host_str);
-	form->port = field(DEFAULT_FIELD, row, col++, port_str);
+	form->host = field(VARYING_INFORMATION_FIELD, row, hamlib_form_col(col++), host_str);
+	form->port = field(VARYING_INFORMATION_FIELD, row, hamlib_form_col(col++), port_str);
 
 	//tracking horizon
 	char tracking_horizon_str[MAX_NUM_CHARS];
 	snprintf(tracking_horizon_str, MAX_NUM_CHARS, "%f", rotctld->tracking_horizon);
-	form->tracking_horizon = field(DEFAULT_FIELD, row, col++, tracking_horizon_str);
+	form->tracking_horizon = field(VARYING_INFORMATION_FIELD, row, hamlib_form_col(col++), tracking_horizon_str);
 
 	//azimuth/elevation
-	form->aziele = field(DEFAULT_FIELD, row, col++, NULL);
+	form->aziele = field(VARYING_INFORMATION_FIELD, row, hamlib_form_col(col++), NULL);
 
 	//construct a FORM out of the FIELDs
-	form->field_array = calloc(NUM_ROTCTLD_FIELDS+1, sizeof(FIELD*));
-	FIELD *fields[NUM_ROTCTLD_FIELDS+1] = {title, form->connection_status,
+	FIELD *fields[] = {title, form->connection_status,
 		host_description, form->host, port_description, form->port, tracking_horizon_description, form->tracking_horizon, aziele_description, form->aziele, 0};
-	memcpy(form->field_array, fields, sizeof(FIELD*)*NUM_ROTCTLD_FIELDS);
-	form->form = new_form(form->field_array);
+	form->form = prepare_form(NUM_ROTCTLD_FIELDS, fields, window_row, window_col);
 
-	//set form window
-	int rows, cols;
-	scale_form(form->form, &rows, &cols);
-	set_form_win(form->form, window);
-	set_form_sub(form->form, derwin(window, rows, cols, 0, 2));
-	post_form(form->form);
-	form_driver(form->form, REQ_VALIDATION);
+	struct padding padding = {.top = 0, .bottom=1, .left=2, .right=2};
+	prepared_form_add_padding(&(form->form), padding);
 
 	//styling
-	box(window, 0, 0);
+	box(form->form.window, 0, 0);
 	set_field_buffer(title, 0, ROTOR_FORM_TITLE);
 
 	return form;
@@ -257,6 +182,8 @@ void rotctld_form_update(rotctld_info_t *rotctld, struct rotctld_form *form)
 
 	//refresh connection field
 	set_connection_field(form->connection_status, rotctld->connected);
+
+	wrefresh(form->form.window);
 }
 
 /**
@@ -273,12 +200,8 @@ struct rigctld_form {
 	FIELD *vfo;
 	///Current frequency
 	FIELD *frequency;
-	///Field array containing all displayed fields
-	FIELD **field_array;
-	///Form displaying fields in the struct
-	FORM *form;
-	///Window used for drawing the form
-	WINDOW *window;
+	///Form displaying fields above
+	struct prepared_form form;
 };
 
 ///Number of fields in rigctld form
@@ -289,29 +212,29 @@ struct rigctld_form {
  *
  * \param title_string Title to display on top of rigctld form
  * \param rigctld Rigctld connection instance
- * \param window Window for drawing
+ * \param window_row Window row
+ * \param window_col Window column
  * \return rigctld form
  **/
-struct rigctld_form *rigctld_form_prepare(const char *title_string, rigctld_info_t *rigctld, WINDOW *window)
+struct rigctld_form *rigctld_form_prepare(const char *title_string, rigctld_info_t *rigctld, int window_row, int window_col)
 {
 	int row = 0;
 	int col = 0;
 
 	struct rigctld_form *form = (struct rigctld_form *) malloc(sizeof(struct rigctld_form));
-	form->window = window;
 
 	//title and connection status
-	FIELD *title = field(TITLE_FIELD, row, col++, title_string);
+	FIELD *title = field(TITLE_FIELD, row, hamlib_form_col(col++), title_string);
 	col += 2;
-	form->connection_status = field(DEFAULT_FIELD, row, col++, "N/A");
+	form->connection_status = field(VARYING_INFORMATION_FIELD, row, hamlib_form_col(col++), NULL);
 
 	//description headers
 	row += 1;
 	col = 0;
-	FIELD *host_description = field(DESCRIPTION_FIELD, row, col++, "Host");
-	FIELD *port_description = field(DESCRIPTION_FIELD, row, col++, "Port");
-	FIELD *vfo_description = field(DESCRIPTION_FIELD, row, col++, "VFO");
-	FIELD *frequency_description = field(DESCRIPTION_FIELD, row, col++, "Frequency");
+	FIELD *host_description = field(DESCRIPTION_FIELD, row, hamlib_form_col(col++), "Host");
+	FIELD *port_description = field(DESCRIPTION_FIELD, row, hamlib_form_col(col++), "Port");
+	FIELD *vfo_description = field(DESCRIPTION_FIELD, row, hamlib_form_col(col++), "VFO");
+	FIELD *frequency_description = field(DESCRIPTION_FIELD, row, hamlib_form_col(col++), "Frequency");
 
 	//settings fields
 	row++;
@@ -322,32 +245,26 @@ struct rigctld_form *rigctld_form_prepare(const char *title_string, rigctld_info
 		host_str = rigctld->host;
 		port_str = rigctld->port;
 	}
-	form->host = field(DEFAULT_FIELD, row, col++, host_str);
-	form->port = field(DEFAULT_FIELD, row, col++, port_str);
+	form->host = field(VARYING_INFORMATION_FIELD, row, hamlib_form_col(col++), host_str);
+	form->port = field(VARYING_INFORMATION_FIELD, row, hamlib_form_col(col++), port_str);
 
 	const char *vfo_str = "N/A";
 	if (strlen(rigctld->vfo_name) > 0) {
 		vfo_str = rigctld->vfo_name;
 	}
-	form->vfo = field(DEFAULT_FIELD, row, col++, vfo_str);
-	form->frequency = field(DEFAULT_FIELD, row, col++, "N/A");
+	form->vfo = field(VARYING_INFORMATION_FIELD, row, hamlib_form_col(col++), vfo_str);
+	form->frequency = field(VARYING_INFORMATION_FIELD, row, hamlib_form_col(col++), "N/A");
 
 	//create FORM from FIELDs
-	form->field_array = calloc(NUM_RIGCTLD_FIELDS+1, sizeof(FIELD*));
 	FIELD *fields[NUM_RIGCTLD_FIELDS+1] = {title, form->connection_status, host_description, form->host, port_description, form->port, vfo_description, form->vfo, frequency_description, form->frequency, 0};
-	memcpy(form->field_array, fields, sizeof(FIELD*)*NUM_RIGCTLD_FIELDS);
-	form->form = new_form(form->field_array);
 
-	//set form window
-	int rows, cols;
-	scale_form(form->form, &rows, &cols);
-	set_form_win(form->form, window);
-	set_form_sub(form->form, derwin(window, rows, cols, 0, 2));
-	post_form(form->form);
-	form_driver(form->form, REQ_VALIDATION);
+	form->form = prepare_form(NUM_RIGCTLD_FIELDS, fields, window_row, window_col);
+
+	struct padding padding = {.top = 0, .bottom=1, .left=2, .right=2};
+	prepared_form_add_padding(&(form->form), padding);
 
 	//form styling
-	box(window, 0, 0);
+	box(form->form.window, 0, 0);
 	set_field_buffer(title, 0, title_string);
 
 	return form;
@@ -360,8 +277,7 @@ struct rigctld_form *rigctld_form_prepare(const char *title_string, rigctld_info
  **/
 void rigctld_form_free(struct rigctld_form **form)
 {
-	free_field_array((*form)->field_array);
-	free_form((*form)->form);
+	prepared_form_free_fields(&((*form)->form));
 	free(*form);
 }
 
@@ -388,19 +304,22 @@ void rigctld_form_update(rigctld_info_t *rigctld, struct rigctld_form *form)
 
 	//update connection status field
 	set_connection_field(form->connection_status, rigctld->connected);
+
+	wrefresh(form->form.window);
 }
 
 void hamlib_status(rotctld_info_t *rotctld, rigctld_info_t *downlink, rigctld_info_t *uplink, enum hamlib_status_background_clearing clear)
 {
 	halfdelay(HALF_DELAY_TIME);
 
-	//windows for each form
+	//prepare status forms
 	int row = HAMLIB_SETTINGS_WINDOW_START_ROW;
-	WINDOW *rotctld_window = newwin(ROTCTLD_SETTINGS_WINDOW_HEIGHT, SETTINGS_WINDOW_WIDTH, row, HAMLIB_SETTINGS_WINDOW_COL);
+	int col = HAMLIB_SETTINGS_WINDOW_COL;
+	struct rotctld_form *rotctld_form = rotctld_form_prepare(rotctld, row, col);
 	row += ROTCTLD_SETTINGS_WINDOW_HEIGHT + WINDOW_SPACING;
-	WINDOW *downlink_window = newwin(RIGCTLD_SETTINGS_WINDOW_HEIGHT, SETTINGS_WINDOW_WIDTH, row, HAMLIB_SETTINGS_WINDOW_COL);
+	struct rigctld_form *downlink_form = rigctld_form_prepare("Downlink", downlink, row, col);
 	row += ROTCTLD_SETTINGS_WINDOW_HEIGHT + WINDOW_SPACING;
-	WINDOW *uplink_window = newwin(RIGCTLD_SETTINGS_WINDOW_HEIGHT, SETTINGS_WINDOW_WIDTH, row, HAMLIB_SETTINGS_WINDOW_COL);
+	struct rigctld_form *uplink_form = rigctld_form_prepare("Uplink", uplink, row, col);
 	row += ROTCTLD_SETTINGS_WINDOW_HEIGHT + WINDOW_SPACING;
 
 	//clear background
@@ -412,20 +331,11 @@ void hamlib_status(rotctld_info_t *rotctld, rigctld_info_t *downlink, rigctld_in
 		refresh();
 	}
 
-	//prepare status forms
-	struct rigctld_form *downlink_form = rigctld_form_prepare("Downlink", downlink, downlink_window);
-	struct rigctld_form *uplink_form = rigctld_form_prepare("Uplink", uplink, uplink_window);
-	struct rotctld_form *rotctld_form = rotctld_form_prepare(rotctld, rotctld_window);
-
 	while (true) {
 		//update with current rig/rotctld status
 		rigctld_form_update(downlink, downlink_form);
 		rigctld_form_update(uplink, uplink_form);
 		rotctld_form_update(rotctld, rotctld_form);
-
-		wrefresh(uplink_window);
-		wrefresh(downlink_window);
-		wrefresh(rotctld_window);
 
 		//key input handling
 		int key = getch();
@@ -437,8 +347,4 @@ void hamlib_status(rotctld_info_t *rotctld, rigctld_info_t *downlink, rigctld_in
 	rigctld_form_free(&downlink_form);
 	rigctld_form_free(&uplink_form);
 	rotctld_form_free(&rotctld_form);
-
-	delwin(rotctld_window);
-	delwin(uplink_window);
-	delwin(downlink_window);
 }

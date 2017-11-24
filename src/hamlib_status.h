@@ -2,6 +2,7 @@
 #define HAMLIB_SETTINGS_H_DEFINED
 
 #include "hamlib.h"
+#include <form.h>
 
 /**
  * Used for deciding whether the background should be cleared or not before
