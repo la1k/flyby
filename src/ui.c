@@ -781,7 +781,8 @@ void print_main_menu(WINDOW *window)
 	row++;
 	column = print_main_menu_option(window, row, column, "U", "Update Sat Elements  ");
 	column = print_main_menu_option(window, row, column, "M", "Multitrack settings");
-	column = print_main_menu_option(window, row, column, "Q", "Exit flyby                        ");
+	column = print_main_menu_option(window, row, column, "Q", "Exit flyby        ");
+	column = print_main_menu_option(window, row, column, "L", "Track body     ");
 
 	wrefresh(window);
 }
@@ -918,6 +919,7 @@ void run_flyby_curses_ui(bool new_user, const char *qthfile, predict_observer_t 
 	init_pair(8,COLOR_RED,COLOR_YELLOW);
 	init_pair(9,COLOR_BLACK,COLOR_GREEN);
 	init_pair(10,COLOR_BLACK,COLOR_YELLOW);
+	init_pair(11,COLOR_RED,COLOR_BLACK);
 
 	if (new_user) {
 		qth_editor(qthfile, observer);
@@ -970,6 +972,7 @@ void run_flyby_curses_ui(bool new_user, const char *qthfile, predict_observer_t 
 		refresh();
 		halfdelay(HALF_DELAY_TIME);  // Increase if CPU load is too high
 		key = getch();
+
 		if (key != -1) {
 			cbreak(); //turn off halfdelay
 
@@ -1064,6 +1067,10 @@ void run_flyby_curses_ui(bool new_user, const char *qthfile, predict_observer_t 
 						case 27:
 						case 'q':
 							should_run = false;
+							break;
+						case 'l':
+						case 'L':
+							track_astronomical_body(observer, rotctld);
 							break;
 					}
 					clear();

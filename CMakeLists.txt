@@ -32,7 +32,7 @@ include_directories(${CMAKE_BINARY_DIR} ${CMAKE_SOURCE_DIR}/src ${PREDICT_INCLUD
 link_directories(${PREDICT_LIBRARY_DIRS})
 
 #main flyby executable
-add_executable(flyby src/ui.c src/hamlib.c src/main.c src/string_array.c src/xdg_basedirs.c src/xdg_basedir_extras.c src/tle_db.c src/transponder_db.c src/qth_config.c src/filtered_menu.c src/transponder_editor.c src/multitrack.c src/locator.c src/option_help.c src/singletrack.c src/prediction_schedules.c src/hamlib_status.c src/field_helpers.c)
+add_executable(flyby src/ui.c src/hamlib.c src/main.c src/string_array.c src/xdg_basedirs.c src/xdg_basedir_extras.c src/tle_db.c src/transponder_db.c src/qth_config.c src/filtered_menu.c src/transponder_editor.c src/multitrack.c src/locator.c src/option_help.c src/singletrack.c src/prediction_schedules.c src/hamlib_status.c src/field_helpers.c src/track_astronomical_bodies.c)
 install(TARGETS flyby RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 
 target_link_libraries(flyby m ncurses menu form ${PREDICT_LIBRARIES})
