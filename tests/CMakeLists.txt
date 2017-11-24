@@ -10,7 +10,7 @@ add_test(NAME xdg-dirs COMMAND xdg-dirs-t)
 
 #qth file operation tests
 configure_file(test_data/flyby.qth.in test_data/flyby/flyby.qth COPYONLY)
-add_executable(qth-t qth-t.c ${CMAKE_SOURCE_DIR}/src/qth_config.c ${CMAKE_SOURCE_DIR}/src/string_array.c)
+add_executable(qth-t qth-t.c ${CMAKE_SOURCE_DIR}/src/qth_config.c ${CMAKE_SOURCE_DIR}/src/string_array.c ${CMAKE_SOURCE_DIR}/src/xdg_basedir_extras.c)
 target_link_libraries(qth-t ${CMOCKA_LIBRARY} predict)
 add_test(NAME qth COMMAND qth-t)
 
@@ -34,7 +34,7 @@ configure_file(test_data/old_tles/part2.tle.in test_data/mixture/flyby/tles/part
 configure_file(test_data/newer_tles/amateur.txt.in test_data/mixture/flyby/tles/amateur.txt COPYONLY)
 
 #TLE db tests
-add_executable(tle-db-t tle-db-t.c ${CMAKE_SOURCE_DIR}/src/tle_db.c ${CMAKE_SOURCE_DIR}/src/string_array.c)
+add_executable(tle-db-t tle-db-t.c ${CMAKE_SOURCE_DIR}/src/tle_db.c ${CMAKE_SOURCE_DIR}/src/string_array.c ${CMAKE_SOURCE_DIR}/src/xdg_basedir_extras.c ${CMAKE_SOURCE_DIR}/src/xdg_basedir_extras.c)
 target_link_libraries(tle-db-t ${CMOCKA_LIBRARY} predict)
 add_test(NAME tle-db COMMAND tle-db-t)
 
@@ -42,7 +42,7 @@ add_test(NAME tle-db COMMAND tle-db-t)
 configure_file(test_data/flyby.db.in test_data/flyby/flyby.db)
 
 #transponder db tests
-add_executable(transponder-db-t transponder-db-t.c ${CMAKE_SOURCE_DIR}/src/transponder_db.c ${CMAKE_SOURCE_DIR}/src/string_array.c ${CMAKE_SOURCE_DIR}/src/tle_db.c)
+add_executable(transponder-db-t transponder-db-t.c ${CMAKE_SOURCE_DIR}/src/transponder_db.c ${CMAKE_SOURCE_DIR}/src/string_array.c ${CMAKE_SOURCE_DIR}/src/tle_db.c ${CMAKE_SOURCE_DIR}/src/xdg_basedir_extras.c)
 target_link_libraries(transponder-db-t ${CMOCKA_LIBRARY} predict)
 add_test(NAME transponder-db COMMAND transponder-db-t)
 
