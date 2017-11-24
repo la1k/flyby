@@ -1,9 +1,5 @@
 #include <predict/predict.h>
-
-/**
- * Convenience enum so that screens for predicting moon and sun can be unified to one function.
- **/
-enum celestial_object{PREDICT_SUN, PREDICT_MOON};
+#include "track_astronomical_bodies.h"
 
 /* This function predicts satellite passes.
  *
@@ -28,4 +24,4 @@ void solar_illumination_display_predictions(const char *name, predict_orbital_el
  * \param object Sun or moon
  * \param qth Point of observation
 **/
-void sun_moon_pass_display_schedule(enum celestial_object object, predict_observer_t *qth);
+void sun_moon_pass_display_schedule(enum astronomical_body object, predict_observer_t *qth);
