@@ -217,38 +217,6 @@ We will try out the single track mode. Press either right arrow button or ENTER 
 
 Now, a screen is shown containing almost exactly the same information as in the previous multitrack view. Here, however, some additional features are available for controlling antenna rotors and radio rigs.
 
-### Orbital predictions
-
-(This subsection is based on PREDICT's original manpage.)
-
-In the previous menu, selecting 'Predict passes' (or pressing P) or 'Predict visible
-passes' (or pressing V) would, respectively, show tables over the upcoming passes or
-upcoming visible passes. This can be be convenient for planning in
-advance any observations, or confirming past observations. In both cases, symbol '\*' to the right means that the satellite is in sunlight, while '+' means that the satellite is in sunlight and in the cover of darkness. Under good viewing conditions and for large satellites like ISS, the latter means that the satellite is visible to the naked eye.
-
-Selecting 'Solar illumination prediction' will show tables over how much sunlight a particular satellite wil receive during a 24 hour period.
-
-### Solar and lunar orbital predictions
-
-(This subsection is based on PREDICT's original manpage.)
-
-Selecting 'O' or 'N' in the main menu will display orbital schedules for the Sun and the Moon, respectively. Here, declination (Dec) and the greenwich hour angle (GHA) correspond to the latitude and longitude of the object's sub-satellite point above the Earth's surface. RA is the right ascension. Range corresponds to the normalized distance to the object (actual distance divided by the average distance).
-In practice,
-the normalized distance can range from about 0.945 to 1.055 for
-the Moon, and about 0.983 to 1.017 for the Sun.
-
-The radial velocity (Vel) corresponds to
-the speed and direction the object is traveling toward (+) or away
-(-) from the ground station, and is expressed in meters per second.
-When the radial distance of the Moon is close to zero, the amount of
-Doppler shift experienced in Moonbounce communications is minimal.
-
-Note that the effects of atmospherics are ignored in determining the
-elevation angles for the Sun and Moon. Furthermore, the data
-provided by flyby corresponds to the object's center, and
-not the upper or lower limb, as is sometimes done when predicting
-the rising and setting times of these celestial objects.
-
 Defining transponders
 ---------------------
 
@@ -342,6 +310,47 @@ More options for rotctld and rigctld operation can be reviewed using
 flyby --help
 ```
 A uplink VFO can e.g. be added using `--rigctld-uplink`.
+
+Prediction schedules
+--------------------
+
+Flyby can display satellite and sun/moon prediction tables.
+
+### Orbital predictions
+
+(This subsection is based on PREDICT's original manpage.)
+
+In the the multitrack view satellite submenu, selecting 'Predict passes' (or
+pressing P) or 'Predict visible passes' (or pressing V) would, respectively,
+show tables over the upcoming passes or upcoming visible passes. This can be be
+convenient for planning in advance any observations, or confirming past
+observations. In both cases, symbol '\*' to the right means that the satellite
+is in sunlight, while '+' means that the satellite is in sunlight and in the
+cover of darkness. Under good viewing conditions and for large satellites like
+ISS, the latter means that the satellite is visible to the naked eye.
+
+Selecting 'Solar illumination prediction' will show tables over how much sunlight a particular satellite wil receive during a 24 hour period.
+
+### Solar and lunar orbital predictions
+
+(This subsection is based on PREDICT's original manpage.)
+
+Selecting 'O' or 'N' in the main menu will display orbital schedules for the Sun and the Moon, respectively. Here, declination (Dec) and the greenwich hour angle (GHA) correspond to the latitude and longitude of the object's sub-satellite point above the Earth's surface. RA is the right ascension. Range corresponds to the normalized distance to the object (actual distance divided by the average distance).
+In practice,
+the normalized distance can range from about 0.945 to 1.055 for
+the Moon, and about 0.983 to 1.017 for the Sun.
+
+The radial velocity (Vel) corresponds to
+the speed and direction the object is traveling toward (+) or away
+(-) from the ground station, and is expressed in meters per second.
+When the radial distance of the Moon is close to zero, the amount of
+Doppler shift experienced in Moonbounce communications is minimal.
+
+Note that the effects of atmospherics are ignored in determining the
+elevation angles for the Sun and Moon. Furthermore, the data
+provided by flyby corresponds to the object's center, and
+not the upper or lower limb, as is sometimes done when predicting
+the rising and setting times of these celestial objects.
 
 Troubleshooting
 ---------------
