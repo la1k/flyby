@@ -768,7 +768,7 @@ int singletrack_track_satellite(const char *satellite_name, predict_observer_t *
 	}
 
 	bool aos_happens = predict_aos_happens(orbital_elements, qth->latitude);
-	bool geostationary = predict_is_geostationary(orbital_elements);
+	bool geosynchronous = predict_is_geosynchronous(orbital_elements);
 
 	predict_julian_date_t daynum = predict_to_julian(time(NULL));
 	predict_orbit(orbital_elements, &orbit, daynum);
@@ -801,16 +801,12 @@ int singletrack_track_satellite(const char *satellite_name, predict_observer_t *
 		double squint = predict_squint_angle(qth, &orbit, satellite_transponders.alon, satellite_transponders.alat);
 
 		//update pass information
-		if (!decayed && aos_happens && !geostationary && (daynum > los.time)) {
-			struct predict_orbit temp_orbit;
-
+		if (!decayed && aos_happens && !geosynchronous && (daynum > los.time)) {
 			//aos of next pass
-			predict_orbit(orbital_elements, &temp_orbit, predict_next_aos(qth, orbital_elements, daynum));
-			predict_observe_orbit(qth, &temp_orbit, &aos);
+			aos = predict_next_aos(qth, orbital_elements, daynum);
 
 			//los of current or next pass
-			predict_orbit(orbital_elements, &temp_orbit, predict_next_los(qth, orbital_elements, daynum));
-			predict_observe_orbit(qth, &temp_orbit, &los);
+			los = predict_next_los(qth, orbital_elements, daynum);
 
 			//max elevation of current or next pass
 			max_elevation = predict_at_max_elevation(qth, orbital_elements, daynum);
@@ -833,9 +829,9 @@ int singletrack_track_satellite(const char *satellite_name, predict_observer_t *
 
 		//display AOS/LOS times
 		attrset(COLOR_PAIR(1)|A_BOLD);
-		if (geostationary && (obs.elevation>=0.0)) {
-			mvprintw(AOSLOS_INFORMATION_ROW,1,"Satellite orbit is geostationary");
-		} else if (decayed || !aos_happens || (geostationary && (obs.elevation<0.0))){
+		if (geosynchronous && (obs.elevation>=0.0)) {
+			mvprintw(AOSLOS_INFORMATION_ROW,1,"Satellite orbit is geosynchronous");
+		} else if (decayed || !aos_happens || (geosynchronous && (obs.elevation<0.0))){
 			mvprintw(AOSLOS_INFORMATION_ROW,1,"This satellite never reaches AOS");
 		} else if (obs.elevation >= 0.0) {
 			time_t epoch = predict_from_julian(los.time);
@@ -848,7 +844,7 @@ int singletrack_track_satellite(const char *satellite_name, predict_observer_t *
 		}
 
 		//display max elevation information
-		if (!geostationary && !decayed && aos_happens) {
+		if (!geosynchronous && !decayed && aos_happens) {
 			//max elevation time
 			time_t epoch = predict_from_julian(max_elevation.time);
 			char time_string[MAX_NUM_CHARS];

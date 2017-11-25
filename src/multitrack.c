@@ -495,7 +495,7 @@ bool multitrack_update_entry(double max_elevation_threshold, predict_observer_t 
 	}
 
 	//set text formatting attributes according to satellite state, set AOS/LOS string
-	bool can_predict = !predict_is_geostationary(entry->orbital_elements) && predict_aos_happens(entry->orbital_elements, qth->latitude) && !(orbit.decayed);
+	bool can_predict = !predict_is_geosynchronous(entry->orbital_elements) && predict_aos_happens(entry->orbital_elements, qth->latitude) && !(orbit.decayed);
 	char pass_info[MAX_NUM_CHARS] = {0};
 	char aos_los[MAX_NUM_CHARS] = {0};
 
@@ -503,7 +503,7 @@ bool multitrack_update_entry(double max_elevation_threshold, predict_observer_t 
 		//different colours according to range and elevation
 		entry->display_attributes = multitrack_colors(obs.range, obs.elevation*180/M_PI);
 
-		if (predict_is_geostationary(entry->orbital_elements)){
+		if (predict_is_geosynchronous(entry->orbital_elements)){
 			sprintf(aos_los, "*GeoS*");
 			entry->geostationary = true;
 		} else {
@@ -560,7 +560,7 @@ bool multitrack_update_entry(double max_elevation_threshold, predict_observer_t 
 	bool calculate_next_los = can_predict && (time > entry->next_los) && (obs.elevation > 0);
 	bool calculate_next_aos = can_predict && (time > entry->next_aos) && (obs.elevation < 0);
 	if (calculate_next_los) {
-		entry->next_los= predict_next_los(qth, entry->orbital_elements, time);
+		entry->next_los= predict_next_los(qth, entry->orbital_elements, time).time;
 	}
 
 	if (calculate_next_aos || calculate_next_los) {
@@ -569,7 +569,7 @@ bool multitrack_update_entry(double max_elevation_threshold, predict_observer_t 
 	}
 
 	if (calculate_next_aos) {
-		entry->next_aos = predict_next_aos(qth, entry->orbital_elements, time);
+		entry->next_aos = predict_next_aos(qth, entry->orbital_elements, time).time;
 	}
 
 	//use current elevation as max elevation if satellite is above horizon and geostationary
@@ -605,7 +605,7 @@ bool multitrack_update_entry(double max_elevation_threshold, predict_observer_t 
 	entry->above_horizon = obs.elevation > 0;
 	entry->decayed = orbit.decayed;
 
-	entry->never_visible = !predict_aos_happens(entry->orbital_elements, qth->latitude) || (predict_is_geostationary(entry->orbital_elements) && (obs.elevation <= 0.0));
+	entry->never_visible = !predict_aos_happens(entry->orbital_elements, qth->latitude) || (predict_is_geosynchronous(entry->orbital_elements) && (obs.elevation <= 0.0));
 	return calculate_next_aos || calculate_next_los;
 }
 
