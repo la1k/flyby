@@ -58,7 +58,7 @@ void singletrack_print_headers(const char *satellite_name, long satellite_number
  * \param orbit Orbit
  * \param obs Observation
  **/
-void singletrack_print_satellite_properties(const struct predict_orbit *orbit, const struct predict_observation *obs);
+void singletrack_print_satellite_properties(const struct predict_position *orbit, const struct predict_observation *obs);
 
 /**
  * For specifying current satellite status without passing struct predict_observation all over the place.
@@ -331,7 +331,7 @@ void singletrack_print_headers(const char *satellite_name, long satellite_number
 /**
  * Get string describing current satellite sunlight status.
  **/
-const char *sunlight_status_string(const struct predict_orbit *orbit, const struct predict_observation *obs)
+const char *sunlight_status_string(const struct predict_position *orbit, const struct predict_observation *obs)
 {
 	if (obs->visible) {
 		return SUNLIGHT_BASESTRING "visible    ";
@@ -345,7 +345,7 @@ const char *sunlight_status_string(const struct predict_orbit *orbit, const stru
 //row for printing satellite sunlight status
 #define SUNLIGHT_STATUS_ROW 22
 
-void singletrack_print_satellite_properties(const struct predict_orbit *orbit, const struct predict_observation *obs)
+void singletrack_print_satellite_properties(const struct predict_position *orbit, const struct predict_observation *obs)
 {
 	double sat_vel = sqrt(pow(orbit->velocity[0], 2.0) + pow(orbit->velocity[1], 2.0) + pow(orbit->velocity[2], 2.0));
 	attrset(COLOR_PAIR(2)|A_BOLD);
@@ -725,7 +725,7 @@ int singletrack_track_satellite(const char *satellite_name, predict_observer_t *
 
 	char time_string[MAX_NUM_CHARS];
 
-	struct predict_orbit orbit;
+	struct predict_position orbit;
 
 	switch (orbital_elements->ephemeris) {
 		case EPHEMERIS_SGP4:

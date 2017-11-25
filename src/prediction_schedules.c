@@ -357,7 +357,7 @@ void satellite_pass_display_schedule(const char *name, predict_orbital_elements_
 
 	predict_julian_date_t curr_time = prompt_user_for_time(name);
 
-	struct predict_orbit orbit;
+	struct predict_position orbit;
 	predict_orbit(orbital_elements, &orbit, curr_time);
 	clear();
 
@@ -619,7 +619,7 @@ void solar_illumination_display_predictions(const char *name, predict_orbital_el
 
 	const int NUM_MINUTES = 1440;
 
-	struct predict_orbit orbit;
+	struct predict_position orbit;
 
 
 	do {
