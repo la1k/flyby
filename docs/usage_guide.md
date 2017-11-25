@@ -346,20 +346,6 @@ A uplink VFO can e.g. be added using `--rigctld-uplink`.
 Troubleshooting
 ---------------
 
-### flyby freezes on "Preparing entry 53 of 344" (or similar)
-
-This is probably due to a bug in `predict_is_geostationary()` in libpredict (see https://github.com/la1k/libpredict/issues/66).
-The AOS/LOS finding functions in libpredict use `predict_is_geostationary()` to
-avoid trying to look for AOS/LOS of geostationary satellites, but
-`predict_is_geostationary()` does not classify all geosynchronous orbits correctly (uses a too strict definition).
-Combine that with missing limits on the number of iterations in the AOS/LOS
-functions, and more challenging use of AOS/LOS functions in `predict_at_max_elevation()`, and the result is that misclassified geosynchronous satellites lead to unending iteration loops.
-
-This is fixed in https://github.com/la1k/libpredict/pull/72. Until this is merged, and you encounter this bug, you can disable the offending satellites by:
-
-* Editing `$HOME/.config/flyby/flyby.whitelist` and removing the satellite numbers corresponding to your geostationary satellites
-* Removing `$HOME/.config/flyby/flyby.whitelist` altogether and be careful about which satellites you enable again
-
 ### flyby doesn't compile, fails with "warning: implicit declaration of function 'predict(...)", "warning: passing argument 1 of 'predict(...)", "error: too many arguments to function 'predict(...)", or similar
 
 Since the offending function is prefixed by `predict_`, this is a libpredict function, and since the compiler warnings and errors are all about unexpected functions, arguments or similar, it most likely means that you don't have the latest version of libpredict installed, or that your compiler is trying to include or link against the wrong version.
