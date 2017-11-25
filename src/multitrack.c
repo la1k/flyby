@@ -468,7 +468,7 @@ bool multitrack_update_entry(double max_elevation_threshold, predict_observer_t 
 	entry->geostationary = false;
 
 	struct predict_observation obs;
-	struct predict_orbit orbit;
+	struct predict_position orbit;
 	predict_orbit(entry->orbital_elements, &orbit, time);
 	predict_observe_orbit(qth, &orbit, &obs);
 
