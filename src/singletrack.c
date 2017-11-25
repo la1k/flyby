@@ -370,25 +370,6 @@ void singletrack_print_satellite_properties(const struct predict_orbit *orbit, c
 	mvprintw(SUNLIGHT_STATUS_ROW,1,sunlight_status_string(orbit, obs));
 }
 
-///Scissored from libpredict for predict_doppler_shift_(...) below. FIXME: Remove after libpredict#75 merge.
-#define SPEED_OF_LIGHT 299792458.0
-
-/**
- * Modified version of predict_doppler_shift(...) until https://github.com/la1k/libpredict/issues/75 is
- * solved and merged. FIXME: Remove after merge.
- *
- * Calculates doppler shift.
- *
- * \param obs Satellite observation
- * \param frequency Frequency
- * \return Doppler shift
- **/
-double predict_doppler_shift_(const struct predict_observation *obs, double frequency)
-{
-	double sat_range_rate = obs->range_rate*1000.0; //convert to m/s
-	return -frequency*sat_range_rate/SPEED_OF_LIGHT; //assumes that sat_range <<<<< speed of light, which is very ok
-}
-
 /**
  * For specifying whether inverse_doppler_shift(...) should assume uplink or downlink frequency for inverse calculation.
  **/
@@ -413,7 +394,7 @@ double inverse_doppler_shift(enum dopp_shift_frequency_type type, const struct p
 	if (type == DOPP_UPLINK) {
 		sign = -1;
 	}
-	return doppler_shifted_frequency/(1.0 + sign*predict_doppler_shift_(observation, 1));
+	return doppler_shifted_frequency/(1.0 + sign*predict_doppler_shift(observation, 1));
 }
 
 void singletrack_set_transponder(const struct sat_db_entry *transponder_entry, int transponder_index, struct singletrack_link *ret_transponder)
@@ -432,8 +413,8 @@ void singletrack_update_link_information(const struct predict_observation *obser
 	link_status->delay=1000.0*((1000.0*observation->range)/299792458.0);
 	link_status->downlink_loss=32.4+(20.0*log10(link_status->downlink))+(20.0*log10(observation->range));
 	link_status->uplink_loss=32.4+(20.0*log10(link_status->uplink))+(20.0*log10(observation->range));
-	link_status->downlink_doppler = link_status->downlink + predict_doppler_shift_(observation, link_status->downlink);
-	link_status->uplink_doppler = link_status->uplink - predict_doppler_shift_(observation, link_status->uplink);
+	link_status->downlink_doppler = link_status->downlink + predict_doppler_shift(observation, link_status->downlink);
+	link_status->uplink_doppler = link_status->uplink - predict_doppler_shift(observation, link_status->uplink);
 	link_status->in_range = observation->elevation >= 0;
 
 	if (fabs(observation->range_rate) < 0.1) {
