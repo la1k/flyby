@@ -465,6 +465,43 @@ void satellite_pass_display_schedule(const char *name, predict_orbital_elements_
 	}
 }
 
+/**
+ * Convenience structure for collecting ra, dec and gha.
+ **/
+struct ra_dec_gha {
+	///Right ascension
+	double ra;
+	///Declination
+	double dec;
+	///Greenwich hour angle
+	double gha;
+};
+
+/**
+ * Predict RA, Declination and GHA in degrees for an astronomical object.
+ *
+ * \param type Type of object (PREDICT_SUN or PREDICT_MOON)
+ * \param day Date
+ * \param ret_val Returned values
+ **/
+void ra_dec_gha_astronomical_body(enum astronomical_body type, predict_julian_date_t day, struct ra_dec_gha *ret_val)
+{
+	switch (type) {
+		case PREDICT_SUN:
+			ret_val->ra = predict_sun_ra(day)*180.0/M_PI;
+			ret_val->dec = predict_sun_declination(day)*180.0/M_PI;
+			ret_val->gha = predict_sun_gha(day)*180.0/M_PI;
+			break;
+
+		case PREDICT_MOON:
+			ret_val->ra = predict_moon_ra(day)*180.0/M_PI;
+			ret_val->dec = predict_moon_declination(day)*180.0/M_PI;
+			ret_val->gha = predict_moon_gha(day)*180.0/M_PI;
+			break;
+	}
+}
+
+
 void sun_moon_pass_display_schedule(enum astronomical_body object, predict_observer_t *qth)
 {
 	char print_mode;
@@ -491,13 +528,10 @@ void sun_moon_pass_display_schedule(enum astronomical_body object, predict_obser
 	predict_julian_date_t daynum = prompt_user_for_time(name_str);
 	clear();
 	struct predict_observation obs = {0};
+	struct ra_dec_gha ra_dec_gha = {0};
 
 	const double HORIZON_THRESHOLD = 0.03;
 	const double REDUCTION_FACTOR = 0.004;
-
-	double right_ascension = 0;
-	double declination = 0;
-	double longitude = 0;
 
 	do {
 		//determine sun- or moonrise
@@ -513,6 +547,8 @@ void sun_moon_pass_display_schedule(enum astronomical_body object, predict_obser
 		}
 
 		observe_astronomical_body(object, qth, rise, &obs);
+		ra_dec_gha_astronomical_body(object, rise, &ra_dec_gha);
+
 		daynum=rise;
 
 		iaz=(int)rint(obs.azimuth*180.0/M_PI);
@@ -523,7 +559,7 @@ void sun_moon_pass_display_schedule(enum astronomical_body object, predict_obser
 			//display data
 			time_t epoch = predict_from_julian(daynum);
 			strftime(time_string, MAX_NUM_CHARS, "%a %d%b%y %H:%M:%S", gmtime(&epoch));
-			sprintf(string,"      %s%4d %4d  %5.1f  %5.1f  %5.1f  %6.1f%7.3f\n",time_string, iel, iaz, right_ascension, declination, longitude, obs.range_rate, obs.range);
+			sprintf(string,"      %s%4d %4d  %5.1f  %5.1f  %5.1f  %6.1f%7.3f\n",time_string, iel, iaz, ra_dec_gha.ra, ra_dec_gha.dec, ra_dec_gha.gha, obs.range_rate, obs.range);
 			quit=schedule_print("",string,print_mode);
 			lastel=iel;
 			lastdaynum=daynum;
@@ -531,6 +567,7 @@ void sun_moon_pass_display_schedule(enum astronomical_body object, predict_obser
 			//calculate data
 			daynum+=0.04*(cos(M_PI/180.0*(obs.elevation*180.0/M_PI+0.5)));
 			observe_astronomical_body(object, qth, daynum, &obs);
+			ra_dec_gha_astronomical_body(object, daynum, &ra_dec_gha);
 			iaz=(int)rint(obs.azimuth*180.0/M_PI);
 			iel=(int)rint(obs.elevation*180.0/M_PI);
 		} while (iel>3 && quit==0);
@@ -549,8 +586,9 @@ void sun_moon_pass_display_schedule(enum astronomical_body object, predict_obser
 
 			time_t epoch = predict_from_julian(daynum);
 			strftime(time_string, MAX_NUM_CHARS, "%a %d%b%y %H:%M:%S", gmtime(&epoch));
+			ra_dec_gha_astronomical_body(object, daynum, &ra_dec_gha);
 
-			sprintf(string,"      %s%4d %4d  %5.1f  %5.1f  %5.1f  %6.1f%7.3f\n",time_string, iel, iaz, right_ascension, declination, longitude, obs.range_rate, obs.range);
+			sprintf(string,"      %s%4d %4d  %5.1f  %5.1f  %5.1f  %6.1f%7.3f\n",time_string, iel, iaz, ra_dec_gha.ra, ra_dec_gha.dec, ra_dec_gha.gha, obs.range_rate, obs.range);
 			quit=schedule_print("",string,print_mode);
 			lastel=iel;
 		} //will continue until we have elevation 0 at the end of the pass
