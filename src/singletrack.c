@@ -204,10 +204,10 @@ void singletrack_print_main_menu(WINDOW *window)
 	int row = 0;
 	int column = 0;
 
-	column = print_main_menu_option(window, row, column, 'S', "Hamlib status ");
-	column = print_main_menu_option(window, row, column, 'A', "Turn to AOS   ");
-	column = print_main_menu_option(window, row, column, 'H', "Other keybindings        ");
-	column = print_main_menu_option(window, row, column, 'Q', "Return                 ");
+	column = print_main_menu_option(window, row, column, "S", "Hamlib status ");
+	column = print_main_menu_option(window, row, column, "A", "Turn to AOS   ");
+	column = print_main_menu_option(window, row, column, "H", "Other keybindings        ");
+	column = print_main_menu_option(window, row, column, "Q", "Return                 ");
 
 	wrefresh(window);
 }

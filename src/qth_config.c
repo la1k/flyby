@@ -43,14 +43,7 @@ enum qth_file_state qth_from_search_paths(predict_observer_t *ret_observer)
 
 char* qth_default_writepath()
 {
-	create_xdg_dirs();
-
-	char *config_home = xdg_config_home();
-	char *qth_path = (char*)malloc(sizeof(char)*MAX_NUM_CHARS);
-	snprintf(qth_path, MAX_NUM_CHARS, "%s%s", config_home, QTH_RELATIVE_FILE_PATH);
-	free(config_home);
-
-	return qth_path;
+	return settings_filepath(QTH_RELATIVE_FILE_PATH);
 }
 
 void qth_to_file(const char *qth_path, predict_observer_t *qth)

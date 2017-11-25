@@ -90,6 +90,6 @@ void run_flyby_curses_ui(bool new_user, const char *qthfile, predict_observer_t 
  * \param description Description of keybinding
  * \return Position for next menu option
  **/
-int print_main_menu_option(WINDOW *window, int row, int col, char key, const char *description);
+int print_main_menu_option(WINDOW *window, int row, int col, const char *key, const char *description);
 
 #endif

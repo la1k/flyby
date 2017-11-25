@@ -748,13 +748,13 @@ void whitelist_editor(struct tle_db *tle_db, const struct transponder_db *transp
 }
 
 #define MAIN_MENU_BACKGROUND_STYLE COLOR_PAIR(4)|A_REVERSE
-int print_main_menu_option(WINDOW *window, int row, int col, char key, const char *description)
+int print_main_menu_option(WINDOW *window, int row, int col, const char *key, const char *description)
 {
 	wattrset(window, COLOR_PAIR(1));
-	mvwprintw(window, row,col,"%c", key);
+	mvwprintw(window, row,col,"%s", key);
 	wattrset(window, MAIN_MENU_BACKGROUND_STYLE);
-	mvwprintw(window, row,col+1,"%s", description);
-	return col + 1 + strlen(description);
+	mvwprintw(window, row,col+strlen(key),"%s", description);
+	return col + strlen(key) + strlen(description);
 }
 
 /**
@@ -767,21 +767,22 @@ void print_main_menu(WINDOW *window)
 	int row = 0;
 	int column = 0;
 
-	column = print_main_menu_option(window, row, column, 'W', "En/Disable Satellites");
-	column = print_main_menu_option(window, row, column, 'G', "Edit Ground Station");
-	column = print_main_menu_option(window, row, column, 'E', "Edit Transponders ");
-	column = print_main_menu_option(window, row, column, 'H', "Help           ");
+	column = print_main_menu_option(window, row, column, "W", "En/Disable Satellites");
+	column = print_main_menu_option(window, row, column, "G", "Edit Ground Station");
+	column = print_main_menu_option(window, row, column, "E", "Edit Transponders ");
+	column = print_main_menu_option(window, row, column, "H", "Help           ");
 	column = 0;
 	row++;
-	column = print_main_menu_option(window, row, column, 'I', "Program Info         ");
-	column = print_main_menu_option(window, row, column, 'O', "Solar Predictions  ");
-	column = print_main_menu_option(window, row, column, 'N', "Lunar Predictions ");
-	column = print_main_menu_option(window, row, column, 'S', "Hamlib status  ");
+	column = print_main_menu_option(window, row, column, "I", "Program Info         ");
+	column = print_main_menu_option(window, row, column, "O", "Solar Predictions  ");
+	column = print_main_menu_option(window, row, column, "N", "Lunar Predictions ");
+	column = print_main_menu_option(window, row, column, "S", "Hamlib status  ");
 	column = 0;
 	row++;
-	column = print_main_menu_option(window, row, column, 'U', "Update Sat Elements  ");
-	column = print_main_menu_option(window, row, column, 'M', "Multitrack settings");
-	column = print_main_menu_option(window, row, column, 'Q', "Exit flyby                        ");
+	column = print_main_menu_option(window, row, column, "U", "Update Sat Elements  ");
+	column = print_main_menu_option(window, row, column, "M", "Multitrack settings");
+	column = print_main_menu_option(window, row, column, "Q", "Exit flyby        ");
+	column = print_main_menu_option(window, row, column, "L", "Track body     ");
 
 	wrefresh(window);
 }
@@ -918,6 +919,7 @@ void run_flyby_curses_ui(bool new_user, const char *qthfile, predict_observer_t 
 	init_pair(8,COLOR_RED,COLOR_YELLOW);
 	init_pair(9,COLOR_BLACK,COLOR_GREEN);
 	init_pair(10,COLOR_BLACK,COLOR_YELLOW);
+	init_pair(11,COLOR_RED,COLOR_BLACK);
 
 	if (new_user) {
 		qth_editor(qthfile, observer);
@@ -970,6 +972,7 @@ void run_flyby_curses_ui(bool new_user, const char *qthfile, predict_observer_t 
 		refresh();
 		halfdelay(HALF_DELAY_TIME);  // Increase if CPU load is too high
 		key = getch();
+
 		if (key != -1) {
 			cbreak(); //turn off halfdelay
 
@@ -1064,6 +1067,10 @@ void run_flyby_curses_ui(bool new_user, const char *qthfile, predict_observer_t 
 						case 27:
 						case 'q':
 							should_run = false;
+							break;
+						case 'l':
+						case 'L':
+							track_astronomical_body(observer, rotctld);
 							break;
 					}
 					clear();

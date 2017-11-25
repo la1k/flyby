@@ -1791,17 +1791,7 @@ void multitrack_edit_settings(multitrack_listing_t *listing)
  **/
 char *multitrack_settings_filepath()
 {
-	create_xdg_dirs();
-
-	char *config_home = xdg_config_home();
-
-	int ret_size = strlen(config_home)*strlen(MULTITRACK_SETTINGS_FILE);
-	char *ret_str = (char*)malloc(sizeof(char)*ret_size);
-
-	snprintf(ret_str, ret_size, "%s%s", config_home, MULTITRACK_SETTINGS_FILE);
-
-	free(config_home);
-	return ret_str;
+	return settings_filepath(MULTITRACK_SETTINGS_FILE);
 }
 
 //config prefix for aos sort option

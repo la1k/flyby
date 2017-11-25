@@ -19,6 +19,9 @@
 //default relative multitrack settings filename
 #define MULTITRACK_SETTINGS_FILE FLYBY_RELATIVE_ROOT_PATH "multitrack_settings.conf"
 
+//default relative astronomical body tracking settings filename
+#define TRACK_ASTRONOMICAL_BODY_SETTINGS_FILE FLYBY_RELATIVE_ROOT_PATH "astronomical_body_tracking_settings.conf"
+
 /**
  * \return XDG_DATA_DIRS variable, or the xdg basedir specification default if the environment variable is empty
  **/
@@ -43,5 +46,15 @@ char *xdg_config_home();
  * Create XDG_CONFIG_HOME/flyby (normally .config/flyby) and XDG_DATA_HOME/flyby/tles/ (normally .local/share/flyby/tles) if these do not exist.
  **/
 void create_xdg_dirs();
+
+/**
+ * Return XDG location for a settings file, i.e. XDG_CONFIG_HOME/[settings_filename]. Returned string has to be free'd after use.
+ *
+ * Calls create_xdg_dirs().
+ *
+ * \param settings_filename Filename for settings file. Current use across flyby requires that this string also contains the flyby/-prefix, see definitions of various filenames above
+ * \return Path to settings file
+ **/
+char *settings_filepath(const char *settings_filename);
 
 #endif

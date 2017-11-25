@@ -555,13 +555,9 @@ string_array_t tle_db_filenames(const struct tle_db *db)
 
 void whitelist_from_search_paths(struct tle_db *db)
 {
-	//try to read QTH file from user home
-	char *config_home = xdg_config_home();
-	char whitelist_path[MAX_NUM_CHARS] = {0};
-	snprintf(whitelist_path, MAX_NUM_CHARS, "%s%s", config_home, WHITELIST_RELATIVE_FILE_PATH);
-	free(config_home);
-
+	char *whitelist_path = settings_filepath(WHITELIST_RELATIVE_FILE_PATH);
 	whitelist_from_file(whitelist_path, db);
+	free(whitelist_path);
 }
 
 void whitelist_to_file(const char *filename, struct tle_db *db)
@@ -580,13 +576,10 @@ void whitelist_to_file(const char *filename, struct tle_db *db)
 void whitelist_write_to_default(struct tle_db *db)
 {
 	//get writepath
-	create_xdg_dirs();
-	char *config_home = xdg_config_home();
-	char writepath[MAX_NUM_CHARS] = {0};
-	snprintf(writepath, MAX_NUM_CHARS, "%s%s", config_home, WHITELIST_RELATIVE_FILE_PATH);
-	free(config_home);
+	char *writepath = settings_filepath(WHITELIST_RELATIVE_FILE_PATH);
 
 	//write whitelist to writepath
 	whitelist_to_file(writepath, db);
+	free(writepath);
 }
 

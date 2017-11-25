@@ -465,25 +465,7 @@ void satellite_pass_display_schedule(const char *name, predict_orbital_elements_
 	}
 }
 
-/**
- * Predict passes of sun and moon, similar to Predict().
- *
- * \param object Sun or moon
- * \param qth Point of observation
- **/
-void celestial_predict(enum celestial_object object, predict_observer_t *qth, predict_julian_date_t time, struct predict_observation *obs)
-{
-	switch (object) {
-		case PREDICT_SUN:
-			predict_observe_sun(qth, time, obs);
-		break;
-		case PREDICT_MOON:
-			predict_observe_moon(qth, time, obs);
-		break;
-	}
-}
-
-void sun_moon_pass_display_schedule(enum celestial_object object, predict_observer_t *qth)
+void sun_moon_pass_display_schedule(enum astronomical_body object, predict_observer_t *qth)
 {
 	char print_mode;
 	char name_str[MAX_NUM_CHARS];
@@ -495,6 +477,8 @@ void sun_moon_pass_display_schedule(enum celestial_object object, predict_observ
 		case PREDICT_MOON:
 			print_mode='m';
 			strcpy(name_str, "the Moon");
+		break;
+		default:
 		break;
 	}
 	schedule_print("","",0);
@@ -517,18 +501,18 @@ void sun_moon_pass_display_schedule(enum celestial_object object, predict_observ
 
 	do {
 		//determine sun- or moonrise
-		celestial_predict(object, qth, daynum, &obs);
+		observe_astronomical_body(object, qth, daynum, &obs);
 
 		while (rise==0.0) {
 			if (fabs(obs.elevation*180.0/M_PI)<HORIZON_THRESHOLD) {
 				rise=daynum;
 			} else {
 				daynum-=(REDUCTION_FACTOR*obs.elevation*180.0/M_PI);
-				celestial_predict(object, qth, daynum, &obs);
+				observe_astronomical_body(object, qth, daynum, &obs);
 			}
 		}
 
-		celestial_predict(object, qth, rise, &obs);
+		observe_astronomical_body(object, qth, rise, &obs);
 		daynum=rise;
 
 		iaz=(int)rint(obs.azimuth*180.0/M_PI);
@@ -546,7 +530,7 @@ void sun_moon_pass_display_schedule(enum celestial_object object, predict_observ
 
 			//calculate data
 			daynum+=0.04*(cos(M_PI/180.0*(obs.elevation*180.0/M_PI+0.5)));
-			celestial_predict(object, qth, daynum, &obs);
+			observe_astronomical_body(object, qth, daynum, &obs);
 			iaz=(int)rint(obs.azimuth*180.0/M_PI);
 			iel=(int)rint(obs.elevation*180.0/M_PI);
 		} while (iel>3 && quit==0);
@@ -558,7 +542,7 @@ void sun_moon_pass_display_schedule(enum celestial_object object, predict_observ
 			//find sun/moon set
 			do {
 				daynum+=0.004*(sin(M_PI/180.0*(obs.elevation*180.0/M_PI+0.5)));
-				celestial_predict(object, qth, daynum, &obs);
+				observe_astronomical_body(object, qth, daynum, &obs);
 				iaz=(int)rint(obs.azimuth*180.0/M_PI);
 				iel=(int)rint(obs.elevation*180.0/M_PI);
 			} while (iel>0);
