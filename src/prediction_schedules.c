@@ -364,10 +364,10 @@ void satellite_pass_display_schedule(const char *name, predict_orbital_elements_
 	char title[MAX_NUM_CHARS] = {0};
 	sprintf(title, "%s (%d)", name, orbital_elements->satellite_number);
 
-	if (predict_aos_happens(orbital_elements, qth->latitude) && !predict_is_geostationary(orbital_elements) && !(orbit.decayed)) {
+	if (predict_aos_happens(orbital_elements, qth->latitude) && !predict_is_geosynchronous(orbital_elements) && !(orbit.decayed)) {
 		do {
-			predict_julian_date_t next_aos = predict_next_aos(qth, orbital_elements, curr_time);
-			predict_julian_date_t next_los = predict_next_los(qth, orbital_elements, next_aos);
+			predict_julian_date_t next_aos = predict_next_aos(qth, orbital_elements, curr_time).time;
+			predict_julian_date_t next_los = predict_next_los(qth, orbital_elements, next_aos).time;
 			curr_time = next_aos;
 
 			struct predict_observation obs;
@@ -453,8 +453,8 @@ void satellite_pass_display_schedule(const char *name, predict_orbital_elements_
 			mvprintw(12,5,"*** Passes for %s cannot occur for your ground station! ***\n",name);
 		}
 
-		if (predict_is_geostationary(orbital_elements)) {
-			mvprintw(12,3,"*** Orbital predictions cannot be made for a geostationary satellite! ***\n");
+		if (predict_is_geosynchronous(orbital_elements)) {
+			mvprintw(12,3,"*** Orbital predictions cannot be made for a geosynchronous satellite! ***\n");
 		}
 
 		beep();
