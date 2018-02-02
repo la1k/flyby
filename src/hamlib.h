@@ -11,6 +11,10 @@
 #define RIGCTLD_DEFAULT_HOST "localhost"
 #define RIGCTLD_DEFAULT_PORT "4532"
 
+#if __APPLE__
+  #define MSG_NOSIGNAL 0
+#endif
+
 typedef struct {
 	///Whether we are connected to a rotctld instance
 	bool connected;
