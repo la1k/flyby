@@ -14,7 +14,7 @@ See docs/usage_guide.md for detailed usage instructions.
 .SH COMMAND LINE OPTIONS
 
 \fB--add-tle-file=FILE\fP
-Add TLE file to flyby's TLE database. The base filename of the input file will be used for the internal file, so any existing file with this filename will be overwritten.
+Add TLE file to flyby's TLE database. The internal database is file-based, and the base filename of the input file will be used as filename for the internal file. Any existing database file with the same name will be overwritten.
 
 \fB-u,--update-tle-db=FILE\fP
 Update TLE database with TLE file FILE. Multiple files can be specified using the same option multiple times (e.g. -u file1 -u file2 ...). Flyby will exit afterwards. Any new TLEs in the file will be ignored.

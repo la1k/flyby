@@ -91,7 +91,7 @@ int main(int argc, char **argv)
 	struct option_extended options[] = {
 		{{"add-tle-file",		required_argument,	0,	FLYBY_OPT_ADD_TLE},
 			"FILE",
-			"Add TLE file to flyby's TLE database. The base filename of the input file will be used for the internal file, so any existing file with this filename will be overwritten."
+			"Add TLE file to flyby's TLE database. The internal database is file-based, and the base filename of the input file will be used as filename for the internal file. Any existing database file with the same name will be overwritten."
 		},
 		{{"update-tle-db",		required_argument,	0,	'u'},
 			"FILE",
@@ -136,7 +136,7 @@ int main(int argc, char **argv)
 		{{0, 0, 0, 0}, NULL, NULL}
 	};
 	char usage_instructions[MAX_NUM_CHARS];
-	snprintf(usage_instructions, MAX_NUM_CHARS, "Flyby satellite tracking program\nUsage:\n%s [options]", argv[0]);
+	snprintf(usage_instructions, MAX_NUM_CHARS, "Flyby satellite tracking program\n\nUsage:\n%s [options]\n\nOptions:", argv[0]);
 
 	struct option *long_options = extended_to_longopts(options);
 	char short_options[] = "u:t:q:A::H:U::D::h";
