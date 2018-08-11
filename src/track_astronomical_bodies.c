@@ -223,7 +223,7 @@ char *spaces(int num_spaces)
 }
 
 ///Length of status field
-#define STATUS_FIELD_LENGTH 20
+#define STATUS_FIELD_LENGTH 23
 
 /**
  * Create a form for displaying tracking info.
@@ -270,7 +270,7 @@ void tracking_info_update(struct tracking_info *info, const struct predict_obser
 			set_field_buffer(info->status_message, 0, "Waiting for user");
 		} else if (obs->elevation>=rotctld->tracking_horizon) {
 			char active[STATUS_FIELD_LENGTH+1];
-			snprintf(active, STATUS_FIELD_LENGTH, "Active (%d, %d)", (int)round(rotctld->prev_cmd_azimuth), (int)round(rotctld->prev_cmd_elevation));
+			snprintf(active, STATUS_FIELD_LENGTH, "Active (%3.2f, %3.2f)", rotctld->prev_cmd_azimuth, rotctld->prev_cmd_elevation);
 			set_field_buffer(info->status_message, 0, active);
 		} else {
 			set_field_buffer(info->status_message, 0, "Standing by");
@@ -318,7 +318,7 @@ void tracking_info_free(struct tracking_info **form)
 #define ROTCTLD_STATUS_ROW FORM_START_ROW
 
 //Column for printing rotctld status messages
-#define ROTCTLD_STATUS_COL 60
+#define ROTCTLD_STATUS_COL 57
 
 /**
  * Print menu at bottom of the terminal.
