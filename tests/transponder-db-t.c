@@ -312,6 +312,100 @@ void test_transponder_db_entry_copy(void **param)
 	assert_true(transponder_db_entry_equal(&entry_1, &entry_2));
 }
 
+void verify_database_in_file(struct tle_db *tle_db, struct transponder_db *old_db, char *new_db_filename)
+{
+	//load transponder db from file
+	struct transponder_db *new_transponder_db = transponder_db_create(tle_db);
+	transponder_db_from_file(new_db_filename, tle_db, new_transponder_db, LOCATION_DATA_HOME);
+
+	//check that all transponders are equal
+	for (int i=0; i < old_db->num_sats; i++) {
+		struct sat_db_entry old_entry = old_db->sats[i];
+		struct sat_db_entry new_entry = new_transponder_db->sats[i];
+		assert_int_equal(old_entry.num_transponders, new_entry.num_transponders);
+		for (int j=0; j < old_entry.num_transponders; j++) {
+			struct transponder old_trans = old_entry.transponders[j];
+			struct transponder new_trans = new_entry.transponders[j];
+
+			//name
+			assert_string_equal(old_trans.name, new_trans.name);
+
+			//frequency ranges
+			float epsilon = 0.1;
+			assert_float_equal(old_trans.downlink_start, new_trans.downlink_start, epsilon);
+			assert_float_equal(old_trans.downlink_end, new_trans.downlink_end, epsilon);
+			assert_float_equal(old_trans.uplink_start, new_trans.uplink_start, epsilon);
+			assert_float_equal(old_trans.uplink_end, new_trans.uplink_end, epsilon);
+		}
+	}
+}
+
+void test_transponder_db_with_num_transponders_near_and_above_maximum_limit(void **param)
+{
+	//create transponder database
+	struct tle_db *tle_db = tle_db_create();
+	tle_db_from_file(TEST_DATA_DIR "old_tles/part1.tle", tle_db);
+	struct transponder_db *transponder_db = transponder_db_create(tle_db);
+	bool *should_write = (bool*)calloc(tle_db->num_tles, sizeof(bool));
+
+	//fill with maximum number of transponder entries
+	for (int i=0; i < transponder_db->num_sats; i++) {
+		should_write[i] = true;
+		for (int j=0; j < MAX_NUM_TRANSPONDERS; j++) {
+			snprintf(transponder_db->sats[i].transponders[j].name, MAX_NUM_CHARS, "%s-%d", tle_db->tles[i].name, j);
+			transponder_db->sats[i].transponders[j].downlink_start = j+1;
+			transponder_db->sats[i].transponders[j].downlink_end = j+1;
+		}
+		transponder_db->sats[i].num_transponders = MAX_NUM_TRANSPONDERS;
+	}
+
+	//write transponder db to temporary file
+	char filename[L_tmpnam] = "/tmp/XXXXXX";
+	mkstemp(filename);
+	transponder_db_to_file(filename, tle_db, transponder_db, should_write);
+
+	//check that it is read back correctly
+	verify_database_in_file(tle_db, transponder_db, filename);
+
+	//insert extra transponders beyond the limit into the generated database
+	FILE* db_file = fopen(filename, "r");
+	char modified_db_filename[L_tmpnam] = "/tmp/XXXXXX";
+	mkstemp(modified_db_filename);
+
+	FILE* modified_db_file = fopen(modified_db_filename, "w");
+	char line[MAX_NUM_CHARS];
+	bool last_line_contained_end = false;
+	while (!feof(db_file)) {
+		fgets(line, MAX_NUM_CHARS, db_file);
+		if (strncmp(line, "end", 3) == 0) {
+			//ensure we are not at the very end of the file
+			if (!last_line_contained_end) {
+				//insert new transponders to list of transponders
+				for (int i=0; i < 5; i++) {
+					fprintf(modified_db_file, "new transponder-%d\n", i);
+					fprintf(modified_db_file, "0.000000, 0.000000\n");
+					fprintf(modified_db_file, "4.000000, 4.000000\n");
+					fprintf(modified_db_file, "No weekly schedule\n");
+					fprintf(modified_db_file, "No orbital schedule\n");
+				}
+			}
+			last_line_contained_end = true;
+		} else {
+			last_line_contained_end = false;
+		}
+		fprintf(modified_db_file, "%s", line);
+	}
+
+	//check that extra entries are correctly ignored
+	verify_database_in_file(tle_db, transponder_db, modified_db_filename);
+
+	//cleanup
+	fclose(db_file);
+	fclose(modified_db_file);
+	unlink(filename);
+	unlink(modified_db_filename);
+}
+
 char *xdg_data_dirs()
 {
 	return strdup((char*)mock());
@@ -340,7 +434,8 @@ int main()
 		cmocka_unit_test(test_transponder_db_entry_empty),
 		cmocka_unit_test(test_transponder_db_from_search_paths),
 		cmocka_unit_test(test_transponder_db_entry_equal),
-		cmocka_unit_test(test_transponder_db_entry_copy)
+		cmocka_unit_test(test_transponder_db_entry_copy),
+		cmocka_unit_test(test_transponder_db_with_num_transponders_near_and_above_maximum_limit)
 	};
 
 	int rc = cmocka_run_group_tests(tests, NULL, NULL);
