@@ -90,16 +90,19 @@ int transponder_db_from_file(const char *dbfile, const struct tle_db *tle_db, st
 			}
 
 			//transponder name
+			char name[MAX_NUM_CHARS];
 			templine[strlen(templine)-1] = '\0'; //remove newline
-			strncpy(new_entry.transponders[transponder_index].name, templine, MAX_NUM_CHARS);
+			strncpy(name, templine, MAX_NUM_CHARS);
 
 			//uplink frequencies
 			fgets(templine, MAX_NUM_CHARS, fd);
-			sscanf(templine,"%lf, %lf", &(new_entry.transponders[transponder_index].uplink_start), &(new_entry.transponders[transponder_index].uplink_end));
+			double uplink_start, uplink_end;
+			sscanf(templine,"%lf, %lf", &uplink_start, &uplink_end);
 
 			//downlink frequencies
 			fgets(templine, MAX_NUM_CHARS, fd);
-			sscanf(templine,"%lf, %lf", &(new_entry.transponders[transponder_index].downlink_start), &(new_entry.transponders[transponder_index].downlink_end));
+			double downlink_start, downlink_end;
+			sscanf(templine,"%lf, %lf", &downlink_start, &downlink_end);
 
 			//unused information: weekly schedule for transponder. See issue #29.
 			fgets(templine, MAX_NUM_CHARS, fd);
@@ -107,8 +110,14 @@ int transponder_db_from_file(const char *dbfile, const struct tle_db *tle_db, st
 			//unused information: orbital schedule for transponder. See issue #29.
 			fgets(templine, MAX_NUM_CHARS, fd);
 
-			//check whether transponder is well-defined
-			if ((new_entry.transponders[transponder_index].uplink_start!=0.0 || new_entry.transponders[transponder_index].downlink_start!=0.0) && (transponder_index < MAX_NUM_TRANSPONDERS)) {
+			//check whether transponder is well-defined and that we're not exceeding the hard limit on num. transponders
+			if ((uplink_start!=0.0 || downlink_start!=0.0) && (transponder_index < MAX_NUM_TRANSPONDERS)) {
+				strncpy(new_entry.transponders[transponder_index].name, name, MAX_NUM_CHARS);
+				new_entry.transponders[transponder_index].uplink_start = uplink_start;
+				new_entry.transponders[transponder_index].uplink_end = uplink_end;
+				new_entry.transponders[transponder_index].downlink_start = downlink_start;
+				new_entry.transponders[transponder_index].downlink_end = downlink_end;
+
 				transponder_index++;
 			}
 		}
