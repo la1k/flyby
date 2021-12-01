@@ -1,10 +1,10 @@
 #!/usr/bin/env python
 
 #This is a script that fetches transponder data from db.satnogs.org and parses it to flyby transponder data.
-import urllib2
 import json
 import sys
 import tempfile
+from urllib.request import urlopen
 from distutils import spawn
 from subprocess import call
 from operator import itemgetter
@@ -21,16 +21,16 @@ else:
         sys.exit();
 
 #Step 1: Fetch JSON transponder information from SatNOGS db.
-request = urllib2.urlopen("https://db.satnogs.org/api/transmitters")
+request = urlopen("https://db.satnogs.org/api/transmitters")
 data = json.load(request)
 
 # Order data by norad_cat_id entry
-sorteddata = sorted(data, key=itemgetter('norad_cat_id'))
+sorteddata = sorted(data, key=lambda x: x['norad_cat_id'] or 0)
 
 # Open output file
 db = None;
 if not named_file:
-    db = tempfile.NamedTemporaryFile();
+    db = tempfile.NamedTemporaryFile(mode='w+t')
 else:
     db = open(named_file, "w");
 
