@@ -13,7 +13,7 @@
 #define HEADER_STYLE COLOR_PAIR(2)|A_REVERSE
 
 //color attributes of selected entry in satellite listing
-#define MULTITRACK_SELECTED_ATTRIBUTE (COLOR_PAIR(6)|A_REVERSE)
+#define MULTITRACK_SELECTED_ATTRIBUTE A_UNDERLINE
 
 //marker of menu item
 #define MULTITRACK_SELECTED_MARKER '-'
@@ -835,7 +835,7 @@ void multitrack_display_listing(multitrack_listing_t *listing)
 	//show entries
 	if (listing->num_entries > 0) {
 		int selected_index = listing->sorted_index[listing->selected_entry_index];
-		listing->entries[selected_index]->display_attributes = MULTITRACK_SELECTED_ATTRIBUTE;
+		listing->entries[selected_index]->display_attributes |= MULTITRACK_SELECTED_ATTRIBUTE;
 		listing->entries[selected_index]->display_string[0] = MULTITRACK_SELECTED_MARKER;
 
 		int line = 0;
