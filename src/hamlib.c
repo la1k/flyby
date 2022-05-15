@@ -43,11 +43,10 @@ int sock_readline(int sockd, char *message, size_t bufsize)
  **/
 void rotctld_bootstrap_response(int socket)
 {
-	//send request for position
-	send(socket, "p\n", 2, MSG_NOSIGNAL);
-
-	//will return azimuth\nelevation\n, so read back first part of this message
-	sock_readline(socket, NULL, 256);
+	// Send request for position w/ extended response protocol:
+	// will get the full response in a single line the next time
+	// we read from the socket.
+	send(socket, ";p\n", 3, MSG_NOSIGNAL);
 }
 
 rotctld_error rotctld_connect(const char *rotctld_host, const char *rotctld_port, rotctld_info_t *ret_info)
@@ -154,7 +153,7 @@ rotctld_error rotctld_track(rotctld_info_t *info, double azimuth, double elevati
 		info->prev_cmd_azimuth = azimuth;
 		info->prev_cmd_elevation = elevation;
 
-		char message[30];
+		char message[256];
 
 		/* If positions are sent too often, rotctld will queue
 		   them and the antenna will lag behind. Therefore, we wait
