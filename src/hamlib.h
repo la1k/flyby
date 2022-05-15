@@ -51,6 +51,7 @@ enum rotctld_error_e {
 	ROTCTLD_GETADDRINFO_ERR = -1,
 	ROTCTLD_CONNECTION_FAILED = -2,
 	ROTCTLD_SEND_FAILED = -3,
+	ROTCTLD_RETURNED_STATUS_ERROR = -4,
 };
 typedef enum rotctld_error_e rotctld_error;
 
