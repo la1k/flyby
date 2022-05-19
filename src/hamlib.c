@@ -43,11 +43,10 @@ int sock_readline(int sockd, char *message, size_t bufsize)
  **/
 void rotctld_bootstrap_response(int socket)
 {
-	//send request for position
-	send(socket, "p\n", 2, MSG_NOSIGNAL);
-
-	//will return azimuth\nelevation\n, so read back first part of this message
-	sock_readline(socket, NULL, 256);
+	// Send request for position w/ extended response protocol:
+	// will get the full response in a single line the next time
+	// we read from the socket.
+	send(socket, ";p\n", 3, MSG_NOSIGNAL);
 }
 
 rotctld_error rotctld_connect(const char *rotctld_host, const char *rotctld_port, rotctld_info_t *ret_info)
@@ -110,6 +109,8 @@ const char *rotctld_error_message(rotctld_error errorcode)
 			return "Unable to connect to rotctld.";
 		case ROTCTLD_SEND_FAILED:
 			return "Unable to send to rotctld or rotctld disconnected.";
+		case ROTCTLD_RETURNED_STATUS_ERROR:
+			return "Message from rotctl contained a non-zero status code";
 	}
 	return "Unsupported error code.";
 }
@@ -152,7 +153,7 @@ rotctld_error rotctld_track(rotctld_info_t *info, double azimuth, double elevati
 		info->prev_cmd_azimuth = azimuth;
 		info->prev_cmd_elevation = elevation;
 
-		char message[30];
+		char message[256];
 
 		/* If positions are sent too often, rotctld will queue
 		   them and the antenna will lag behind. Therefore, we wait
@@ -189,6 +190,17 @@ rotctld_error rotctld_send_position_request(int socket)
 	return ROTCTLD_NO_ERR;
 }
 
+bool msg_is_netrotctl_error(char *message) {
+	const char *NETROTCTL_RET = "RPRT ";
+	if (strlen(message) < strlen(NETROTCTL_RET) + 1) {
+		return false;
+	}
+
+	bool is_netrotctl_status = strncmp(message, NETROTCTL_RET, strlen(NETROTCTL_RET)) == 0;
+	int netrotctl_status = atoi(message + strlen(NETROTCTL_RET));
+	return is_netrotctl_status && (netrotctl_status < 0);
+}
+
 rotctld_error rotctld_read_position(rotctld_info_t *info, float *azimuth, float *elevation)
 {
 	char message[256];
@@ -205,6 +217,10 @@ rotctld_error rotctld_read_position(rotctld_info_t *info, float *azimuth, float 
 
 	//get response
 	sock_readline(info->socket, message, sizeof(message));
+	if (msg_is_netrotctl_error(message)) {
+		return ROTCTLD_RETURNED_STATUS_ERROR;
+	}
+
 	sscanf(message, "%f\n", azimuth);
 	sock_readline(info->socket, message, sizeof(message));
 	sscanf(message, "%f\n", elevation);
