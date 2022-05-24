@@ -14,8 +14,10 @@
 typedef struct {
 	///Whether we are connected to a rotctld instance
 	bool connected;
-	///Socket file identificator
-	int socket;
+	///Socket fid for reading rotctld positions
+	int read_socket;
+	///Socket fid for setting rotctld positions
+	int track_socket;
 	///Hostname
 	char host[MAX_NUM_CHARS];
 	///Port
