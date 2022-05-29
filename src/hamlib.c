@@ -49,30 +49,25 @@ void rotctld_bootstrap_response(int socket)
 	send(socket, ";p\n", 3, MSG_NOSIGNAL);
 }
 
-rotctld_error rotctld_connect(const char *rotctld_host, const char *rotctld_port, rotctld_info_t *ret_info)
+rotctld_error socket_connect(const char *host, const char *port, int *socket_fid)
 {
-	strncpy(ret_info->host, rotctld_host, MAX_NUM_CHARS);
-	strncpy(ret_info->port, rotctld_port, MAX_NUM_CHARS);
-
 	struct addrinfo hints, *servinfo, *servinfop;
 	memset(&hints, 0, sizeof(hints));
 	hints.ai_family = AF_UNSPEC;
 	hints.ai_socktype = SOCK_STREAM;
 
-	int rotctld_socket = 0;
-	int retval = getaddrinfo(rotctld_host, rotctld_port, &hints, &servinfo);
+	int retval = getaddrinfo(host, port, &hints, &servinfo);
 	if (retval != 0) {
-		ret_info->connected = false;
 		return ROTCTLD_GETADDRINFO_ERR;
 	}
 
 	for(servinfop = servinfo; servinfop != NULL; servinfop = servinfop->ai_next) {
-		if ((rotctld_socket = socket(servinfop->ai_family, servinfop->ai_socktype,
+		if ((*socket_fid = socket(servinfop->ai_family, servinfop->ai_socktype,
 			servinfop->ai_protocol)) == -1) {
 			continue;
 		}
-		if (connect(rotctld_socket, servinfop->ai_addr, servinfop->ai_addrlen) == -1) {
-			close(rotctld_socket);
+		if (connect(*socket_fid, servinfop->ai_addr, servinfop->ai_addrlen) == -1) {
+			close(*socket_fid);
 			continue;
 		}
 
@@ -82,12 +77,28 @@ rotctld_error rotctld_connect(const char *rotctld_host, const char *rotctld_port
 		return ROTCTLD_CONNECTION_FAILED;
 	}
 	freeaddrinfo(servinfo);
+}
+
+rotctld_error rotctld_connect(const char *rotctld_host, const char *rotctld_port, rotctld_info_t *ret_info)
+{
+	strncpy(ret_info->host, rotctld_host, MAX_NUM_CHARS);
+	strncpy(ret_info->port, rotctld_port, MAX_NUM_CHARS);
+	ret_info->connected = false;
+
+	rotctld_error retval;
+	retval = socket_connect(rotctld_host, rotctld_port, &(ret_info->read_socket));
+	if (retval != ROTCTLD_NO_ERR) {
+		return retval;
+	}
+	retval = socket_connect(rotctld_host, rotctld_port, &(ret_info->track_socket));
+	if (retval != ROTCTLD_NO_ERR) {
+		return retval;
+	}
 
 	/* TrackDataNet() will wait for confirmation of a command before sending
 	   the next so we bootstrap this by asking for the current position */
-	rotctld_bootstrap_response(rotctld_socket);
+	rotctld_bootstrap_response(ret_info->track_socket);
 
-	ret_info->socket = rotctld_socket;
 	ret_info->connected = true;
 	ret_info->tracking_horizon = 0;
 
@@ -159,11 +170,11 @@ rotctld_error rotctld_track(rotctld_info_t *info, double azimuth, double elevati
 		   them and the antenna will lag behind. Therefore, we wait
 		   for confirmation from last command before sending the
 		   next. */
-		sock_readline(info->socket, message, sizeof(message));
+		sock_readline(info->track_socket, message, sizeof(message));
 
 		sprintf(message, "P %.2f %.2f\n", azimuth, elevation);
 		int len = strlen(message);
-		if (send(info->socket, message, len, MSG_NOSIGNAL) != len) {
+		if (send(info->track_socket, message, len, MSG_NOSIGNAL) != len) {
 			info->connected = false;
 			return ROTCTLD_SEND_FAILED;
 		}
@@ -205,28 +216,22 @@ rotctld_error rotctld_read_position(rotctld_info_t *info, float *azimuth, float 
 {
 	char message[256];
 
-	//read pending return message
-	sock_readline(info->socket, message, sizeof(message));
-
 	//send position request
-	rotctld_error ret_err = rotctld_send_position_request(info->socket);
+	rotctld_error ret_err = rotctld_send_position_request(info->read_socket);
 	if (ret_err != ROTCTLD_NO_ERR) {
 		info->connected = false;
 		return ret_err;
 	}
 
 	//get response
-	sock_readline(info->socket, message, sizeof(message));
+	sock_readline(info->read_socket, message, sizeof(message));
 	if (msg_is_netrotctl_error(message)) {
 		return ROTCTLD_RETURNED_STATUS_ERROR;
 	}
 
 	sscanf(message, "%f\n", azimuth);
-	sock_readline(info->socket, message, sizeof(message));
+	sock_readline(info->read_socket, message, sizeof(message));
 	sscanf(message, "%f\n", elevation);
-
-	//prepare new pending reply
-	rotctld_bootstrap_response(info->socket);
 
 	return ROTCTLD_NO_ERR;
 }
@@ -424,8 +429,10 @@ void rigctld_disconnect(rigctld_info_t *info)
 void rotctld_disconnect(rotctld_info_t *info)
 {
 	if (info->connected) {
-		send(info->socket, "q\n", 2, MSG_NOSIGNAL);
-		close(info->socket);
+		send(info->read_socket, "q\n", 2, MSG_NOSIGNAL);
+		send(info->track_socket, "q\n", 2, MSG_NOSIGNAL);
+		close(info->read_socket);
+		close(info->track_socket);
 		info->connected = false;
 	}
 }
