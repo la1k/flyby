@@ -8,6 +8,7 @@
 #include <netinet/in.h>
 #include <netdb.h>
 #include <math.h>
+#include <errno.h>
 
 void bailout(const char *msg);
 
@@ -84,6 +85,8 @@ rotctld_error rotctld_connect(const char *rotctld_host, const char *rotctld_port
 	strncpy(ret_info->host, rotctld_host, MAX_NUM_CHARS);
 	strncpy(ret_info->port, rotctld_port, MAX_NUM_CHARS);
 	ret_info->connected = false;
+	ret_info->track_buffer_pos = 0;
+	ret_info->last_track_response_received = true;
 
 	rotctld_error retval;
 	retval = socket_connect(rotctld_host, rotctld_port, &(ret_info->read_socket));
@@ -122,6 +125,10 @@ const char *rotctld_error_message(rotctld_error errorcode)
 			return "Unable to send to rotctld or rotctld disconnected.";
 		case ROTCTLD_RETURNED_STATUS_ERROR:
 			return "Message from rotctl contained a non-zero status code";
+		case ROTCTLD_READ_BUFFER_OVERFLOW:
+			return "Rotctld read buffer was overflowed";
+		case ROTCTLD_READ_FAILED:
+			return "Failed to read from rotctld track socket";
 	}
 	return "Unsupported error code.";
 }
@@ -160,17 +167,41 @@ rotctld_error rotctld_track(rotctld_info_t *info, double azimuth, double elevati
 		info->first_cmd_sent = true;
 	}
 
-	if (coordinates_differ) {
+	/* If positions are sent too often, rotctld will queue
+	   them and the antenna will lag behind. Therefore, we wait
+	   for confirmation from last command before sending the
+	   next. */
+	if (!info->last_track_response_received) {
+		char *buffer = info->track_buffer + info->track_buffer_pos;
+		int buffer_len = MAX_NUM_CHARS - info->track_buffer_pos;
+		if (buffer_len <= 0) {
+			return ROTCTLD_READ_BUFFER_OVERFLOW;
+		}
+
+		int read_bytes = recv(info->track_socket, buffer, buffer_len, MSG_DONTWAIT);
+
+		if (read_bytes < 0) {
+			if (errno == EWOULDBLOCK) {
+				return ROTCTLD_NO_ERR;
+			} else {
+				return ROTCTLD_READ_FAILED;
+			}
+		} else {
+			info->track_buffer_pos += read_bytes;
+
+			if (buffer[read_bytes-1] == '\n') {
+				info->last_track_response_received = true;
+				info->track_buffer_pos = 0;
+			}
+		}
+	}
+
+
+	if (coordinates_differ && info->last_track_response_received) {
 		info->prev_cmd_azimuth = azimuth;
 		info->prev_cmd_elevation = elevation;
 
 		char message[256];
-
-		/* If positions are sent too often, rotctld will queue
-		   them and the antenna will lag behind. Therefore, we wait
-		   for confirmation from last command before sending the
-		   next. */
-		sock_readline(info->track_socket, message, sizeof(message));
 
 		sprintf(message, "P %.2f %.2f\n", azimuth, elevation);
 		int len = strlen(message);
@@ -178,6 +209,8 @@ rotctld_error rotctld_track(rotctld_info_t *info, double azimuth, double elevati
 			info->connected = false;
 			return ROTCTLD_SEND_FAILED;
 		}
+
+		info->last_track_response_received = false;
 	}
 
 	return ROTCTLD_NO_ERR;
