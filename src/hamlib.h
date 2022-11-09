@@ -30,6 +30,12 @@ typedef struct {
 	double prev_cmd_azimuth;
 	///Previous sent elevation
 	double prev_cmd_elevation;
+	// TODO: Description + var name
+	// TODO: Maybe separate this into a different struct, and reuse
+	// for rigctld_info_t
+	bool last_track_response_received;
+	int track_buffer_pos;
+	char track_buffer[MAX_NUM_CHARS];
 } rotctld_info_t;
 
 typedef struct {

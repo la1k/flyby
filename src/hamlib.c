@@ -84,6 +84,8 @@ rotctld_error rotctld_connect(const char *rotctld_host, const char *rotctld_port
 	strncpy(ret_info->host, rotctld_host, MAX_NUM_CHARS);
 	strncpy(ret_info->port, rotctld_port, MAX_NUM_CHARS);
 	ret_info->connected = false;
+	ret_info->track_buffer_pos = 0;
+	ret_info->last_track_response_received = true;
 
 	rotctld_error retval;
 	retval = socket_connect(rotctld_host, rotctld_port, &(ret_info->read_socket));
@@ -160,17 +162,34 @@ rotctld_error rotctld_track(rotctld_info_t *info, double azimuth, double elevati
 		info->first_cmd_sent = true;
 	}
 
-	if (coordinates_differ) {
-		info->prev_cmd_azimuth = azimuth;
-		info->prev_cmd_elevation = elevation;
-
-		char message[256];
-
+	if (!info->last_track_response_received) {
 		/* If positions are sent too often, rotctld will queue
 		   them and the antenna will lag behind. Therefore, we wait
 		   for confirmation from last command before sending the
 		   next. */
 		sock_readline(info->track_socket, message, sizeof(message));
+
+		char *buffer = info->track_buffer + info->track_buffer_pos;
+		int buffer_len = MAX_NUM_CHARS - info->track_buffer_pos;
+		if (buffer_len <= 0) {
+			// TODO: Fail with error code
+			printf("Buffer overflow\n");
+			sys.exit(1);
+		}
+
+		int read_bytes = recv(info->track_socket, &buffer, buffer_len, MSG_DONTWAIT);
+		if (read_bytes < 0) {
+		}
+
+		info->track_buffer_pos += read_bytes;
+	}
+
+
+	if (coordinates_differ && info->last_track_response_received) {
+		info->prev_cmd_azimuth = azimuth;
+		info->prev_cmd_elevation = elevation;
+
+		char message[256];
 
 		sprintf(message, "P %.2f %.2f\n", azimuth, elevation);
 		int len = strlen(message);
@@ -178,6 +197,8 @@ rotctld_error rotctld_track(rotctld_info_t *info, double azimuth, double elevati
 			info->connected = false;
 			return ROTCTLD_SEND_FAILED;
 		}
+
+		info->last_track_response_received = false;
 	}
 
 	return ROTCTLD_NO_ERR;
