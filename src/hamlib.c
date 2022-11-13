@@ -8,6 +8,7 @@
 #include <netinet/in.h>
 #include <netdb.h>
 #include <math.h>
+#include <errno.h>
 
 void bailout(const char *msg);
 
@@ -162,26 +163,40 @@ rotctld_error rotctld_track(rotctld_info_t *info, double azimuth, double elevati
 		info->first_cmd_sent = true;
 	}
 
+    /* If positions are sent too often, rotctld will queue
+       them and the antenna will lag behind. Therefore, we wait
+       for confirmation from last command before sending the
+       next. */
 	if (!info->last_track_response_received) {
-		/* If positions are sent too often, rotctld will queue
-		   them and the antenna will lag behind. Therefore, we wait
-		   for confirmation from last command before sending the
-		   next. */
-		sock_readline(info->track_socket, message, sizeof(message));
-
 		char *buffer = info->track_buffer + info->track_buffer_pos;
 		int buffer_len = MAX_NUM_CHARS - info->track_buffer_pos;
 		if (buffer_len <= 0) {
 			// TODO: Fail with error code
 			printf("Buffer overflow\n");
-			sys.exit(1);
+			exit(1);
 		}
 
-		int read_bytes = recv(info->track_socket, &buffer, buffer_len, MSG_DONTWAIT);
+		int read_bytes = recv(info->track_socket, buffer, buffer_len, MSG_DONTWAIT);
+
+        // TODO: flatten?
 		if (read_bytes < 0) {
-		}
+            if (errno == EWOULDBLOCK) {
+                return ROTCTLD_NO_ERR;
+            } else {
+                // TODO: fail with error code
+                printf("errno %d\n", errno);
+                exit(1);
+            }
+		} else {
+            // TODO: Could be that the \n comes earlier? Should maybe make this more robust
+            info->track_buffer_pos += read_bytes;
 
-		info->track_buffer_pos += read_bytes;
+            if (buffer[read_bytes-1] == '\n') {
+                info->last_track_response_received = true;
+                info->track_buffer_pos = 0;
+            }
+
+        }
 	}
 
 
