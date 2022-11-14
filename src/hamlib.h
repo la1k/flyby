@@ -11,6 +11,12 @@
 #define RIGCTLD_DEFAULT_HOST "localhost"
 #define RIGCTLD_DEFAULT_PORT "4532"
 
+// TODO: Name
+typedef struct {
+	int buffer_pos;
+	char buffer[MAX_NUM_CHARS];
+} buffer_t;
+
 typedef struct {
 	///Whether we are connected to a rotctld instance
 	bool connected;
@@ -34,8 +40,7 @@ typedef struct {
 	// TODO: Maybe separate this into a different struct, and reuse
 	// for rigctld_info_t
 	bool last_track_response_received;
-	int track_buffer_pos;
-	char track_buffer[MAX_NUM_CHARS];
+	buffer_t track_buffer;
 } rotctld_info_t;
 
 typedef struct {

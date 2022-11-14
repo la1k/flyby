@@ -85,7 +85,7 @@ rotctld_error rotctld_connect(const char *rotctld_host, const char *rotctld_port
 	strncpy(ret_info->host, rotctld_host, MAX_NUM_CHARS);
 	strncpy(ret_info->port, rotctld_port, MAX_NUM_CHARS);
 	ret_info->connected = false;
-	ret_info->track_buffer_pos = 0;
+	ret_info->track_buffer.buffer_pos = 0;
 	ret_info->last_track_response_received = true;
 
 	rotctld_error retval;
@@ -154,6 +154,33 @@ bool rotctld_directions_differ(rotctld_info_t *info, double azimuth, double elev
 	return azimuth_differs || elevation_differs;
 }
 
+rotctld_error try_read_response_nonblocking(int socket, buffer_t *buffer) {
+	char *read_buffer = buffer->buffer + buffer->buffer_pos;
+	int buffer_len = MAX_NUM_CHARS - buffer->buffer_pos;
+
+	if (buffer_len <= 0) {
+		return ROTCTLD_READ_BUFFER_OVERFLOW;
+	}
+
+	int read_bytes = recv(socket, read_buffer, buffer_len, MSG_DONTWAIT);
+
+	if ((read_bytes < 0) && (errno != EWOULDBLOCK)) {
+		return ROTCTLD_READ_FAILED;
+	} else {
+		buffer->buffer_pos += read_bytes;
+	}
+
+	return ROTCTLD_NO_ERR;
+}
+
+bool message_in_buffer_is_complete(buffer_t *buffer) {
+	return buffer->buffer[buffer->buffer_pos-1] == '\n';
+}
+
+void reset_buffer(buffer_t *buffer) {
+	buffer->buffer_pos = 0;
+}
+
 rotctld_error rotctld_track(rotctld_info_t *info, double azimuth, double elevation)
 {
 	bool coordinates_differ = rotctld_directions_differ(info, azimuth, elevation);
@@ -168,27 +195,14 @@ rotctld_error rotctld_track(rotctld_info_t *info, double azimuth, double elevati
 	   for confirmation from last command before sending the
 	   next. */
 	if (!info->last_track_response_received) {
-		char *buffer = info->track_buffer + info->track_buffer_pos;
-		int buffer_len = MAX_NUM_CHARS - info->track_buffer_pos;
-		if (buffer_len <= 0) {
-			return ROTCTLD_READ_BUFFER_OVERFLOW;
+		rotctld_error err = try_read_response_nonblocking(info->track_socket, &info->track_buffer);
+		if (err != ROTCTLD_NO_ERR) {
+			return err;
 		}
 
-		int read_bytes = recv(info->track_socket, buffer, buffer_len, MSG_DONTWAIT);
-
-		if (read_bytes < 0) {
-			if (errno == EWOULDBLOCK) {
-				return ROTCTLD_NO_ERR;
-			} else {
-				return ROTCTLD_READ_FAILED;
-			}
-		} else {
-			info->track_buffer_pos += read_bytes;
-
-			if (buffer[read_bytes-1] == '\n') {
-				info->last_track_response_received = true;
-				info->track_buffer_pos = 0;
-			}
+		if (message_in_buffer_is_complete(&info->track_buffer)) {
+			reset_buffer(&info->track_buffer);
+			info->last_track_response_received = true;
 		}
 	}
 
