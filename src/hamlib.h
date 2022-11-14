@@ -60,6 +60,8 @@ enum rotctld_error_e {
 	ROTCTLD_CONNECTION_FAILED = -2,
 	ROTCTLD_SEND_FAILED = -3,
 	ROTCTLD_RETURNED_STATUS_ERROR = -4,
+	ROTCTLD_READ_BUFFER_OVERFLOW = -5,
+	ROTCTLD_READ_FAILED = -6,
 };
 typedef enum rotctld_error_e rotctld_error;
 
