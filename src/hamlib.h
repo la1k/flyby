@@ -12,6 +12,8 @@
 #define RIGCTLD_DEFAULT_PORT "4532"
 
 // TODO: Name
+// TODO: Maybe socket should be a part of this?
+// TODO: boolean that specifies whether response was received
 typedef struct {
 	int buffer_pos;
 	char buffer[MAX_NUM_CHARS];
@@ -41,6 +43,8 @@ typedef struct {
 	// for rigctld_info_t
 	bool last_track_response_received;
 	buffer_t track_buffer;
+	bool last_read_response_received;
+	buffer_t read_buffer;
 } rotctld_info_t;
 
 typedef struct {

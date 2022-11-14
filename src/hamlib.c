@@ -36,6 +36,14 @@ int sock_readline(int sockd, char *message, size_t bufsize)
 	return pos;
 }
 
+bool message_in_buffer_is_complete(buffer_t *buffer) {
+	return buffer->buffer[buffer->buffer_pos-1] == '\n';
+}
+
+void reset_buffer(buffer_t *buffer) {
+	buffer->buffer_pos = 0;
+}
+
 /**
  * Make rotctld produce a response which will be ready for reading
  * on the next command to be sent to rotctld.
@@ -85,8 +93,10 @@ rotctld_error rotctld_connect(const char *rotctld_host, const char *rotctld_port
 	strncpy(ret_info->host, rotctld_host, MAX_NUM_CHARS);
 	strncpy(ret_info->port, rotctld_port, MAX_NUM_CHARS);
 	ret_info->connected = false;
-	ret_info->track_buffer.buffer_pos = 0;
+	reset_buffer(&ret_info->track_buffer);
+	reset_buffer(&ret_info->read_buffer);
 	ret_info->last_track_response_received = true;
+	ret_info->last_read_response_received = true;
 
 	rotctld_error retval;
 	retval = socket_connect(rotctld_host, rotctld_port, &(ret_info->read_socket));
@@ -173,14 +183,6 @@ rotctld_error try_read_response_nonblocking(int socket, buffer_t *buffer) {
 	return ROTCTLD_NO_ERR;
 }
 
-bool message_in_buffer_is_complete(buffer_t *buffer) {
-	return buffer->buffer[buffer->buffer_pos-1] == '\n';
-}
-
-void reset_buffer(buffer_t *buffer) {
-	buffer->buffer_pos = 0;
-}
-
 rotctld_error rotctld_track(rotctld_info_t *info, double azimuth, double elevation)
 {
 	bool coordinates_differ = rotctld_directions_differ(info, azimuth, elevation);
@@ -259,18 +261,27 @@ rotctld_error rotctld_read_position(rotctld_info_t *info, float *azimuth, float 
 {
 	char message[256];
 
-	//send position request
-	rotctld_error ret_err = rotctld_send_position_request(info->read_socket);
-	if (ret_err != ROTCTLD_NO_ERR) {
-		info->connected = false;
-		return ret_err;
+	if (info->last_read_response_received) {
+		//send position request
+		rotctld_error ret_err = rotctld_send_position_request(info->read_socket);
+		if (ret_err != ROTCTLD_NO_ERR) {
+			info->connected = false;
+			return ret_err;
+		}
+		info->last_read_response_received = false;
 	}
 
 	//get response
-	sock_readline(info->read_socket, message, sizeof(message));
+	rotctld_error retval = try_read_response_nonblocking(info->read_socket, &info->read_buffer);
+	// TODO: handle errors
+	
+	if 
+
 	if (msg_is_netrotctl_error(message)) {
 		return ROTCTLD_RETURNED_STATUS_ERROR;
 	}
+
+	// TODO: ??? why is this two lines of data?
 
 	sscanf(message, "%f\n", azimuth);
 	sock_readline(info->read_socket, message, sizeof(message));
