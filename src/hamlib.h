@@ -30,6 +30,12 @@ typedef struct {
 	double prev_cmd_azimuth;
 	///Previous sent elevation
 	double prev_cmd_elevation;
+	///Whether the response from the last track command has been received
+	bool last_track_response_received;
+	///Current position in the buffer for reading response from the last track command
+	int track_buffer_pos;
+	///Buffer for reading the response of the last track command
+	char track_buffer[MAX_NUM_CHARS];
 } rotctld_info_t;
 
 typedef struct {
@@ -54,6 +60,8 @@ enum rotctld_error_e {
 	ROTCTLD_CONNECTION_FAILED = -2,
 	ROTCTLD_SEND_FAILED = -3,
 	ROTCTLD_RETURNED_STATUS_ERROR = -4,
+	ROTCTLD_READ_BUFFER_OVERFLOW = -5,
+	ROTCTLD_READ_FAILED = -6,
 };
 typedef enum rotctld_error_e rotctld_error;
 
