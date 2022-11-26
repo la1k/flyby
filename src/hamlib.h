@@ -12,6 +12,11 @@
 #define RIGCTLD_DEFAULT_PORT "4532"
 
 typedef struct {
+	int buffer_pos;
+	char buffer[MAX_NUM_CHARS];
+} buffer_t;
+
+typedef struct {
 	///Whether we are connected to a rotctld instance
 	bool connected;
 	///Socket fid for reading rotctld positions
@@ -32,10 +37,8 @@ typedef struct {
 	double prev_cmd_elevation;
 	///Whether the response from the last track command has been received
 	bool last_track_response_received;
-	///Current position in the buffer for reading response from the last track command
-	int track_buffer_pos;
 	///Buffer for reading the response of the last track command
-	char track_buffer[MAX_NUM_CHARS];
+	buffer_t track_buffer;
 } rotctld_info_t;
 
 typedef struct {
