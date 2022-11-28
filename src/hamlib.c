@@ -166,7 +166,7 @@ bool rotctld_directions_differ(rotctld_info_t *info, double azimuth, double elev
 	return azimuth_differs || elevation_differs;
 }
 
-rotctld_try_read_response_nonblocking(int socket, buffer_t *buffer)
+rotctld_error rotctld_try_read_response_nonblocking(int socket, buffer_t *buffer)
 {
 	char *read_buffer = buffer->buffer + buffer->buffer_pos;
 	int buffer_len = MAX_NUM_CHARS - buffer->buffer_pos;
@@ -244,7 +244,7 @@ rotctld_error rotctld_track(rotctld_info_t *info, double azimuth, double elevati
 rotctld_error rotctld_send_position_request(int socket)
 {
 	char message[256];
-	sprintf(message, "p\n");
+	sprintf(message, ";p\n");
 	int len = strlen(message);
 	if (send(socket, message, len, MSG_NOSIGNAL) != len) {
 		return ROTCTLD_SEND_FAILED;
@@ -281,9 +281,7 @@ rotctld_error rotctld_read_position(rotctld_info_t *info, float *azimuth, float 
 		return ROTCTLD_RETURNED_STATUS_ERROR;
 	}
 
-	sscanf(message, "%f\n", azimuth);
-	sock_readline(info->read_socket, message, sizeof(message));
-	sscanf(message, "%f\n", elevation);
+	sscanf(message, "get_pos:;Azimuth: %f;Elevation: %f;RPRT 0", azimuth, elevation);
 
 	return ROTCTLD_NO_ERR;
 }
