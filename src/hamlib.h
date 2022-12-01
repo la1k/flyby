@@ -39,6 +39,10 @@ typedef struct {
 	bool last_track_response_received;
 	///Buffer for reading the response of the last track command
 	buffer_t track_buffer;
+	///Whether the response from the last position request has been received
+	bool last_position_request_response_received;
+	///Buffer for reading the response of the last position request
+	buffer_t position_request_buffer;
 } rotctld_info_t;
 
 typedef struct {
@@ -113,15 +117,20 @@ void rotctld_disconnect(rotctld_info_t *info);
  **/
 rotctld_error rotctld_track(rotctld_info_t *info, double azimuth, double elevation);
 
+struct rotctld_read_position {
+	bool is_set;
+	float azimuth;
+	float elevation;
+};
+
 /**
  * Read current rotctld position.
  *
  * \param info Rotctld connection instance
- * \param ret_azimuth Returned azimuth angle
- * \param ret_elevation Returned elevation angle
+ * \param ret_pos Returned position
  * \return ROTCTLD_NO_ERR on success
  **/
-rotctld_error rotctld_read_position(rotctld_info_t *info, float *ret_azimuth, float *ret_elevation);
+rotctld_error rotctld_read_position(rotctld_info_t *info, struct rotctld_read_position *ret_pos);
 
 /**
  * Set current tracking horizon.

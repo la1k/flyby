@@ -172,10 +172,11 @@ void rotctld_form_update(rotctld_info_t *rotctld, struct rotctld_form *form)
 	//read current azimuth/elevation from rotctld and display in field
 	char aziele_string[MAX_NUM_CHARS] = "N/A   N/A";
 	if (rotctld->connected) {
-		float azimuth = 0, elevation = 0;
-		rotctld_error ret_err = rotctld_read_position(rotctld, &azimuth, &elevation);
-		if (ret_err == ROTCTLD_NO_ERR) {
-			snprintf(aziele_string, MAX_NUM_CHARS, "%3.0f   %3.0f", azimuth, elevation);
+		struct rotctld_read_position pos = {0};
+
+		rotctld_error ret_err = rotctld_read_position(rotctld, &pos);
+		if ((ret_err == ROTCTLD_NO_ERR) && (pos.is_set)) {
+			snprintf(aziele_string, MAX_NUM_CHARS, "%3.0f   %3.0f", pos.azimuth, pos.elevation);
 		}
 	}
 	set_field_buffer(form->aziele, 0, aziele_string);

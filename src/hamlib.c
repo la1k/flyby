@@ -85,7 +85,7 @@ void buffer_reset(buffer_t *buffer) {
 }
 
 bool buffer_has_complete_message(buffer_t *buffer) {
-	buffer->buffer[buffer->buffer_pos-1] == '\n';
+	return buffer->buffer[buffer->buffer_pos-1] == '\n';
 }
 
 rotctld_error rotctld_connect(const char *rotctld_host, const char *rotctld_port, rotctld_info_t *ret_info)
@@ -95,6 +95,8 @@ rotctld_error rotctld_connect(const char *rotctld_host, const char *rotctld_port
 	ret_info->connected = false;
 	ret_info->last_track_response_received = true;
 	buffer_reset(&ret_info->track_buffer);
+	ret_info->last_position_request_response_received = true;
+	buffer_reset(&ret_info->position_request_buffer);
 
 	rotctld_error retval;
 	retval = socket_connect(rotctld_host, rotctld_port, &(ret_info->read_socket));
@@ -264,24 +266,41 @@ bool msg_is_netrotctl_error(char *message) {
 	return is_netrotctl_status && (netrotctl_status < 0);
 }
 
-rotctld_error rotctld_read_position(rotctld_info_t *info, float *azimuth, float *elevation)
+rotctld_error rotctld_read_position(rotctld_info_t *info, struct rotctld_read_position *pos)
 {
-	char message[256];
+	pos->is_set = false;
 
-	//send position request
-	rotctld_error ret_err = rotctld_send_position_request(info->read_socket);
-	if (ret_err != ROTCTLD_NO_ERR) {
-		info->connected = false;
-		return ret_err;
+	if (info->last_position_request_response_received) {
+		//send position request
+		rotctld_error ret_err = rotctld_send_position_request(info->read_socket);
+		if (ret_err != ROTCTLD_NO_ERR) {
+			info->connected = false;
+			return ret_err;
+		}
+		info->last_position_request_response_received = false;
 	}
 
-	//get response
-	sock_readline(info->read_socket, message, sizeof(message));
-	if (msg_is_netrotctl_error(message)) {
-		return ROTCTLD_RETURNED_STATUS_ERROR;
-	}
+	if (!info->last_position_request_response_received) {
+		//get response
+		rotctld_error err = rotctld_try_read_response_nonblocking(info->read_socket, &info->position_request_buffer);
+		if (err != ROTCTLD_NO_ERR) {
+			return err;
+		}
 
-	sscanf(message, "get_pos:;Azimuth: %f;Elevation: %f;RPRT 0", azimuth, elevation);
+		if (buffer_has_complete_message(&info->position_request_buffer)) {
+			if (msg_is_netrotctl_error(info->position_request_buffer.buffer)) {
+				return ROTCTLD_RETURNED_STATUS_ERROR;
+			}
+
+			sscanf(info->position_request_buffer.buffer, "get_pos:;Azimuth: %f;Elevation: %f;RPRT 0", &pos->azimuth, &pos->elevation);
+			pos->is_set = true;
+
+			info->last_position_request_response_received = true;
+			buffer_reset(&info->position_request_buffer);
+		}
+
+
+	}
 
 	return ROTCTLD_NO_ERR;
 }
